@@ -1,0 +1,75 @@
+{
+  "expo": {
+    "name": "ResetDopa",
+    "slug": "resetdopa",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "description": "Your companion for dopamine detox and habit building. Track urges, complete daily tasks, and build lasting streaks.",
+    "primaryColor": "#4A90E2",
+    "privacy": "public",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dopareset.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
+    },
+    "android": {
+      "package": "com.dopareset.app",
+      "versionCode": 1,
+      "jsEngine": "jsc",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4A90E2"
+      },
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "SCHEDULE_EXACT_ALARM",
+        "POST_NOTIFICATIONS"
+      ],
+      "androidStatusBar": {
+        "barStyle": "dark-content",
+        "backgroundColor": "#F5F7FA"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4A90E2",
+          "sounds": []
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "extra": {
+      "privacyPolicyUrl": "https://p18khr.github.io/dopareset-legal/privacy.md",
+      "termsUrl": "https://p18khr.github.io/dopareset-legal/terms.md",
+      "eas": {
+        "projectId": "resetdopa-eas"
+      }
+    },
+    "scheme": "com.dopareset.app"
+  }
+}
