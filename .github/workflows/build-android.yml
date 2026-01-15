@@ -15,21 +15,17 @@ jobs:
         with:
           node-version: '20'
           
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-          
       - name: Install dependencies
         run: npm install --legacy-peer-deps
         
-      - name: Build APK with Expo (Linux local build - no quota)
-        run: npx eas build --platform android --local --output ./app-release.apk
+      - name: Build Android APK with EAS
+        run: npx eas build --platform android --non-interactive
+        env:
+          EXPO_TOKEN: Kr0pDs9oLtLROu83xguC23j6Q2_fEQxzBNsRMdc4
         
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ResetDopa-APK
-          path: ./app-release.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
