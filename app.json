@@ -62,7 +62,10 @@
     ],
     "extra": {
       "privacyPolicyUrl": "https://p18khr.github.io/dopareset-legal/privacy.md",
-      "termsUrl": "https://p18khr.github.io/dopareset-legal/terms.md"
+      "termsUrl": "https://p18khr.github.io/dopareset-legal/terms.md",
+      "eas": {
+        "projectId": "2607ba58-f3f0-45c7-a15c-8a92e06721c3"
+      }
     },
     "runtimeVersion": "1.0.0",
     "scheme": "com.dopareset.app",
