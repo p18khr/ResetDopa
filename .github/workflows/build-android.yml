@@ -24,14 +24,25 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
           
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: 31
+          build-tools: 34.0.0
+          
       - name: Install dependencies
         run: npm install --legacy-peer-deps
         
-      - name: Build APK with Gradle (android folder already prebuilt)
+      - name: Generate Expo modules
+        run: npx expo-modules-autolinking
+        
+      - name: Build Android app (direct gradle)
         working-directory: ./android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --no-daemon
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
         
       - name: Upload APK
         uses: actions/upload-artifact@v4
