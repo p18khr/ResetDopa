@@ -8,14 +8,13 @@
     "userInterfaceStyle": "light",
     "description": "Your companion for dopamine detox and habit building. Track urges, complete daily tasks, and build lasting streaks.",
     "primaryColor": "#4A90E2",
-    "privacy": "public",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "url": "https://u.expo.dev/resetdopa"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -25,7 +24,9 @@
       "bundleIdentifier": "com.dopareset.app",
       "buildNumber": "1.0.0",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -41,11 +42,7 @@
         "VIBRATE",
         "SCHEDULE_EXACT_ALARM",
         "POST_NOTIFICATIONS"
-      ],
-      "androidStatusBar": {
-        "barStyle": "dark-content",
-        "backgroundColor": "#F5F7FA"
-      }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -67,9 +64,14 @@
       "privacyPolicyUrl": "https://p18khr.github.io/dopareset-legal/privacy.md",
       "termsUrl": "https://p18khr.github.io/dopareset-legal/terms.md",
       "eas": {
-        "projectId": "resetdopa-eas"
+        "projectId": "125af98b-699c-4bfe-8b77-0b0d78c914c0"
       }
     },
-    "scheme": "com.dopareset.app"
+    "runtimeVersion": "1.0.0",
+    "eas": {
+      "projectId": "125af98b-699c-4bfe-8b77-0b0d78c914c0"
+    },
+    "scheme": "com.dopareset.app",
+    "owner": "p18khr"
   }
 }

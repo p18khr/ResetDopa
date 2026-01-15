@@ -1,0 +1,38 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+        
+      - name: Setup Expo
+        run: npm install -g eas-cli
+        
+      - name: Build APK
+        run: eas build --platform android --non-interactive
+        env:
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+          EAS_BUILD_PROFILE: production
+          
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ResetDopa-APK
+          path: '**/*.apk'
+          retention-days: 30
