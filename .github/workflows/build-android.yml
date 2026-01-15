@@ -2,9 +2,6 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build:
@@ -27,18 +24,12 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
         
-      - name: Generate native Android files
-        run: npx expo prebuild --platform android --clean
-        
-      - name: Build APK
-        working-directory: ./android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease
+      - name: Build APK with Expo (Linux local build - no quota)
+        run: npx eas build --platform android --local --output ./app-release.apk
         
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ResetDopa-APK
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: ./app-release.apk
           retention-days: 30
