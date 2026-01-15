@@ -18,8 +18,11 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
         
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+        
       - name: Build Android APK with EAS
-        run: npx eas build --platform android --non-interactive
+        run: eas build --platform android --non-interactive
         env:
           EXPO_TOKEN: Kr0pDs9oLtLROu83xguC23j6Q2_fEQxzBNsRMdc4
         
