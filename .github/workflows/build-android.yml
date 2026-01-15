@@ -27,8 +27,7 @@ jobs:
       - name: Build APK
         run: eas build --platform android --non-interactive
         env:
-          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
-          EAS_BUILD_PROFILE: production
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
