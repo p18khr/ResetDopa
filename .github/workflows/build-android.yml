@@ -22,9 +22,10 @@ jobs:
         run: npm install -g eas-cli
         
       - name: Build Android APK with EAS
-        run: eas build --platform android
+        run: eas build --platform android --non-interactive
         env:
           EXPO_TOKEN: Kr0pDs9oLtLROu83xguC23j6Q2_fEQxzBNsRMdc4
+          CI: true
         
       - name: Upload APK
         uses: actions/upload-artifact@v4
