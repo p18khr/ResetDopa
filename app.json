@@ -68,9 +68,6 @@
       }
     },
     "runtimeVersion": "1.0.0",
-    "eas": {
-      "projectId": "125af98b-699c-4bfe-8b77-0b0d78c914c0"
-    },
     "scheme": "com.dopareset.app",
     "owner": "p18khr"
   }
