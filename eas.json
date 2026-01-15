@@ -13,9 +13,7 @@
     },
     "production": {
       "autoIncrement": true,
-      "node": {
-        "version": "20.10.0"
-      },
+      "node": "20.10.0",
       "env": {
         "ORG_GRADLE_PROJECT_android_gradlePluginVersion": "8.1.1"
       }
