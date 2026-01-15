@@ -27,15 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
         
-      - name: Generate native Android code
-        run: npx expo prebuild --clean --platform android
-        
-      - name: Fix Gradle version (7.6.3 for RN 0.73.6 compatibility)
-        run: |
-          sed -i 's|gradle-8\.14\.3-bin\.zip|gradle-7.6.3-all.zip|g' android/gradle/wrapper/gradle-wrapper.properties
-          cat android/gradle/wrapper/gradle-wrapper.properties
-        
-      - name: Build APK with Gradle
+      - name: Build APK with Gradle (android folder already prebuilt)
         working-directory: ./android
         run: |
           chmod +x gradlew
