@@ -21,8 +21,8 @@ export default function Settings({ navigation }) {
   const [moodHour, setMoodHour] = useState(20);
   const [moodMinute, setMoodMinute] = useState(0);
 
-  const privacyUrl = Constants.expoConfig?.extra?.privacyPolicyUrl || 'https://resetdopa.com/privacy';
-  const termsUrl = Constants.expoConfig?.extra?.termsUrl || 'https://resetdopa.com/terms';
+  const privacyUrl = Constants.expoConfig?.extra?.privacyPolicyUrl || 'https://resetdopa.com/privacy.html';
+  const termsUrl = Constants.expoConfig?.extra?.termsUrl || 'https://resetdopa.com/terms.html';
 
   useEffect(() => {
     loadNotificationSettings();
