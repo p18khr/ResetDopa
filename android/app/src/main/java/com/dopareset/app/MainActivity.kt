@@ -1,4 +1,4 @@
-package com.resetdopa
+package com.dopareset.app
 
 import android.os.Build
 import android.os.Bundle

@@ -1,4 +1,4 @@
-package com.resetdopa
+package com.dopareset.app
 
 import android.app.Application
 import android.content.res.Configuration
