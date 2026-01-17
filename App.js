@@ -5,7 +5,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import * as Sentry from '@sentry/react-native';
 import { AppProvider, AppContext } from './src/context/AppContext';
 import { signOut } from 'firebase/auth';
 import { auth } from './src/config/firebase';
@@ -28,15 +27,6 @@ import { useEffect, useState } from 'react';
 import ReactRef from 'react';
 
 const navigationRef = React.createRef();
-
-if (!__DEV__ && process.env.EXPO_PUBLIC_SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-    enableAutoSessionTracking: true,
-    tracesSampleRate: 0.2,
-    profilesSampleRate: 0.1,
-  });
-}
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -156,9 +146,7 @@ function App() {
   );
 }
 
-const AppWithSentry = Sentry.wrap(App);
-
-export default AppWithSentry;
+export default App;
 
 function BannerLayer() {
   // AuthStatusBanner is disabled because:
