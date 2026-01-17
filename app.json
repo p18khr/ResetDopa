@@ -8,6 +8,7 @@
     "userInterfaceStyle": "light",
     "description": "Your companion for dopamine detox and habit building. Track urges, complete daily tasks, and build lasting streaks.",
     "primaryColor": "#4A90E2",
+    "jsEngine": "jsc",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
