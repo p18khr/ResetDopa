@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - ResetDopa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: white;
+            min-height: 100vh;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #6C5CE7;
+            padding-bottom: 20px;
+        }
+        h1 {
+            color: #6C5CE7;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .last-updated {
+            color: #999;
+            font-size: 0.9em;
+        }
+        h2 {
+            color: #6C5CE7;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        h3 {
+            color: #555;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        ul {
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .emoji {
+            margin-right: 5px;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #6C5CE7;
+            margin: 20px 0;
+        }
+        a {
+            color: #6C5CE7;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #999;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Privacy Policy</h1>
+            <p class="last-updated">Last Updated: January 3, 2026</p>
+        </header>
+
+        <main>
+            <p>ResetDopa ("we," "us," "our," or "Company") operates the ResetDopa mobile application (the "App"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the App.</p>
+
+            <h2>1. Information We Collect</h2>
+
+            <h3>1.1 Information You Provide</h3>
+            <ul>
+                <li><strong>Email and Authentication Data</strong>: Your email address and password (securely handled by Firebase Authentication)</li>
+                <li><strong>Usage Data</strong>: Task completions, urge logs, streak information, mood entries, badge progress</li>
+                <li><strong>Optional Data</strong>: Profile information, preferences, feedback</li>
+            </ul>
+
+            <h3>1.2 Automatically Collected Information</h3>
+            <ul>
+                <li><strong>Device Information</strong>: Device type, operating system, app version</li>
+                <li><strong>Analytics Data</strong>: How you use the app (screens visited, features used, duration)</li>
+                <li><strong>Crash Reports</strong>: Error logs and stack traces (currently disabled)</li>
+            </ul>
+
+            <h3>1.3 Local Storage</h3>
+            <p>We use AsyncStorage (on-device storage) to:</p>
+            <ul>
+                <li>Remember your login session</li>
+                <li>Store app preferences and settings</li>
+                <li>Cache daily content (quotes, laws)</li>
+                <li>Track your local progress between syncs</li>
+            </ul>
+            <p>No cookies or third-party tracking is implemented.</p>
+
+            <h2>2. How We Use Your Information</h2>
+            <p>We use collected data to:</p>
+            <ul>
+                <li><span class="emoji">✅</span>Authenticate your account and provide app services</li>
+                <li><span class="emoji">✅</span>Track your progress and generate statistics</li>
+                <li><span class="emoji">✅</span>Send daily reminders and notifications (with your permission)</li>
+                <li><span class="emoji">✅</span>Improve app performance and fix bugs</li>
+                <li><span class="emoji">✅</span>Prevent fraud and ensure security</li>
+                <li><span class="emoji">✅</span>Comply with legal obligations</li>
+            </ul>
+
+            <div class="highlight">
+                <p><strong>We do NOT:</strong></p>
+                <ul>
+                    <li><span class="emoji">❌</span>Sell your personal data to third parties</li>
+                    <li><span class="emoji">❌</span>Use your data for targeted advertising</li>
+                    <li><span class="emoji">❌</span>Share your data with marketers or brokers</li>
+                    <li><span class="emoji">❌</span>Store credit card or payment information</li>
+                    <li><span class="emoji">❌</span>Track you across other apps or websites</li>
+                </ul>
+            </div>
+
+            <h2>3. Data Storage & Security</h2>
+
+            <h3>3.1 Where Your Data Is Stored</h3>
+            <ul>
+                <li><strong>Authentication</strong>: Firebase Authentication (Google/Firebase managed)</li>
+                <li><strong>App Data</strong>: Google Cloud Firestore (encrypted at rest and in transit)</li>
+                <li><strong>Local Storage</strong>: Your device's AsyncStorage (encrypted by OS)</li>
+            </ul>
+
+            <h3>3.2 Security Measures</h3>
+            <ul>
+                <li>End-to-end HTTPS/SSL encryption for all data in transit</li>
+                <li>Firebase Cloud Firestore encryption at rest</li>
+                <li>Industry-standard security practices and firewalls</li>
+                <li>Regular security audits and penetration testing</li>
+                <li>No sensitive data (passwords, credit cards) stored in the App</li>
+            </ul>
+
+            <h3>3.3 Password Security</h3>
+            <p>Your password is encrypted by Firebase Authentication and never visible to ResetDopa servers. If you forget your password, use the password reset feature to set a new one.</p>
+
+            <h2>4. Data Retention & Deletion</h2>
+
+            <h3>4.1 Data Retention</h3>
+            <p>We retain your data as long as your account is active. This includes:</p>
+            <ul>
+                <li>Your profile information and authentication data</li>
+                <li>Task completions and streak history</li>
+                <li>Mood and urge logs</li>
+                <li>Badge and achievement data</li>
+            </ul>
+
+            <h3>4.2 Account Deletion</h3>
+            <p>You may request deletion of your account at any time through the Settings screen. Upon deletion:</p>
+            <ul>
+                <li>All personal data is permanently deleted within 30 days</li>
+                <li>You will lose access to your progress and statistics</li>
+                <li>You can create a new account and start fresh</li>
+                <li>Deletion is irreversible</li>
+            </ul>
+
+            <h3>4.3 Legal Holds</h3>
+            <p>If we receive a legal request to preserve data, we may retain information longer than our normal retention period to comply with legal obligations.</p>
+
+            <h2>5. Third-Party Services</h2>
+
+            <h3>5.1 Firebase (Google)</h3>
+            <ul>
+                <li><strong>What We Share</strong>: Email, authentication data, app usage statistics</li>
+                <li><strong>Privacy Link</strong>: <a href="https://policies.google.com/privacy" target="_blank">Google Privacy Policy</a></li>
+            </ul>
+
+            <h3>5.2 Expo (Hosting)</h3>
+            <ul>
+                <li><strong>What We Share</strong>: Build and deployment data only</li>
+                <li><strong>Privacy Link</strong>: <a href="https://expo.dev/privacy" target="_blank">Expo Privacy Policy</a></li>
+            </ul>
+
+            <h3>5.3 GitHub Pages (Documentation Hosting)</h3>
+            <ul>
+                <li><strong>What We Share</strong>: Only if you visit our documentation sites</li>
+                <li><strong>Privacy Link</strong>: <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement" target="_blank">GitHub Privacy Statement</a></li>
+            </ul>
+
+            <h2>6. Children's Privacy</h2>
+            <p>ResetDopa is not intended for children under 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected information from a child under 13, we will take steps to delete such information and terminate the child's account.</p>
+
+            <h2>7. Your Privacy Rights</h2>
+
+            <h3>7.1 Access Your Data</h3>
+            <p>You can access all your personal data in the App or by requesting an export.</p>
+
+            <h3>7.2 Correct Your Data</h3>
+            <p>You can update your profile information directly in the App Settings.</p>
+
+            <h3>7.3 Delete Your Data</h3>
+            <p>You can request account deletion through Settings. All data will be permanently removed within 30 days.</p>
+
+            <h3>7.4 Opt-Out of Communications</h3>
+            <p>You can disable notifications and reminders in the Settings screen at any time.</p>
+
+            <h2>8. GDPR Compliance (European Users)</h2>
+            <p>If you are located in the European Union, you have additional rights under the General Data Protection Regulation (GDPR), including:</p>
+            <ul>
+                <li>Right to access your personal data</li>
+                <li>Right to correct inaccurate data</li>
+                <li>Right to delete your data ("Right to be Forgotten")</li>
+                <li>Right to restrict processing</li>
+                <li>Right to data portability</li>
+                <li>Right to object to processing</li>
+                <li>Right to lodge a complaint with your local data protection authority</li>
+            </ul>
+
+            <h2>9. California Consumer Privacy Act (CCPA)</h2>
+            <p>If you are a California resident, you have the right to:</p>
+            <ul>
+                <li>Know what personal information is collected</li>
+                <li>Know whether your personal information is sold or disclosed</li>
+                <li>Say no to the sale or sharing of your personal information</li>
+                <li>Access your personal information</li>
+                <li>Request deletion of your personal information</li>
+            </ul>
+            <p>ResetDopa does NOT sell your personal information to third parties.</p>
+
+            <h2>10. Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. When we do, we will notify you by email or by posting a notice in the App. Your continued use of the App following the posting of changes means you accept those changes.</p>
+
+            <h2>11. Contact Us</h2>
+            <p>If you have questions about this Privacy Policy or our privacy practices, please contact us at:</p>
+            <ul>
+                <li>Email: <a href="mailto:privacy@resetdopa.com">privacy@resetdopa.com</a></li>
+                <li>Website: <a href="https://resetdopa.com">resetdopa.com</a></li>
+                <li>Address: (Include your company address)</li>
+            </ul>
+
+            <div class="highlight">
+                <p><strong>Data Protection Officer (GDPR)</strong></p>
+                <p>If you have privacy concerns, you can contact our Data Protection Officer or your local data protection authority.</p>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 ResetDopa. All rights reserved.</p>
+            <p><a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms of Service</a></p>
+        </footer>
+    </div>
+</body>
+</html>
