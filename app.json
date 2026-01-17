@@ -49,7 +49,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font",
       [
         "expo-notifications",
         {
@@ -57,18 +56,17 @@
           "color": "#4A90E2",
           "sounds": []
         }
-      ],
-      "expo-web-browser"
+      ]
     ],
     "extra": {
       "privacyPolicyUrl": "https://p18khr.github.io/dopareset-legal/privacy.md",
       "termsUrl": "https://p18khr.github.io/dopareset-legal/terms.md",
       "eas": {
-        "projectId": "2607ba58-f3f0-45c7-a15c-8a92e06721c3"
+        "projectId": "3d16a9fe-e98b-41c0-bc63-5ef74f3cf676"
       }
     },
     "runtimeVersion": "1.0.0",
     "scheme": "com.dopareset.app",
-    "owner": "p18khr12"
+    "owner": "p18kh123"
   }
 }
