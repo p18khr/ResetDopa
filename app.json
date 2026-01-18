@@ -32,7 +32,7 @@
     },
     "android": {
       "package": "com.dopareset.app",
-      "versionCode": 3,
+      "versionCode": 5,
       "targetSdkVersion": 35,
       "compileSdkVersion": 35,
       "jsEngine": "jsc",
