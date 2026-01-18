@@ -13,10 +13,7 @@
     },
     "production": {
       "autoIncrement": true,
-      "node": "20.19.4",
-      "env": {
-        "ORG_GRADLE_PROJECT_android_gradlePluginVersion": "8.1.1"
-      }
+      "node": "20.19.4"
     },
     "apk": {
       "distribution": "internal"
