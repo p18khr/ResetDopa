@@ -282,10 +282,12 @@ export default function Settings({ navigation }) {
             </View>
           </View>
           
-          <TouchableOpacity style={[styles.testButton, { backgroundColor: '#fff', borderColor: '#6366F1' }]} onPress={testNotification}>
-            <Ionicons name="notifications" size={20} color="#6366F1" />
-            <Text style={[styles.testButtonText, { color: '#6366F1' }]}>Send Test Notification</Text>
-          </TouchableOpacity>
+          {__DEV__ && (
+            <TouchableOpacity style={[styles.testButton, { backgroundColor: '#fff', borderColor: '#6366F1' }]} onPress={testNotification}>
+              <Ionicons name="notifications" size={20} color="#6366F1" />
+              <Text style={[styles.testButtonText, { color: '#6366F1' }]}>Send Test Notification</Text>
+            </TouchableOpacity>
+          )}
 
           <View style={[styles.card, { marginTop: 12 }]}>
             <View style={styles.settingRow}>
