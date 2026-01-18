@@ -18,7 +18,9 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Authentication with React Native persistence
 const auth = getAuth(app);
-setPersistence(auth, reactNativeLocalPersistence).catch(() => {});
+setPersistence(auth, reactNativeLocalPersistence).catch((err) => {
+  if (__DEV__) console.warn('Firebase persistence error:', err);
+});
 
 export { auth };
 

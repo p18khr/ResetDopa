@@ -53,7 +53,7 @@ export default function Login({ navigation }) {
       await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       // Navigation handled by App.js based on auth state
     } catch (error) {
-      if (__DEV__) console.error('Login error:', error?.code, error?.message);
+      console.error('❌ Login error:', error?.code, error?.message);
       let message = 'Login failed. Please try again.';
       if (error.code === 'auth/invalid-email') {
         message = 'Invalid email address format';
