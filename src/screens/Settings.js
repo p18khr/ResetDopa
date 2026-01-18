@@ -8,6 +8,9 @@ import { AppContext } from '../context/AppContext';
 import { Ionicons } from '@expo/vector-icons';
 import TestingControls from '../components/TestingControls';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Super user email - has access to testing controls in production
+const SUPER_USER_EMAIL = 'prakharpps.18@gmail.com';
 import { registerForPushNotifications, scheduleDailyReminder, cancelAllNotifications, scheduleMilestoneNotification, scheduleDailyMoodPrompt, isExpoGo } from '../utils/notifications';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
@@ -403,10 +406,10 @@ export default function Settings({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Testing Section - DEV ONLY */}
-        {__DEV__ && (
+        {/* Testing Section - DEV ONLY or SUPER USER */}
+        {(__DEV__ || user?.email === SUPER_USER_EMAIL) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Testing</Text>
+            <Text style={styles.sectionTitle}>Testing {user?.email === SUPER_USER_EMAIL && '(Super User)'}</Text>
             <TestingControls navigation={navigation} />
           </View>
         )}

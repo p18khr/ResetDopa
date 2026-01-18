@@ -7,6 +7,8 @@ import { AppContext } from '../context/AppContext';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
+const SUPER_USER_EMAIL = 'prakharpps.18@gmail.com';
+
 export default function TestingControls({ navigation }) {
   const { getCurrentDay, advanceProgramDay, initializeBeginnerState, startDate, getGraceStatus, user, hasAcceptedTerms } = useContext(AppContext);
   const [showGraceDebug, setShowGraceDebug] = useState(false);
@@ -87,6 +89,48 @@ export default function TestingControls({ navigation }) {
     }
   };
 
+  const onResetNewUser = async () => {
+    Alert.alert(
+      'Reset to New User',
+      'This will simulate a fresh install. You will see the full onboarding flow again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.multiRemove([
+                'guideSeen_v2',
+                'guideNeedMarkOne',
+                'guideShowExplore',
+                'seen_intro_program',
+                'seen_intro_urges',
+                'seen_intro_stats',
+                'program_intro_pending',
+                'beginnerLaunch_v1',
+              ]);
+              if (user) {
+                await updateDoc(doc(db, 'users', user.uid), {
+                  hasAcceptedTerms: false,
+                  week1SetupDone: false,
+                  week1Anchors: [],
+                });
+              }
+              Alert.alert(
+                'Reset Complete',
+                'App reset to new user state. Please restart the app to see the full onboarding flow.',
+                [{ text: 'OK' }]
+              );
+            } catch (error) {
+              Alert.alert('Error', `Failed to reset: ${error?.message}`);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>Testing</Text>
@@ -122,6 +166,14 @@ export default function TestingControls({ navigation }) {
           <Text style={[styles.buttonText, { color: hasAcceptedTerms ? "#10B981" : "#EF4444" }]}>
             {hasAcceptedTerms ? 'Terms: ✓' : 'Terms: ✗'}
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.button, { borderColor: '#F59E0B', backgroundColor: '#FFFBEB' }]} 
+          onPress={onResetNewUser}
+        >
+          <Ionicons name="refresh-outline" size={20} color="#F59E0B" />
+          <Text style={[styles.buttonText, { color: '#F59E0B' }]}>Reset New User</Text>
         </TouchableOpacity>
 
         {graceStatus && (
