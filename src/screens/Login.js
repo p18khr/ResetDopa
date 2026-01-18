@@ -55,6 +55,11 @@ export default function Login({ navigation }) {
     } catch (error) {
       console.error('❌ Login error:', error?.code, error?.message);
       let message = 'Login failed. Please try again.';
+      
+      // Show actual error code for debugging
+      const errorCode = error?.code || 'UNKNOWN';
+      const debugInfo = __DEV__ ? `\n\nError Code: ${errorCode}\n${error?.message || 'No message'}` : '';
+      
       if (error.code === 'auth/invalid-email') {
         message = 'Invalid email address format';
       } else if (error.code === 'auth/user-not-found') {
@@ -70,7 +75,7 @@ export default function Login({ navigation }) {
       } else if (error.code === 'auth/user-disabled') {
         message = 'This account has been disabled. Please contact support.';
       }
-      Alert.alert('Login Failed', message);
+      Alert.alert('Login Failed', message + debugInfo);
     } finally {
       setLoading(false);
     }
