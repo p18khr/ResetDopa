@@ -32,9 +32,10 @@
     },
     "android": {
       "package": "com.dopareset.app",
-      "versionCode": 5,
-      "targetSdkVersion": 35,
-      "compileSdkVersion": 35,
+      "versionCode": 6,
+      "minSdkVersion": 21,
+      "targetSdk": 35,
+      "compileSdk": 35,
       "jsEngine": "jsc",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
