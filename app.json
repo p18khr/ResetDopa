@@ -34,6 +34,7 @@
       "package": "com.dopareset.app",
       "versionCode": 3,
       "targetSdkVersion": 35,
+      "compileSdkVersion": 35,
       "jsEngine": "jsc",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
