@@ -33,6 +33,8 @@
     "android": {
       "package": "com.dopareset.app",
       "versionCode": 6,
+      "targetSdkVersion": 34,
+      "compileSdkVersion": 34,
       "jsEngine": "jsc",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -49,16 +51,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35,
-            "buildToolsVersion": "35.0.0"
-          }
-        }
-      ],
       [
         "expo-notifications",
         {
