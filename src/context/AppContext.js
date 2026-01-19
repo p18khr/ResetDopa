@@ -1235,7 +1235,7 @@ export function AppProvider({ children }) {
         ? { day: dayNumber, type: 'advance', message: msg }
         : null;
       setRolloverBannerInfo(bannerInfo);
-      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo });
+      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo, lastRolloverPrevDayEvaluated: dayNumber - 1 });
       return;
     }
 
@@ -1253,7 +1253,7 @@ export function AppProvider({ children }) {
         ? { day: dayNumber, type: 'advance', message: msg }
         : null;
       setRolloverBannerInfo(bannerInfo);
-      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo });
+      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo, lastRolloverPrevDayEvaluated: dayNumber - 1 });
       return;
     }    // Below threshold - guidance only (no grace during day)
     if (adherence >= 0.3 && adherence < threshold) {
@@ -1394,10 +1394,20 @@ export function AppProvider({ children }) {
       if (dayNumber <= 1) return;
       const prevDay = dayNumber - 1;
       
+      // CRITICAL GUARD: If TODAY was already evaluated for streak, skip rollover
+      // This prevents streak from incrementing again on app restart same-day
+      if (streakEvaluatedForDay === dayNumber) {
+        if (typeof lastRolloverPrevDayEvaluated !== 'number' || lastRolloverPrevDayEvaluated < prevDay) {
+          setLastRolloverPrevDayEvaluated(prevDay);
+          saveUserData({ lastRolloverPrevDayEvaluated: prevDay });
+        }
+        return;
+      }
+      
       // Skip if already evaluated yesterday for rollover
       if (lastRolloverPrevDayEvaluated === prevDay) return;
 
-      // ATOMIC LOCK: Skip all streak logic if this day was already evaluated same-day
+      // ATOMIC LOCK: Skip all streak logic if YESTERDAY was already evaluated same-day
       // This prevents grace from running on days that already had threshold evaluation
       if (streakEvaluatedForDay === prevDay) {
         setLastRolloverPrevDayEvaluated(prevDay);
@@ -1437,7 +1447,7 @@ export function AppProvider({ children }) {
           ? { day: prevDay, type: 'hold', message: `Day ${prevDay} counted — streak holding strong!` }
           : null;
         setRolloverBannerInfo(bannerInfo);
-        saveUserData({ lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
+        saveUserData({ lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo, streakEvaluatedForDay: prevDay });
         return;
       }
 
