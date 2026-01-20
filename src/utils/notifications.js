@@ -63,7 +63,16 @@ export async function ensureNotificationPermissions() {
 
 // Schedule daily reminder notification
 export async function scheduleDailyReminder(hour = 9, minute = 0) {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  // Check if a daily reminder is already scheduled to prevent duplicates
+  const existing = await Notifications.getAllScheduledNotificationsAsync();
+  const reminderExists = existing.some(notif => 
+    notif.content?.title === "ResetDopa™ Daily Check-in"
+  );
+  
+  if (reminderExists) {
+    // Already scheduled, don't add another one
+    return true;
+  }
   
   const trigger = {
     hour: hour,
@@ -96,7 +105,17 @@ export async function scheduleDailyReminder(hour = 9, minute = 0) {
 
 // Schedule a daily mood prompt notification
 export async function scheduleDailyMoodPrompt(hour = 20, minute = 0) {
-  // Do not cancel all notifications here; allow coexistence with other schedules
+  // Check if this exact mood prompt is already scheduled to prevent duplicates
+  const existing = await Notifications.getAllScheduledNotificationsAsync();
+  const moodPromptExists = existing.some(notif => 
+    notif.content?.title === 'How are you feeling today? 😊'
+  );
+  
+  if (moodPromptExists) {
+    // Already scheduled, don't add another one
+    return true;
+  }
+
   const trigger = {
     hour,
     minute,
@@ -172,6 +191,10 @@ export async function scheduleMilestoneNotification(milestone) {
     calm_500: "🌟 500 Calm Points! You're doing great!",
   };
 
+  // Milestone notifications are immediate (trigger: null), so they fire right away
+  // No need to deduplicate as they're one-time events, not recurring
+  // However, we could add a cooldown if needed in the future
+  
   await Notifications.scheduleNotificationAsync({
     content: {
       title: "New Achievement Unlocked!",

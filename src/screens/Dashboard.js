@@ -222,6 +222,7 @@ export default function Dashboard({ navigation, route }) {
         const minute = minuteStr ? parseInt(minuteStr) : 0;
         if (moodOn) {
           await registerForPushNotifications();
+          // Only schedule if not already scheduled (deduplication handled in scheduleDailyMoodPrompt)
           await scheduleDailyMoodPrompt(hour, minute);
         }
       } catch (e) {
