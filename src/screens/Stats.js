@@ -257,7 +257,7 @@ export default function Stats({ navigation, route }) {
             <LawChip law={getLawForRoute(route?.name || 'Stats')} />
           </View>
         </View>
-        <Text style={styles.demoTag}>Demo Day: {typeof getCurrentDay === 'function' ? getCurrentDay() : '—'}</Text>
+        {/* Demo Day tag hidden for production */}
 
         {/* Urges Weekly Chart */}
         <View style={styles.chartSection}>

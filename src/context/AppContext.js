@@ -43,7 +43,6 @@ export function AppProvider({ children }) {
   const [adherenceWindowDays, setAdherenceWindowDays] = useState(3);
   const [completedWeeksWithFireworks, setCompletedWeeksWithFireworks] = useState([]); // Track which weeks have already fired fireworks
   const generatedDayTasksRef = React.useRef({});
-  const badgesClaimedAtLoadRef = React.useRef(new Set()); // Track badges already claimed at load time
   const [dailyQuote, setDailyQuote] = useState(null);
   const [dailyQuoteSource, setDailyQuoteSource] = useState(null); // 'cloud' | 'local' | 'generated'
   const [devDayOffset, setDevDayOffset] = useState(0); // Demo: advance day without changing calendar
@@ -121,6 +120,7 @@ export function AppProvider({ children }) {
   // Atomic lock using Ref (synchronous, not state) to prevent double-increment
   // Survives across renders, guarantees no race conditions
   const streakEvaluatedForDayRefRef = React.useRef(0);
+  const lastRolloverPrevDayEvaluatedRefRef = React.useRef(0); // Prevents multiple rollover evaluations
   // Curated rotating daily quotes with tags
   const QUOTES = [
     { text: 'Small wins compound into big change.', author: 'Unknown', tag: 'small wins' },
@@ -315,14 +315,11 @@ export function AppProvider({ children }) {
     initDevOffset();
   }, []);
 
-  // Check and claim badges ONLY when metrics change, not on app load
-  // This prevents spamming notifications for badges that were already claimed in previous sessions
+  // Check and claim badges on app load and when metrics change
   useEffect(() => {
     if (!user || loading) return;
-    // Only check if we have badges data (loaded from Firestore)
-    if (badgesClaimedAtLoadRef.current.size === 0 && badges.length === 0) return;
     checkAndClaimBadges({ streakVal: streak, calmPointsVal: calmPoints, tasksVal: tasks, urgesVal: urges, completionsState: todayCompletions });
-  }, [streak, calmPoints, JSON.stringify(tasks), JSON.stringify(urges), JSON.stringify(todayCompletions), user, loading]);
+  }, [user, loading]);
 
   // Load user data from Firestore
   const loadUserData = async (uid) => {
@@ -336,18 +333,7 @@ export function AppProvider({ children }) {
         setTodayPicks(data.todayPicks || {});
         setTodayCompletions(data.todayCompletions || {});
         setTasks(data.tasks || []);
-        if (Array.isArray(data.badges)) {
-          setBadges(data.badges);
-          // Track which badges were already claimed at load - don't notify on these
-          const claimedAtLoad = new Set();
-          data.badges.forEach(b => {
-            if (b.got) claimedAtLoad.add(b.id);
-          });
-          badgesClaimedAtLoadRef.current = claimedAtLoad;
-        } else {
-          setBadges([]);
-          badgesClaimedAtLoadRef.current = new Set();
-        }
+        setBadges(data.badges || []);
         setStartDate(data.startDate || new Date().toISOString());
         setStartDateResets(typeof data.startDateResets === 'number' ? data.startDateResets : 0);
         setWeek1SetupDone(!!data.week1SetupDone);
@@ -362,7 +348,11 @@ export function AppProvider({ children }) {
           streakEvaluatedForDayRefRef.current = data.streakEvaluatedForDay;
         }
         if (typeof data.lastStreakMessage === 'string') setLastStreakMessage(data.lastStreakMessage);
-        if (typeof data.lastRolloverPrevDayEvaluated === 'number') setLastRolloverPrevDayEvaluated(data.lastRolloverPrevDayEvaluated);
+        if (typeof data.lastRolloverPrevDayEvaluated === 'number') {
+          setLastRolloverPrevDayEvaluated(data.lastRolloverPrevDayEvaluated);
+          // SYNC ROLLOVER REF: Prevent multiple rollover triggers on app reopen
+          lastRolloverPrevDayEvaluatedRefRef.current = data.lastRolloverPrevDayEvaluated;
+        }
         if (typeof data.rolloverBannerDismissedDay === 'number') setRolloverBannerDismissedDay(data.rolloverBannerDismissedDay);
         if (data.rolloverBannerInfo && typeof data.rolloverBannerInfo === 'object') {
           const dismissedDay = typeof data.rolloverBannerDismissedDay === 'number' ? data.rolloverBannerDismissedDay : 0;
@@ -1068,26 +1058,13 @@ export function AppProvider({ children }) {
       if (wasLocked) {
         unlockedTitle = updated[idx]?.title || null;
         unlockedMessage = badgeMessages[badgeId] || null;
-        // Only notify if this badge wasn't already claimed at app load
-        // This prevents re-notifying on app restart for pre-existing badges
-        if (badgesClaimedAtLoadRef.current && !badgesClaimedAtLoadRef.current.has(badgeId)) {
-          // Remove from the tracking set so we don't skip it again
-          badgesClaimedAtLoadRef.current.delete(badgeId);
-        } else if (badgesClaimedAtLoadRef.current && badgesClaimedAtLoadRef.current.has(badgeId)) {
-          // This badge was already claimed at load, skip notification
-          unlockedTitle = null;
-          unlockedMessage = null;
-        }
       }
     } else {
       // If badge not present, append with inferred title
       const title = badgeId === 'identity_set' ? 'Identity Set' : 'Badge';
       newBadges = [...badges, { id: badgeId, title, got: true }];
-      // Only notify new badges not loaded from previous session
-      if (!badgesClaimedAtLoadRef.current || !badgesClaimedAtLoadRef.current.has(badgeId)) {
-        unlockedTitle = title;
-        unlockedMessage = badgeMessages[badgeId] || null;
-      }
+      unlockedTitle = title;
+      unlockedMessage = badgeMessages[badgeId] || null;
     }
     setBadges(newBadges);
     saveUserData({ badges: newBadges });
@@ -1241,6 +1218,15 @@ export function AppProvider({ children }) {
       return;
     }
 
+    // ADDITIONAL SAFETY: Also check state (in case app was restarted and state hasn't synced yet)
+    // If streakEvaluatedForDay from Firestore equals current dayNumber, skip
+    if (streakEvaluatedForDay === dayNumber && streakEvaluatedForDay > 0) {
+      // Sync the Ref in case it got out of sync on startup
+      streakEvaluatedForDayRefRef.current = dayNumber;
+      setLastStreakMessage('Threshold already counted today — keep momentum going.');
+      return;
+    }
+
     const picks = ensurePicksForDay(dayNumber);
     const assignedCount = picks.length > 0 ? picks.length : (dayNumber <= 7 ? 5 : 6);
     const doneMap = completionsState[dayNumber] || {};
@@ -1263,7 +1249,7 @@ export function AppProvider({ children }) {
         ? { day: dayNumber, type: 'advance', message: msg }
         : null;
       setRolloverBannerInfo(bannerInfo);
-      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo, lastRolloverPrevDayEvaluated: dayNumber - 1 });
+      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo });
       return;
     }
 
@@ -1281,7 +1267,7 @@ export function AppProvider({ children }) {
         ? { day: dayNumber, type: 'advance', message: msg }
         : null;
       setRolloverBannerInfo(bannerInfo);
-      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo, lastRolloverPrevDayEvaluated: dayNumber - 1 });
+      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo });
       return;
     }    // Below threshold - guidance only (no grace during day)
     if (adherence >= 0.3 && adherence < threshold) {
@@ -1422,22 +1408,21 @@ export function AppProvider({ children }) {
       if (dayNumber <= 1) return;
       const prevDay = dayNumber - 1;
       
-      // CRITICAL GUARD: If TODAY was already evaluated for streak, skip rollover
-      // This prevents streak from incrementing again on app restart same-day
-      if (streakEvaluatedForDay === dayNumber) {
-        if (typeof lastRolloverPrevDayEvaluated !== 'number' || lastRolloverPrevDayEvaluated < prevDay) {
-          setLastRolloverPrevDayEvaluated(prevDay);
-          saveUserData({ lastRolloverPrevDayEvaluated: prevDay });
-        }
+      // ATOMIC LOCK: Use Ref (synchronous) to prevent multiple rollover evaluations
+      // This stops the bug where app reopens on same day and re-evaluates yesterday
+      if (lastRolloverPrevDayEvaluatedRefRef.current === prevDay) return;
+      
+      // Skip if already evaluated yesterday for rollover (state fallback)
+      if (lastRolloverPrevDayEvaluated === prevDay) {
+        // Sync Ref in case it got out of sync
+        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         return;
       }
-      
-      // Skip if already evaluated yesterday for rollover
-      if (lastRolloverPrevDayEvaluated === prevDay) return;
 
-      // ATOMIC LOCK: Skip all streak logic if YESTERDAY was already evaluated same-day
+      // ATOMIC LOCK: Skip all streak logic if this day was already evaluated same-day
       // This prevents grace from running on days that already had threshold evaluation
       if (streakEvaluatedForDay === prevDay) {
+        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
         const bannerInfo = rolloverBannerDismissedDay !== prevDay 
           ? { day: prevDay, type: 'hold', message: `Day ${prevDay} evaluated — no overnight changes.` }
@@ -1470,12 +1455,13 @@ export function AppProvider({ children }) {
       // If prev day already counted same-day, it's already locked in (unmarking disabled)
       // Adherence can't drop below threshold after counting, so just acknowledge and continue
       if (lastStreakDayCounted === prevDay) {
+        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
         const bannerInfo = rolloverBannerDismissedDay !== prevDay 
           ? { day: prevDay, type: 'hold', message: `Day ${prevDay} counted — streak holding strong!` }
           : null;
         setRolloverBannerInfo(bannerInfo);
-        saveUserData({ lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo, streakEvaluatedForDay: prevDay });
+        saveUserData({ lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
         return;
       }
 
@@ -1486,6 +1472,7 @@ export function AppProvider({ children }) {
         setLastStreakDayCounted(prevDay);
         const msg = 'Streak advanced overnight — strong start! Keep locking anchors.';
         setLastStreakMessage(msg);
+        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
         const bannerInfo = rolloverBannerDismissedDay !== prevDay 
           ? { day: prevDay, type: 'advance', message: msg }
@@ -1501,6 +1488,7 @@ export function AppProvider({ children }) {
         updateStreak(newStreakVal);
         setLastStreakDayCounted(prevDay);
         setLastStreakMessage('Streak advanced overnight — great consistency!');
+        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
         const bannerInfo = rolloverBannerDismissedDay !== prevDay 
           ? { day: prevDay, type: 'advance', message: 'Streak advanced overnight — great consistency!' }
@@ -1523,6 +1511,7 @@ export function AppProvider({ children }) {
           const tasksNeeded = Math.ceil(thresholdPrev * assignedCount);
           const msg = `Grace applied for Day ${prevDay}. You completed ${donePrev}/${assignedCount} tasks (needed ${tasksNeeded}). Streak advanced to ${newStreakVal} via grace. One grace per week — make today count!`;
           setLastStreakMessage(msg);
+          lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
           setLastRolloverPrevDayEvaluated(prevDay);
           const bannerInfo = rolloverBannerDismissedDay !== prevDay 
             ? { day: prevDay, type: 'grace', message: msg }
@@ -1533,6 +1522,7 @@ export function AppProvider({ children }) {
           if (!silent) Alert.alert('Grace Day ⚖️', msg);
           return;
         } else if (graceUsedYesterday) {
+          lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
           setLastRolloverPrevDayEvaluated(prevDay);
           saveUserData({ lastRolloverPrevDayEvaluated: prevDay });
           return; // Already grace-protected
@@ -1540,6 +1530,7 @@ export function AppProvider({ children }) {
           // Grace unavailable - used recently within 7-day window
           const msg = `Day ${prevDay}: ${donePrev}/${assignedCount} tasks (${Math.round(adherencePrev*100)}%). Grace unavailable (used recently). Streak holding at ${streak}.`;
           setLastStreakMessage(msg);
+          lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
           setLastRolloverPrevDayEvaluated(prevDay);
           const bannerInfo = rolloverBannerDismissedDay !== prevDay 
             ? { day: prevDay, type: 'hold', message: msg }
@@ -1556,6 +1547,7 @@ export function AppProvider({ children }) {
           updateStreak(0);
           const msg = `Streak reset. Day ${prevDay}: ${donePrev}/${assignedCount} tasks completed. Start fresh today with small wins.`;
           setLastStreakMessage(msg);
+          lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
           setLastRolloverPrevDayEvaluated(prevDay);
           const bannerInfo = rolloverBannerDismissedDay !== prevDay 
             ? { day: prevDay, type: 'reset', message: msg }
@@ -1564,6 +1556,7 @@ export function AppProvider({ children }) {
           saveUserData({ streak: 0, lastStreakMessage: msg, lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
           if (!silent) Alert.alert('Streak Reset', msg);
         } else {
+          lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
           setLastRolloverPrevDayEvaluated(prevDay);
           saveUserData({ lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: null });
         }
@@ -1576,6 +1569,7 @@ export function AppProvider({ children }) {
         updateStreak(newStreakVal);
         const msg = 'Streak dipped by 1 — rebuild momentum today.';
         setLastStreakMessage(msg);
+        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
         const bannerInfo = rolloverBannerDismissedDay !== prevDay 
           ? { day: prevDay, type: 'hold', message: msg }
@@ -1585,6 +1579,7 @@ export function AppProvider({ children }) {
       } else {
         const msg = 'Yesterday fell short — lock anchors early today to rebuild.';
         setLastStreakMessage(msg);
+        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
         const bannerInfo = rolloverBannerDismissedDay !== prevDay 
           ? { day: prevDay, type: 'hold', message: msg }
@@ -1594,9 +1589,11 @@ export function AppProvider({ children }) {
       }
   };
   // Day rollover effect: evaluate prior day once per day
+  // Only trigger on day change, NOT on every data reload
+  // The Ref lock in applyRolloverOnce prevents duplicate evaluations
   useEffect(() => {
     applyRolloverOnce({ silent: false });
-  }, [observedDayKey, JSON.stringify(todayCompletions), JSON.stringify(todayPicks), startDate]);
+  }, [observedDayKey, startDate]);
 
   const dismissRolloverBanner = () => {
     try {
