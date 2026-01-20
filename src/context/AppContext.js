@@ -43,6 +43,7 @@ export function AppProvider({ children }) {
   const [adherenceWindowDays, setAdherenceWindowDays] = useState(3);
   const [completedWeeksWithFireworks, setCompletedWeeksWithFireworks] = useState([]); // Track which weeks have already fired fireworks
   const generatedDayTasksRef = React.useRef({});
+  const badgesClaimedAtLoadRef = React.useRef(new Set()); // Track badges already claimed at load time
   const [dailyQuote, setDailyQuote] = useState(null);
   const [dailyQuoteSource, setDailyQuoteSource] = useState(null); // 'cloud' | 'local' | 'generated'
   const [devDayOffset, setDevDayOffset] = useState(0); // Demo: advance day without changing calendar
@@ -314,11 +315,14 @@ export function AppProvider({ children }) {
     initDevOffset();
   }, []);
 
-  // Check and claim badges on app load and when metrics change
+  // Check and claim badges ONLY when metrics change, not on app load
+  // This prevents spamming notifications for badges that were already claimed in previous sessions
   useEffect(() => {
     if (!user || loading) return;
+    // Only check if we have badges data (loaded from Firestore)
+    if (badgesClaimedAtLoadRef.current.size === 0 && badges.length === 0) return;
     checkAndClaimBadges({ streakVal: streak, calmPointsVal: calmPoints, tasksVal: tasks, urgesVal: urges, completionsState: todayCompletions });
-  }, [user, loading]);
+  }, [streak, calmPoints, JSON.stringify(tasks), JSON.stringify(urges), JSON.stringify(todayCompletions), user, loading]);
 
   // Load user data from Firestore
   const loadUserData = async (uid) => {
@@ -332,7 +336,18 @@ export function AppProvider({ children }) {
         setTodayPicks(data.todayPicks || {});
         setTodayCompletions(data.todayCompletions || {});
         setTasks(data.tasks || []);
-        setBadges(data.badges || []);
+        if (Array.isArray(data.badges)) {
+          setBadges(data.badges);
+          // Track which badges were already claimed at load - don't notify on these
+          const claimedAtLoad = new Set();
+          data.badges.forEach(b => {
+            if (b.got) claimedAtLoad.add(b.id);
+          });
+          badgesClaimedAtLoadRef.current = claimedAtLoad;
+        } else {
+          setBadges([]);
+          badgesClaimedAtLoadRef.current = new Set();
+        }
         setStartDate(data.startDate || new Date().toISOString());
         setStartDateResets(typeof data.startDateResets === 'number' ? data.startDateResets : 0);
         setWeek1SetupDone(!!data.week1SetupDone);
@@ -1053,13 +1068,26 @@ export function AppProvider({ children }) {
       if (wasLocked) {
         unlockedTitle = updated[idx]?.title || null;
         unlockedMessage = badgeMessages[badgeId] || null;
+        // Only notify if this badge wasn't already claimed at app load
+        // This prevents re-notifying on app restart for pre-existing badges
+        if (badgesClaimedAtLoadRef.current && !badgesClaimedAtLoadRef.current.has(badgeId)) {
+          // Remove from the tracking set so we don't skip it again
+          badgesClaimedAtLoadRef.current.delete(badgeId);
+        } else if (badgesClaimedAtLoadRef.current && badgesClaimedAtLoadRef.current.has(badgeId)) {
+          // This badge was already claimed at load, skip notification
+          unlockedTitle = null;
+          unlockedMessage = null;
+        }
       }
     } else {
       // If badge not present, append with inferred title
       const title = badgeId === 'identity_set' ? 'Identity Set' : 'Badge';
       newBadges = [...badges, { id: badgeId, title, got: true }];
-      unlockedTitle = title;
-      unlockedMessage = badgeMessages[badgeId] || null;
+      // Only notify new badges not loaded from previous session
+      if (!badgesClaimedAtLoadRef.current || !badgesClaimedAtLoadRef.current.has(badgeId)) {
+        unlockedTitle = title;
+        unlockedMessage = badgeMessages[badgeId] || null;
+      }
     }
     setBadges(newBadges);
     saveUserData({ badges: newBadges });
