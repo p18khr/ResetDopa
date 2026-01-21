@@ -14,10 +14,12 @@
     "production": {
       "autoIncrement": false,
       "node": "20.19.4",
-      "distribution": "store"
+      "distribution": "store",
+      "channel": "production"
     },
     "apk": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "node": "20.19.4"
     }
   },
   "submit": {

@@ -66,13 +66,26 @@
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "minSdkVersion": 21,
-            "buildToolsVersion": "35.0.0"
+            "buildToolsVersion": "35.0.0",
+            "kotlinVersion": "1.9.10",
+            "gradleVersion": "8.10",
+            "gradleProperties": [
+              "android.useAndroidX=true",
+              "android.enableJetifier=true",
+              "org.gradle.jvmargs=-Xmx4096m",
+              "org.gradle.parallel=true",
+              "android.compileSdkVersion=35",
+              "android.targetSdkVersion=35"
+            ]
           },
           "ios": {
             "deploymentTarget": "13.4"
           }
         }
-      ]
+      ],
+      "expo-font",
+      "expo-asset",
+      "expo-web-browser"
     ],
     "extra": {
       "privacyPolicyUrl": "https://resetdopa.com/privacy.html",
@@ -83,6 +96,6 @@
     },
     "runtimeVersion": "1.0.0",
     "scheme": "com.dopareset.app",
-    "owner": "p18khr1234"
+    "owner": "p18khr12"
   }
 }
