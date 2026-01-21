@@ -82,10 +82,7 @@
             "deploymentTarget": "13.4"
           }
         }
-      ],
-      "expo-font",
-      "expo-asset",
-      "expo-web-browser"
+      ]
     ],
     "extra": {
       "privacyPolicyUrl": "https://resetdopa.com/privacy.html",
