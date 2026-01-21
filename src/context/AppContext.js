@@ -1408,6 +1408,14 @@ export function AppProvider({ children }) {
       if (dayNumber <= 1) return;
       const prevDay = dayNumber - 1;
       
+      // EARLY GUARD: If today has already been evaluated for threshold during the day,
+      // don't attempt any overnight evaluation logic on yesterday
+      // This prevents streak bumps when app reopens on the same day
+      if (streakEvaluatedForDay === dayNumber) {
+        if (__DEV__) console.log(`[Rollover Guard] Day ${dayNumber} already evaluated same-day (streakEvaluatedForDay=${streakEvaluatedForDay}). Skipping rollover logic.`);
+        return;
+      }
+      
       // ATOMIC LOCK: Use Ref (synchronous) to prevent multiple rollover evaluations
       // This stops the bug where app reopens on same day and re-evaluates yesterday
       if (lastRolloverPrevDayEvaluatedRefRef.current === prevDay) return;
@@ -1422,6 +1430,7 @@ export function AppProvider({ children }) {
       // ATOMIC LOCK: Skip all streak logic if this day was already evaluated same-day
       // This prevents grace from running on days that already had threshold evaluation
       if (streakEvaluatedForDay === prevDay) {
+        streakEvaluatedForDayRefRef.current = prevDay;
         lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
         const bannerInfo = rolloverBannerDismissedDay !== prevDay 
@@ -1591,9 +1600,10 @@ export function AppProvider({ children }) {
   // Day rollover effect: evaluate prior day once per day
   // Only trigger on day change, NOT on every data reload
   // The Ref lock in applyRolloverOnce prevents duplicate evaluations
+  // Queue to prevent race conditions with evaluateStreakProgress
   useEffect(() => {
-    applyRolloverOnce({ silent: false });
-  }, [observedDayKey, startDate]);
+    queueEvaluation(() => applyRolloverOnce({ silent: false }));
+  }, [observedDayKey, startDate, streakEvaluatedForDay]);
 
   const dismissRolloverBanner = () => {
     try {
