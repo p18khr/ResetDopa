@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "description": "Your companion for dopamine detox and habit building. Track urges, complete daily tasks, and build lasting streaks.",
     "primaryColor": "#4A90E2",
-    "jsEngine": "jsc",
+    "jsEngine": "hermes",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -32,10 +32,10 @@
     },
     "android": {
       "package": "com.dopareset.app",
-      "versionCode": 7,
-      "targetSdkVersion": 34,
-      "compileSdkVersion": 34,
-      "jsEngine": "jsc",
+      "versionCode": 8,
+      "targetSdkVersion": 35,
+      "compileSdkVersion": 35,
+      "jsEngine": "hermes",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4A90E2"
@@ -58,17 +58,34 @@
           "color": "#4A90E2",
           "sounds": []
         }
-      ]
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 21,
+            "buildToolsVersion": "35.0.0"
+          },
+          "ios": {
+            "deploymentTarget": "13.4"
+          }
+        }
+      ],
+      "expo-font",
+      "expo-asset",
+      "expo-web-browser"
     ],
     "extra": {
-      "privacyPolicyUrl": "https://p18khr.github.io/dopareset-legal/privacy.md",
-      "termsUrl": "https://p18khr.github.io/dopareset-legal/terms.md",
+      "privacyPolicyUrl": "https://resetdopa.com/privacy.html",
+      "termsUrl": "https://resetdopa.com/terms.html",
       "eas": {
-        "projectId": "21b8164e-fe5c-442f-b614-983f60df5e81"
+        "projectId": "2607ba58-f3f0-45c7-a15c-8a92e06721c3"
       }
     },
     "runtimeVersion": "1.0.0",
     "scheme": "com.dopareset.app",
-    "owner": "p18khr1234"
+    "owner": "p18khr12"
   }
 }
