@@ -1408,22 +1408,29 @@ export function AppProvider({ children }) {
       if (dayNumber <= 1) return;
       const prevDay = dayNumber - 1;
       
-      // EARLY GUARD: If today has already been evaluated for threshold during the day,
+      // EARLY GUARD 1: If today has already been evaluated for threshold during the day,
       // don't attempt any overnight evaluation logic on yesterday
-      // This prevents streak bumps when app reopens on the same day
+      // Check BOTH state (Firestore ground truth) and Ref (in-memory lock)
       if (streakEvaluatedForDay === dayNumber) {
-        if (__DEV__) console.log(`[Rollover Guard] Day ${dayNumber} already evaluated same-day (streakEvaluatedForDay=${streakEvaluatedForDay}). Skipping rollover logic.`);
+        if (__DEV__) console.log(`[Rollover Guard 1] Day ${dayNumber} already evaluated same-day (streakEvaluatedForDay=${streakEvaluatedForDay}). Skipping rollover logic.`);
+        streakEvaluatedForDayRefRef.current = dayNumber;
         return;
       }
       
       // ATOMIC LOCK: Use Ref (synchronous) to prevent multiple rollover evaluations
       // This stops the bug where app reopens on same day and re-evaluates yesterday
-      if (lastRolloverPrevDayEvaluatedRefRef.current === prevDay) return;
+      // CRITICAL: Check BOTH Ref and state to handle Firestore sync delays
+      if (lastRolloverPrevDayEvaluatedRefRef.current === prevDay) {
+        if (__DEV__) console.log(`[Rollover Guard 2] Ref lock active for prevDay ${prevDay}. Skipping.`);
+        return;
+      }
       
       // Skip if already evaluated yesterday for rollover (state fallback)
+      // This catches cases where Ref is out of sync after app restart
       if (lastRolloverPrevDayEvaluated === prevDay) {
         // Sync Ref in case it got out of sync
         lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
+        if (__DEV__) console.log(`[Rollover Guard 3] State already evaluated prevDay ${prevDay}. Syncing Ref and skipping.`);
         return;
       }
 
@@ -1438,6 +1445,7 @@ export function AppProvider({ children }) {
           : null;
         setRolloverBannerInfo(bannerInfo);
         saveUserData({ lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
+        if (__DEV__) console.log(`[Rollover Guard 4] prevDay ${prevDay} already evaluated same-day. Locking and returning.`);
         return;
       }
 
@@ -1447,6 +1455,22 @@ export function AppProvider({ children }) {
       const donePrev = Object.values(doneMapPrev).filter(Boolean).length;
       const adherencePrev = assignedCount === 0 ? 0 : donePrev / assignedCount;
       const thresholdPrev = getRampThreshold(prevDay);
+      
+      // CRITICAL GUARD: If no tasks completed, NEVER advance streak, ever
+      // This prevents the bug where streak auto-advances with 0% adherence
+      if (donePrev === 0) {
+        if (__DEV__) console.log(`[Rollover Guard 5] prevDay ${prevDay} has 0 tasks completed. No streak changes allowed.`);
+        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
+        setLastRolloverPrevDayEvaluated(prevDay);
+        const msg = `Day ${prevDay}: 0/${assignedCount} tasks completed. Streak on hold — restart today with small wins.`;
+        setLastStreakMessage(msg);
+        const bannerInfo = rolloverBannerDismissedDay !== prevDay 
+          ? { day: prevDay, type: 'hold', message: msg }
+          : null;
+        setRolloverBannerInfo(bannerInfo);
+        saveUserData({ lastRolloverPrevDayEvaluated: prevDay, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo });
+        return;
+      }
       
       // Grace tracking
       const gracePrevKey = `day_${prevDay}`;
@@ -1603,7 +1627,7 @@ export function AppProvider({ children }) {
   // Queue to prevent race conditions with evaluateStreakProgress
   useEffect(() => {
     queueEvaluation(() => applyRolloverOnce({ silent: false }));
-  }, [observedDayKey, startDate, streakEvaluatedForDay, lastRolloverPrevDayEvaluated]);
+  }, [observedDayKey, startDate, streakEvaluatedForDay]);
 
   const dismissRolloverBanner = () => {
     try {
