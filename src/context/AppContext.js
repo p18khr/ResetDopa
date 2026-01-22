@@ -1603,7 +1603,7 @@ export function AppProvider({ children }) {
   // Queue to prevent race conditions with evaluateStreakProgress
   useEffect(() => {
     queueEvaluation(() => applyRolloverOnce({ silent: false }));
-  }, [observedDayKey, startDate, streakEvaluatedForDay]);
+  }, [observedDayKey, startDate, streakEvaluatedForDay, lastRolloverPrevDayEvaluated]);
 
   const dismissRolloverBanner = () => {
     try {
