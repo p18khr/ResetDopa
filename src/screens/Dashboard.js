@@ -337,6 +337,9 @@ export default function Dashboard({ navigation, route }) {
   }
   // Include urge log bonus (+2 CP per urge logged today)
   todayPoints += todayUrges * 2;
+  
+  // Safeguard: ensure todayPoints is a valid number (fix rendering disappearance)
+  todayPoints = typeof todayPoints === 'number' && !isNaN(todayPoints) ? todayPoints : 0;
 
   // Streak trend: compare today's vs yesterday's actual streak value
   const todayStreakValue = streak;
