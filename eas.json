@@ -13,7 +13,7 @@
     },
     "production": {
       "autoIncrement": false,
-      "node": "20.19.4",
+      "node": "18.19.0",
       "distribution": "store",
       "channel": "production"
     },

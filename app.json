@@ -33,8 +33,6 @@
     "android": {
       "package": "com.dopareset.app",
       "versionCode": 8,
-      "targetSdkVersion": 35,
-      "compileSdkVersion": 35,
       "jsEngine": "hermes",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -67,8 +65,8 @@
             "targetSdkVersion": 35,
             "minSdkVersion": 21,
             "buildToolsVersion": "35.0.0",
-            "kotlinVersion": "1.9.10",
-            "gradleVersion": "8.10",
+            "kotlinVersion": "2.0.21",
+            "gradleVersion": "8.3",
             "gradleProperties": [
               "android.useAndroidX=true",
               "android.enableJetifier=true",
@@ -88,11 +86,11 @@
       "privacyPolicyUrl": "https://resetdopa.com/privacy.html",
       "termsUrl": "https://resetdopa.com/terms.html",
       "eas": {
-        "projectId": "21b8164e-fe5c-442f-b614-983f60df5e81"
+        "projectId": "811d92bf-6eda-4bb4-ab42-f8f4b2aec318"
       }
     },
     "runtimeVersion": "1.0.0",
     "scheme": "com.dopareset.app",
-    "owner": "p18khr1234"
+    "owner": "p18khr12345"
   }
 }
