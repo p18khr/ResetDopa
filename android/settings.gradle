@@ -4,13 +4,19 @@ pluginManagement {
   }.standardOutput.asText.get().trim()
   def (_, reactNativeMinor, reactNativePatch) = version.split("-")[0].tokenize('.').collect { it.toInteger() }
 
+  repositories {
+    gradlePluginPortal()
+    mavenCentral()
+  }
+
   includeBuild(new File(["node", "--print", "require.resolve('@react-native/gradle-plugin/package.json')"].execute(null, rootDir).text.trim()).getParentFile().toString())
   if(reactNativeMinor == 74 && reactNativePatch <= 3){
     includeBuild("react-settings-plugin")
   }
 }
 
-plugins { id("com.facebook.react.settings") }
+// Plugin applied via build.gradle classpath instead
+// plugins { id("com.facebook.react.settings") }
 
 def getRNMinorVersion() {
   def version = providers.exec {
