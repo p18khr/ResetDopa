@@ -132,6 +132,31 @@ function AppNavigator() {
 }
 
 function App() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadFonts() {
+      try {
+        // 3. Manually trigger the font loading for Ionicons
+        await Font.loadAsync(Ionicons.font);
+      } catch (e) {
+        console.warn("Font loading error:", e);
+      } finally {
+        setFontsLoaded(true);
+      }
+    }
+    loadFonts();
+  }, []);
+
+  // 4. Don't show the navigator until fonts are ready
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A90E2" />
+      </View>
+    );
+  }
+  
   return (
     <ErrorBoundary>
       <AppProvider>
