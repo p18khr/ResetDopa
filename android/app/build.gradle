@@ -87,6 +87,12 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
+    sourceSets {
+      main {
+        assets.srcDirs = ['src/main/assets']
+        res.srcDirs = ['src/main/res']
+      }
+   } 
     namespace 'com.dopareset.app'
     defaultConfig {
         applicationId 'com.dopareset.app'
@@ -175,4 +181,7 @@ dependencies {
         implementation jscFlavor
     }
 }
-apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+// This forces the bundler to include the fonts in the release APK
+project.ext.vectoricons = [
+    iconFontNames: [ 'Ionicons.ttf' ] 
+]
