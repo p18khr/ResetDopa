@@ -5,15 +5,11 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
-  Animated,
-  Dimensions
+  ScrollView
 } from 'react-native';
 import { AppContext } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { DIAGNOSTIC_QUESTIONS, getBundleForAnswers } from '../constants/taskBundles';
-
-const { width } = Dimensions.get('window');
 
 export default function DiagnosticScreen({ navigation }) {
   const { isDarkMode, colors } = useTheme();
@@ -21,7 +17,6 @@ export default function DiagnosticScreen({ navigation }) {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [answers, setAnswers] = useState({});
-  const [slideAnim] = useState(new Animated.Value(0));
 
   const totalSteps = 2;
   const currentQuestion = currentStep === 1 ? DIAGNOSTIC_QUESTIONS.q1 : DIAGNOSTIC_QUESTIONS.q2;
@@ -33,15 +28,8 @@ export default function DiagnosticScreen({ navigation }) {
 
   const handleContinue = () => {
     if (currentStep < totalSteps) {
-      // Animate to next step
-      Animated.timing(slideAnim, {
-        toValue: -width,
-        duration: 300,
-        useNativeDriver: true
-      }).start(() => {
-        setCurrentStep(currentStep + 1);
-        slideAnim.setValue(0);
-      });
+      // Move to next step without animation (animation was causing touch issues)
+      setCurrentStep(currentStep + 1);
     } else {
       // Complete diagnostic and navigate to bundle recommendation
       const bundle = getBundleForAnswers(answers.q1, answers.q2);
@@ -61,14 +49,7 @@ export default function DiagnosticScreen({ navigation }) {
 
   const handleBack = () => {
     if (currentStep > 1) {
-      Animated.timing(slideAnim, {
-        toValue: width,
-        duration: 300,
-        useNativeDriver: true
-      }).start(() => {
-        setCurrentStep(currentStep - 1);
-        slideAnim.setValue(0);
-      });
+      setCurrentStep(currentStep - 1);
     }
   };
 
@@ -106,7 +87,7 @@ export default function DiagnosticScreen({ navigation }) {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={{ transform: [{ translateX: slideAnim }] }}>
+        <View style={{ flex: 1 }}>
           <Text style={styles.question}>{currentQuestion.question}</Text>
 
           <View style={styles.optionsContainer}>
@@ -149,7 +130,7 @@ export default function DiagnosticScreen({ navigation }) {
               );
             })}
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
 
       {/* Footer Buttons */}
