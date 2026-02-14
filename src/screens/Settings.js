@@ -3,7 +3,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Alert, Switch, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
-import { signOut as authSignOut, deleteAccount, getCurrentUser } from '../services/auth.service';
+import { signOut as authSignOut, deleteAccount, getCurrentUser, reauthenticate } from '../services/auth.service';
 import { deleteUserDocument } from '../services/firestore.service';
 import { AppContext } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
@@ -160,56 +160,76 @@ export default function Settings({ navigation }) {
         {
           text: 'Delete Everything',
           style: 'destructive',
-          onPress: async () => {
-            // Final confirmation before deletion
-            Alert.alert(
-              'Final Confirmation',
-              'Type "DELETE" to confirm account deletion',
+          onPress: () => {
+            // Final confirmation - prompt for password re-authentication
+            Alert.prompt(
+              'Confirm Your Identity',
+              'For security, please enter your password to confirm account deletion:',
               [
                 { text: 'Cancel', style: 'cancel' },
                 {
                   text: 'Delete',
                   style: 'destructive',
-                  onPress: async () => {
+                  onPress: async (password) => {
+                    if (!password || password.trim() === '') {
+                      Alert.alert('Error', 'Password is required to delete your account.');
+                      return;
+                    }
+
                     try {
                       const currentUser = getCurrentUser();
-                      if (!currentUser) {
+                      if (!currentUser || !currentUser.email) {
                         Alert.alert('Error', 'User not found. Please logout and try again.');
                         return;
                       }
 
                       // Show loading alert
+                      Alert.alert('Verifying...', 'Please wait while we verify your identity.');
+
+                      // Step 1: Re-authenticate user
+                      if (__DEV__) console.log('🔐 Re-authenticating user...');
+                      const reauthResult = await reauthenticate(currentUser.email, password);
+
+                      if (!reauthResult.success) {
+                        let errorMessage = 'Failed to verify your identity. Please try again.';
+
+                        if (reauthResult.code === 'auth/wrong-password') {
+                          errorMessage = 'Incorrect password. Please try again.';
+                        } else if (reauthResult.code === 'auth/invalid-credential') {
+                          errorMessage = 'Invalid credentials. Please check your password and try again.';
+                        } else if (reauthResult.code === 'auth/network-request-failed') {
+                          errorMessage = 'Network error. Please check your connection and try again.';
+                        }
+
+                        Alert.alert('Authentication Failed', errorMessage);
+                        return;
+                      }
+
+                      if (__DEV__) console.log('✅ Re-authentication successful');
+
+                      // Show deletion in progress alert
                       Alert.alert('Deleting...', 'Please wait while we delete your account and data.');
 
-                      // CRITICAL: Flush all pending Firestore writes BEFORE deleting anything
-                      // This prevents "Missing or insufficient permissions" errors from queued writes
+                      // Step 2: Flush all pending Firestore writes BEFORE deleting anything
                       try {
                         if (__DEV__) console.log('🔄 Flushing pending Firestore writes...');
-
-                        // Wait a moment for any in-flight updates to queue
                         await new Promise(resolve => setTimeout(resolve, 100));
-
-                        // Note: Individual contexts handle their own BatchSaveManager cleanup
-                        // when user becomes null. The timeout above ensures queued writes complete.
-
                         if (__DEV__) console.log('✅ Pending writes flushed');
                       } catch (flushError) {
                         console.warn('⚠️ Flush warning:', flushError);
-                        // Continue with deletion even if flush fails
                       }
 
-                      // Delete Firestore user document
+                      // Step 3: Delete Firestore user document
                       if (currentUser.uid) {
                         try {
                           await deleteUserDocument(currentUser.uid);
                           if (__DEV__) console.log('✅ Firestore user document deleted');
                         } catch (firestoreError) {
                           console.warn('⚠️ Firestore deletion warning:', firestoreError);
-                          // Continue with auth deletion even if Firestore fails
                         }
                       }
 
-                      // Clear local storage
+                      // Step 4: Clear local storage
                       try {
                         await AsyncStorage.clear();
                         if (__DEV__) console.log('✅ AsyncStorage cleared');
@@ -217,11 +237,16 @@ export default function Settings({ navigation }) {
                         console.warn('⚠️ AsyncStorage clear warning:', storageError);
                       }
 
-                      // Delete Firebase Auth user (must be last)
-                      await deleteAccount(currentUser);
+                      // Step 5: Delete Firebase Auth user (must be last)
+                      const deleteResult = await deleteAccount(currentUser);
+
+                      if (!deleteResult.success) {
+                        throw new Error(deleteResult.error || 'Failed to delete account');
+                      }
+
                       if (__DEV__) console.log('✅ Firebase Auth user deleted');
 
-                      // Show success and navigate to login
+                      // Step 6: Show success and navigate to login
                       Alert.alert(
                         'Account Deleted',
                         'Your account and all associated data have been permanently deleted.',
@@ -229,31 +254,32 @@ export default function Settings({ navigation }) {
                           {
                             text: 'OK',
                             onPress: () => {
-                              navigation.reset({
-                                index: 0,
-                                routes: [{ name: 'Login' }],
-                              });
+                              // Use replace instead of reset for better navigation handling
+                              navigation.replace('Login');
                             },
                           },
-                        ]
+                        ],
+                        { cancelable: false }
                       );
                     } catch (error) {
                       console.error('❌ Account deletion error:', error);
-                      
-                      // Handle specific Firebase errors
+
                       let errorMessage = 'Failed to delete account. Please try again later.';
-                      
+
                       if (error.code === 'auth/requires-recent-login') {
-                        errorMessage = 'For security, please logout and login again before deleting your account.';
+                        errorMessage = 'Session expired. Please try again.';
                       } else if (error.code === 'auth/network-request-failed') {
                         errorMessage = 'Network error. Please check your connection and try again.';
+                      } else if (error.message) {
+                        errorMessage = error.message;
                       }
-                      
-                      Alert.alert('Error', errorMessage);
+
+                      Alert.alert('Deletion Failed', errorMessage);
                     }
                   },
                 },
-              ]
+              ],
+              'secure-text'
             );
           },
         },

@@ -6,6 +6,7 @@ import {
   signUp,
   signOut,
   deleteAccount,
+  reauthenticate,
   onAuthStateChange,
   getCurrentUser,
   isAuthenticated,
@@ -21,6 +22,10 @@ jest.mock('firebase/auth', () => ({
   signOut: jest.fn(),
   deleteUser: jest.fn(),
   onAuthStateChanged: jest.fn(),
+  reauthenticateWithCredential: jest.fn(),
+  EmailAuthProvider: {
+    credential: jest.fn(),
+  },
 }));
 
 // Mock Firebase config
@@ -126,6 +131,70 @@ describe('Auth Service', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Network error');
+    });
+  });
+
+  describe('reauthenticate', () => {
+    it('should return success result on successful re-authentication', async () => {
+      const mockConfig = require('../../config/firebase');
+      const mockUser = { uid: 'test-uid', email: 'test@example.com' };
+      mockConfig.auth.currentUser = mockUser;
+
+      const mockCredential = { providerId: 'password' };
+      firebaseAuth.EmailAuthProvider.credential.mockReturnValue(mockCredential);
+      firebaseAuth.reauthenticateWithCredential.mockResolvedValue({ user: mockUser });
+
+      const result = await reauthenticate('test@example.com', 'password123');
+
+      expect(result.success).toBe(true);
+      expect(result.user).toEqual(mockUser);
+      expect(firebaseAuth.EmailAuthProvider.credential).toHaveBeenCalledWith('test@example.com', 'password123');
+      expect(firebaseAuth.reauthenticateWithCredential).toHaveBeenCalledWith(mockUser, mockCredential);
+    });
+
+    it('should return error when no current user', async () => {
+      const mockConfig = require('../../config/firebase');
+      mockConfig.auth.currentUser = null;
+
+      const result = await reauthenticate('test@example.com', 'password123');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('No user is currently signed in');
+      expect(result.code).toBe('auth/no-current-user');
+    });
+
+    it('should return error result on failed re-authentication', async () => {
+      const mockConfig = require('../../config/firebase');
+      mockConfig.auth.currentUser = { uid: 'test-uid', email: 'test@example.com' };
+
+      const mockError = {
+        code: 'auth/wrong-password',
+        message: 'Wrong password',
+      };
+      firebaseAuth.EmailAuthProvider.credential.mockReturnValue({ providerId: 'password' });
+      firebaseAuth.reauthenticateWithCredential.mockRejectedValue(mockError);
+
+      const result = await reauthenticate('test@example.com', 'wrongpassword');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Wrong password');
+      expect(result.code).toBe('auth/wrong-password');
+    });
+
+    it('should handle errors without message', async () => {
+      const mockConfig = require('../../config/firebase');
+      mockConfig.auth.currentUser = { uid: 'test-uid', email: 'test@example.com' };
+
+      firebaseAuth.EmailAuthProvider.credential.mockReturnValue({ providerId: 'password' });
+      firebaseAuth.reauthenticateWithCredential.mockRejectedValue({
+        code: 'auth/network-error',
+      });
+
+      const result = await reauthenticate('test@example.com', 'password');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Failed to re-authenticate');
+      expect(result.code).toBe('auth/network-error');
     });
   });
 

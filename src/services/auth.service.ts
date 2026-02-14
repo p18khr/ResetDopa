@@ -8,6 +8,8 @@ import {
   deleteUser as firebaseDeleteUser,
   onAuthStateChanged,
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   User as FirebaseUser,
   Auth,
 } from 'firebase/auth';
@@ -104,6 +106,38 @@ export async function signOut(): Promise<AuthResult> {
     return {
       success: false,
       error: error.message || 'Failed to sign out',
+      code: error.code,
+    };
+  }
+}
+
+/**
+ * Re-authenticate user with email and password
+ * Required before sensitive operations like account deletion
+ */
+export async function reauthenticate(email: string, password: string): Promise<AuthResult> {
+  try {
+    const user = authInstance.currentUser;
+    if (!user) {
+      return {
+        success: false,
+        error: 'No user is currently signed in',
+        code: 'auth/no-current-user',
+      };
+    }
+
+    const credential = EmailAuthProvider.credential(email, password);
+    await reauthenticateWithCredential(user, credential);
+
+    return {
+      success: true,
+      user,
+    };
+  } catch (error: any) {
+    console.error('[AuthService] Re-authentication error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to re-authenticate',
       code: error.code,
     };
   }
