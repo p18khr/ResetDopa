@@ -11,6 +11,7 @@ jest.mock('firebase/auth', () => ({
 jest.mock('firebase/firestore', () => ({
   doc: jest.fn(),
   updateDoc: jest.fn(),
+  setDoc: jest.fn(),
 }));
 
 jest.mock('../../config/firebase', () => ({
@@ -20,7 +21,7 @@ jest.mock('../../config/firebase', () => ({
 
 // Import mocked functions
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
 
 // Test component to access auth context
 function TestComponent({ onRender }) {
@@ -201,7 +202,7 @@ describe('AuthContext', () => {
         return () => {};
       });
 
-      updateDoc.mockResolvedValue();
+      setDoc.mockResolvedValue();
 
       let capturedAuth;
 
@@ -233,7 +234,7 @@ describe('AuthContext', () => {
         return () => {};
       });
 
-      updateDoc.mockResolvedValue();
+      setDoc.mockResolvedValue();
       doc.mockReturnValue({ id: 'test-uid-456' });
 
       let capturedAuth;
@@ -254,12 +255,13 @@ describe('AuthContext', () => {
 
       await waitFor(() => {
         expect(doc).toHaveBeenCalled();
-        expect(updateDoc).toHaveBeenCalledWith(
+        expect(setDoc).toHaveBeenCalledWith(
           expect.anything(),
           expect.objectContaining({
             hasAcceptedTerms: true,
             termsAcceptedAt: expect.any(String),
-          })
+          }),
+          { merge: true }
         );
       });
     });
@@ -273,7 +275,7 @@ describe('AuthContext', () => {
         return () => {};
       });
 
-      updateDoc.mockRejectedValue(mockError);
+      setDoc.mockRejectedValue(mockError);
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
       let capturedAuth;
@@ -325,7 +327,7 @@ describe('AuthContext', () => {
 
       // Should update local state but not call Firestore
       expect(capturedAuth.hasAcceptedTerms).toBe(true);
-      expect(updateDoc).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
     });
   });
 

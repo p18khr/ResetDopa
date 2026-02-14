@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 import uuid from 'react-native-uuid';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { mergeUserData } from '../services/firestore.service';
 import { TASK_METADATA, getTaskExplanation, generateDayTasks, PROGRAM_DAY_TITLES, getCanonicalTask } from '../utils/programData';
 import { scheduleMilestoneNotification, scheduleThresholdNotification, scheduleBadgeUnlockNotification } from '../utils/notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1780,7 +1781,8 @@ export function AppProvider({ children }) {
         setUserProfile(profile);
         if (user) {
           try {
-            await updateDoc(doc(db, 'users', user.uid), { userProfile: profile });
+            // Use mergeUserData instead of updateDoc to create document if it doesn't exist
+            await mergeUserData(user.uid, { userProfile: profile });
           } catch (e) {
             if (__DEV__) console.warn('Error saving user profile:', e?.message || e);
           }

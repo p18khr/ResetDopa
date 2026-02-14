@@ -1,7 +1,7 @@
 // src/context/AuthContext.js
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { onAuthStateChange, getUserId } from '../services/auth.service';
-import { updateUserData } from '../services/firestore.service';
+import { mergeUserData } from '../services/firestore.service';
 
 const AuthContext = createContext({
   user: null,
@@ -40,7 +40,8 @@ export function AuthProvider({ children }) {
     setHasAcceptedTerms(true);
     setAcceptanceLoaded(true);
     if (user) {
-      const result = await updateUserData(user.uid, {
+      // Use mergeUserData instead of updateUserData to create document if it doesn't exist
+      const result = await mergeUserData(user.uid, {
         hasAcceptedTerms: true,
         termsAcceptedAt: new Date().toISOString(),
       });
