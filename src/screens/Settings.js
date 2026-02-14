@@ -2,27 +2,30 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Alert, Switch, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { signOut, deleteUser } from 'firebase/auth';
-import { auth, db } from '../config/firebase';
+import Constants from 'expo-constants';
+import { signOut as authSignOut, deleteAccount, getCurrentUser } from '../services/auth.service';
+import { deleteUserDocument } from '../services/firestore.service';
 import { AppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import TestingControls from '../components/TestingControls';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Super user email - has access to testing controls in production
 const SUPER_USER_EMAIL = 'prakharpps.18@gmail.com';
-import { registerForPushNotifications, scheduleDailyReminder, cancelAllNotifications, scheduleMilestoneNotification, scheduleDailyMoodPrompt, isExpoGo } from '../utils/notifications';
-import * as WebBrowser from 'expo-web-browser';
-import Constants from 'expo-constants';
-import { deleteDoc, doc } from 'firebase/firestore';
 
 export default function Settings({ navigation }) {
   const { user, startDate, getCurrentDay, startDateResets, resetProgramStartDate } = useContext(AppContext);
+  const { isDarkMode, toggleTheme, colors } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('9:00 AM');
   const [moodEnabled, setMoodEnabled] = useState(true);
   const [moodHour, setMoodHour] = useState(20);
   const [moodMinute, setMoodMinute] = useState(0);
+
+  const handleToggleTheme = () => {
+    toggleTheme();
+  };
 
   const privacyUrl = Constants.expoConfig?.extra?.privacyPolicyUrl || 'https://resetdopa.com/privacy.html';
   const termsUrl = Constants.expoConfig?.extra?.termsUrl || 'https://resetdopa.com/terms.html';
@@ -134,7 +137,7 @@ export default function Settings({ navigation }) {
             try {
               // Clear devDayOffset before logout so it doesn't persist to next user
               await AsyncStorage.removeItem('devDayOffset');
-              await signOut(auth);
+              await authSignOut();
             } catch (error) {
               Alert.alert('Error', 'Failed to logout');
             }
@@ -169,7 +172,7 @@ export default function Settings({ navigation }) {
                   style: 'destructive',
                   onPress: async () => {
                     try {
-                      const currentUser = auth.currentUser;
+                      const currentUser = getCurrentUser();
                       if (!currentUser) {
                         Alert.alert('Error', 'User not found. Please logout and try again.');
                         return;
@@ -181,7 +184,7 @@ export default function Settings({ navigation }) {
                       // Delete Firestore user document
                       if (currentUser.uid) {
                         try {
-                          await deleteDoc(doc(db, 'users', currentUser.uid));
+                          await deleteUserDocument(currentUser.uid);
                           if (__DEV__) console.log('✅ Firestore user document deleted');
                         } catch (firestoreError) {
                           console.warn('⚠️ Firestore deletion warning:', firestoreError);
@@ -198,7 +201,7 @@ export default function Settings({ navigation }) {
                       }
 
                       // Delete Firebase Auth user (must be last)
-                      await deleteUser(currentUser);
+                      await deleteAccount(currentUser);
                       if (__DEV__) console.log('✅ Firebase Auth user deleted');
 
                       // Show success and navigate to login
@@ -250,55 +253,55 @@ export default function Settings({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
-      
-      <ScrollView style={{ backgroundColor: '#fff' }}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
+
+      <ScrollView style={{ backgroundColor: colors.background }}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: '#333' }]}>Settings</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {/* Notifications Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Notifications</Text>
+
+          <View style={[styles.card, { backgroundColor: colors.surfacePrimary }]}>
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Ionicons name="notifications-outline" size={20} color="#6366F1" />
+                <Ionicons name="notifications-outline" size={20} color={colors.accent} />
                 <View style={styles.settingTextContainer}>
-                  <Text style={styles.settingTitle}>Daily Reminders</Text>
-                  <Text style={styles.settingSubtitle}>Get motivated every day at 9:00 AM</Text>
+                  <Text style={[styles.settingTitle, { color: colors.text }]}>Daily Reminders</Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>Get motivated every day at 9:00 AM</Text>
                 </View>
               </View>
               <Switch
                 value={notificationsEnabled}
                 onValueChange={toggleNotifications}
-                trackColor={{ false: '#ccc', true: '#6366F1' }}
+                trackColor={{ false: colors.border, true: colors.accent }}
                 thumbColor={notificationsEnabled ? '#fff' : '#f5f5f5'}
               />
             </View>
           </View>
           
           {__DEV__ && (
-            <TouchableOpacity style={[styles.testButton, { backgroundColor: '#fff', borderColor: '#6366F1' }]} onPress={testNotification}>
+            <TouchableOpacity style={[styles.testButton, { backgroundColor: colors.surfacePrimary, borderColor: '#6366F1' }]} onPress={testNotification}>
               <Ionicons name="notifications" size={20} color="#6366F1" />
               <Text style={[styles.testButtonText, { color: '#6366F1' }]}>Send Test Notification</Text>
             </TouchableOpacity>
           )}
 
-          <View style={[styles.card, { marginTop: 12 }]}>
+          <View style={[styles.card, { marginTop: 12, backgroundColor: colors.surfacePrimary }]}>
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <Ionicons name="happy-outline" size={20} color="#6366F1" />
                 <View style={styles.settingTextContainer}>
-                  <Text style={styles.settingTitle}>Daily Mood Prompt</Text>
-                  <Text style={styles.settingSubtitle}>Ask for mood at {formatTime(moodHour, moodMinute)}</Text>
+                  <Text style={[styles.settingTitle, { color: colors.text }]}>Daily Mood Prompt</Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>Ask for mood at {formatTime(moodHour, moodMinute)}</Text>
                 </View>
               </View>
               <Switch
@@ -320,29 +323,38 @@ export default function Settings({ navigation }) {
 
         {/* Appearance Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Appearance</Text>
-          
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Appearance</Text>
+
+          <View style={[styles.card, { backgroundColor: colors.surfacePrimary }]}>
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Ionicons name="sunny" size={20} color="#6366F1" />
+                <Ionicons name={isDarkMode ? "moon" : "sunny"} size={20} color={colors.accent} />
                 <View style={styles.settingTextContainer}>
-                  <Text style={styles.settingTitle}>Theme</Text>
-                  <Text style={styles.settingSubtitle}>Light mode</Text>
+                  <Text style={[styles.settingTitle, { color: colors.text }]}>Dark Mode</Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>
+                    {isDarkMode ? 'Dark theme enabled' : 'Light theme enabled'}
+                  </Text>
                 </View>
               </View>
+              <Switch
+                value={isDarkMode}
+                onValueChange={handleToggleTheme}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={isDarkMode ? '#fff' : '#f5f5f5'}
+                ios_backgroundColor={colors.border}
+              />
             </View>
           </View>
         </View>
 
         {/* Account Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
+
+          <View style={[styles.card, { backgroundColor: colors.surfacePrimary }]}>
             <View style={styles.infoRow}>
               <Ionicons name="mail-outline" size={20} color="#6B7280" />
-              <Text style={styles.infoText}>{user?.email}</Text>
+              <Text style={[styles.infoText, { color: colors.text }]}>{user?.email}</Text>
             </View>
           </View>
 
@@ -354,21 +366,21 @@ export default function Settings({ navigation }) {
             <Text style={styles.profileButtonText}>Edit Profile</Text>
           </TouchableOpacity>
 
-          <View style={[styles.card, { marginTop: 12 }]}>
+          <View style={[styles.card, { marginTop: 12, backgroundColor: colors.surfacePrimary }]}>
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={20} color="#6B7280" />
-              <Text style={styles.infoText}>Program Start: {startDate ? new Date(startDate).toLocaleDateString() : 'Not set'}</Text>
+              <Text style={[styles.infoText, { color: colors.text }]}>Program Start: {startDate ? new Date(startDate).toLocaleDateString() : 'Not set'}</Text>
             </View>
             <View style={[styles.infoRow, { marginTop: 8 }]}>
               <Ionicons name="refresh" size={18} color="#6B7280" />
-              <Text style={[styles.infoText, { color: '#6B7280' }]}>Resets used: {startDateResets}/2</Text>
+              <Text style={[styles.infoText, { color: colors.text }]}>Resets used: {startDateResets}/2</Text>
             </View>
             <View style={[styles.settingRow, { marginTop: 12 }]}>
               <View style={styles.settingInfo}>
                 <Ionicons name="refresh-outline" size={20} color="#4A90E2" />
                 <View style={styles.settingTextContainer}>
-                  <Text style={styles.settingTitle}>Reset Program Day</Text>
-                  <Text style={styles.settingSubtitle}>Set start date to today and recalculate day</Text>
+                  <Text style={[styles.settingTitle, { color: colors.text }]}>Reset Program Day</Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>Set start date to today and recalculate day</Text>
                 </View>
               </View>
               <TouchableOpacity
@@ -409,31 +421,31 @@ export default function Settings({ navigation }) {
         {/* Testing Section - DEV ONLY or SUPER USER */}
         {(__DEV__ || user?.email === SUPER_USER_EMAIL) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Testing {user?.email === SUPER_USER_EMAIL && '(Super User)'}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Testing {user?.email === SUPER_USER_EMAIL && '(Super User)'}</Text>
             <TestingControls navigation={navigation} />
           </View>
         )}
 
         {/* Legal Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Legal</Text>
-          <TouchableOpacity style={styles.legalButton} onPress={() => openLink(privacyUrl, 'Privacy Policy')}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Legal</Text>
+          <TouchableOpacity style={[styles.legalButton, { backgroundColor: colors.surfacePrimary }]} onPress={() => openLink(privacyUrl, 'Privacy Policy')}>
             <View style={styles.settingInfo}>
               <Ionicons name="shield-checkmark-outline" size={20} color="#4A90E2" />
               <View style={styles.settingTextContainer}>
-                <Text style={styles.settingTitle}>Privacy Policy</Text>
-                <Text style={styles.settingSubtitle}>Learn how we handle your data</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Privacy Policy</Text>
+                <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>Learn how we handle your data</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.legalButton} onPress={() => openLink(termsUrl, 'Terms of Service')}>
+          <TouchableOpacity style={[styles.legalButton, { backgroundColor: colors.surfacePrimary }]} onPress={() => openLink(termsUrl, 'Terms of Service')}>
             <View style={styles.settingInfo}>
               <Ionicons name="document-text-outline" size={20} color="#4A90E2" />
               <View style={styles.settingTextContainer}>
-                <Text style={styles.settingTitle}>Terms of Service</Text>
-                <Text style={styles.settingSubtitle}>Understand your rights and obligations</Text>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Terms of Service</Text>
+                <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>Understand your rights and obligations</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
@@ -442,8 +454,8 @@ export default function Settings({ navigation }) {
 
         {/* App Info */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>ResetDopa™ v1.0.0</Text>
-          <Text style={styles.footerSubtext}>Your journey to brain rewiring</Text>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>ResetDopa™ v1.0.0</Text>
+          <Text style={[styles.footerSubtext, { color: colors.textSecondary }]}>Your journey to brain rewiring</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

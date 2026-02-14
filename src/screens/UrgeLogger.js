@@ -6,8 +6,11 @@ import { AppContext } from '../context/AppContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FirstVisitOverlay from '../components/FirstVisitOverlay';
+import { useTheme } from '../context/ThemeContext';
+import ScreenErrorBoundary from '../components/ScreenErrorBoundary';
 
-export default function UrgeLogger({ navigation }) {
+function UrgeLogger({ navigation }) {
+  const { isDarkMode, colors } = useTheme();
   const [emotion, setEmotion] = useState('');
   const [note, setNote] = useState('');
   const { logUrge, updateUrgeOutcome, urges, devDayOffset } = useContext(AppContext);
@@ -155,8 +158,8 @@ export default function UrgeLogger({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0 } ]} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+    <SafeAreaView style={[styles.safeArea, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0, backgroundColor: colors.background } ]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       <FirstVisitOverlay
         visible={showIntro}
         title="Urge Logger"
@@ -166,95 +169,95 @@ export default function UrgeLogger({ navigation }) {
       <ScrollView style={styles.container}>
         {blockForm && (
           <View pointerEvents="auto" style={styles.blockOverlay}>
-            <Text style={styles.blockText}>Log in progress — choose outcome to finalize</Text>
+            <Text style={[styles.blockText, { color: colors.text, backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>Log in progress — choose outcome to finalize</Text>
           </View>
         )}
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Log an Urge</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Log an Urge</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {/* Lin's Law — Why logging matters */}
-        <View style={styles.infoBanner}>
-          <Ionicons name="information-circle-outline" size={18} color="#1E3A8A" style={{ marginRight: 10 }} />
+        <View style={[styles.infoBanner, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.accent} style={{ marginRight: 10 }} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.lawTitle}>Lin's Law</Text>
-            <Text style={styles.infoTextBanner}>
-              Clarity spreads: naming feelings and triggers makes patterns visible and easier to change. 
+            <Text style={[styles.lawTitle, { color: colors.accent }]}>Lin's Law</Text>
+            <Text style={[styles.infoTextBanner, { color: colors.textSecondary }]}>
+              Clarity spreads: naming feelings and triggers makes patterns visible and easier to change.
               Naming the feeling and root trigger makes the problem half solved. Logging urges builds awareness and reveals patterns to change.
             </Text>
           </View>
         </View>
 
         {/* Form */}
-        <View style={styles.form}>
-          <Text style={styles.label}>How are you feeling?</Text>
+        <View style={[styles.form, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.text }]}>How are you feeling?</Text>
           <View style={styles.chipRow}>
             {FEELINGS.map(e => (
-              <TouchableOpacity 
-                key={e} 
-                onPress={() => setEmotion(prev => prev === e ? '' : e)} 
-                style={[styles.chip, emotion === e && styles.chipActive]}
+              <TouchableOpacity
+                key={e}
+                onPress={() => setEmotion(prev => prev === e ? '' : e)}
+                style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }, emotion === e && styles.chipActive]}
               >
                 <Text style={styles.chipEmoji}>{getEmotionIcon(e)}</Text>
-                <Text style={[styles.chipText, emotion === e && styles.chipTextActive]}>
+                <Text style={[styles.chipText, { color: colors.textSecondary }, emotion === e && styles.chipTextActive]}>
                   {e.charAt(0).toUpperCase() + e.slice(1)}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <Text style={[styles.label, { marginTop: 16 }]}>Other feeling (optional)</Text>
+          <Text style={[styles.label, { marginTop: 16, color: colors.text }]}>Other feeling (optional)</Text>
           <TextInput
             placeholder="If not listed or unsure, type here"
             value={otherFeeling}
             onChangeText={setOtherFeeling}
-            style={styles.input}
-            placeholderTextColor="#9CA3AF"
+            style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary, color: colors.text }]}
+            placeholderTextColor={colors.textTertiary}
           />
 
-          <Text style={[styles.label, { marginTop: 16 }]}>What triggered it? (select one)</Text>
+          <Text style={[styles.label, { marginTop: 16, color: colors.text }]}>What triggered it? (select one)</Text>
                     <View style={styles.chipRow}>
                       {TRIGGERS.map(t => (
-                        <TouchableOpacity key={t} onPress={() => setTrigger(prev => prev === t ? '' : t)} style={[styles.chip, trigger === t && styles.chipActive]}>
-                          <Text style={styles.chipText}>{t.charAt(0).toUpperCase() + t.slice(1)}</Text>
+                        <TouchableOpacity key={t} onPress={() => setTrigger(prev => prev === t ? '' : t)} style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }, trigger === t && styles.chipActive]}>
+                          <Text style={[styles.chipText, { color: colors.textSecondary }]}>{t.charAt(0).toUpperCase() + t.slice(1)}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <Text style={[styles.label, { marginTop: 8 }]}>Other trigger (optional)</Text>
+                    <Text style={[styles.label, { marginTop: 8, color: colors.text }]}>Other trigger (optional)</Text>
                     <TextInput
                       placeholder="If not listed, type here"
                       value={otherTrigger}
                       onChangeText={setOtherTrigger}
-                      style={styles.input}
-                      placeholderTextColor="#9CA3AF"
+                      style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary, color: colors.text }]}
+                      placeholderTextColor={colors.textTertiary}
                     />
 
-          <Text style={[styles.label, { marginTop: 20 }]}>Intensity Level</Text>
+          <Text style={[styles.label, { marginTop: 20, color: colors.text }]}>Intensity Level</Text>
           <View style={styles.intensityRow}>
             {[{val:'low',emoji:'😌',label:'Low'},{val:'medium',emoji:'😟',label:'Medium'},{val:'high',emoji:'😫',label:'High'}].map(i => (
-              <TouchableOpacity 
-                key={i.val} 
-                onPress={() => setIntensity(i.val)} 
-                style={[styles.intensityChip, intensity === i.val && styles.intensityChipActive]}
+              <TouchableOpacity
+                key={i.val}
+                onPress={() => setIntensity(i.val)}
+                style={[styles.intensityChip, { borderColor: colors.border, backgroundColor: colors.surfacePrimary }, intensity === i.val && styles.intensityChipActive]}
               >
                 <Text style={styles.intensityEmoji}>{i.emoji}</Text>
-                <Text style={[styles.intensityText, intensity === i.val && styles.intensityTextActive]}>
+                <Text style={[styles.intensityText, { color: colors.textSecondary }, intensity === i.val && styles.intensityTextActive]}>
                   {i.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <Text style={[styles.label, { marginTop: 20 }]}>What caused it? (required)</Text>
-          <TextInput 
-            placeholder="Describe the trigger, context, people, apps, thoughts…" 
-            value={note} 
-            onChangeText={setNote} 
-            style={styles.input} 
-            multiline 
-            placeholderTextColor="#9CA3AF"
+          <Text style={[styles.label, { marginTop: 20, color: colors.text }]}>What caused it? (required)</Text>
+          <TextInput
+            placeholder="Describe the trigger, context, people, apps, thoughts…"
+            value={note}
+            onChangeText={setNote}
+            style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary, color: colors.text }]}
+            multiline
+            placeholderTextColor={colors.textTertiary}
           />
 
           <TouchableOpacity style={styles.logBtn} onPress={onLog}>
@@ -265,23 +268,23 @@ export default function UrgeLogger({ navigation }) {
 
         {/* Urge Replacement Suggestions */}
         {showSuggestions && (
-          <View style={styles.suggestionsCard}>
+          <View style={[styles.suggestionsCard, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
             <View style={styles.suggestionsHeader}>
-              <Text style={styles.suggestionsTitle}>💪 Try These Right Now</Text>
+              <Text style={[styles.suggestionsTitle, { color: colors.text }]}>💪 Try These Right Now</Text>
               <TouchableOpacity onPress={closeSuggestions}>
-                <Ionicons name="close-circle" size={20} color="#6B7280" />
+                <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.suggestionsSubtitle}>Quick actions to redirect this urge</Text>
+            <Text style={[styles.suggestionsSubtitle, { color: colors.textSecondary }]}>Quick actions to redirect this urge</Text>
             
             {URGE_REPLACEMENTS[intensity].map((item, idx) => (
-              <View key={idx} style={styles.suggestionItem}>
-                <View style={styles.suggestionIcon}>
-                  <Text style={styles.suggestionIconText}>{idx + 1}</Text>
+              <View key={idx} style={[styles.suggestionItem, { borderBottomColor: colors.border }]}>
+                <View style={[styles.suggestionIcon, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                  <Text style={[styles.suggestionIconText, { color: colors.accent }]}>{idx + 1}</Text>
                 </View>
                 <View style={styles.suggestionContent}>
-                  <Text style={styles.suggestionTask}>{item.task}</Text>
-                  <Text style={styles.suggestionWhy}>⏱️ {item.duration} • {item.why}</Text>
+                  <Text style={[styles.suggestionTask, { color: colors.text }]}>{item.task}</Text>
+                  <Text style={[styles.suggestionWhy, { color: colors.textSecondary }]}>⏱️ {item.duration} • {item.why}</Text>
                 </View>
               </View>
             ))}
@@ -320,40 +323,40 @@ export default function UrgeLogger({ navigation }) {
         {/* Urge History */}
         {!showSuggestions && (
           <View style={styles.historySection}>
-            <Text style={styles.historyTitle}>Recent Urges ({urges.length})</Text>
-            
+            <Text style={[styles.historyTitle, { color: colors.text }]}>Recent Urges ({urges.length})</Text>
+
             {urges.length === 0 ? (
-              <View style={styles.emptyState}>
+              <View style={[styles.emptyState, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
                 <Text style={styles.emptyEmoji}>✨</Text>
-                <Text style={styles.emptyText}>No urges logged yet</Text>
-                <Text style={styles.emptySubtext}>Track your urges to build awareness</Text>
+                <Text style={[styles.emptyText, { color: colors.text }]}>No urges logged yet</Text>
+                <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Track your urges to build awareness</Text>
               </View>
             ) : (
               urges.map((urge, index) => (
-                <View key={urge.id} style={styles.urgeCard}>
+                <View key={urge.id} style={[styles.urgeCard, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
                   <View style={styles.urgeHeader}>
                     <View style={styles.urgeEmotion}>
                       <Text style={styles.urgeEmoji}>{getEmotionIcon(urge.emotion)}</Text>
-                      <Text style={styles.urgeEmotionText}>
+                      <Text style={[styles.urgeEmotionText, { color: colors.text }]}>
                         {urge.emotion.charAt(0).toUpperCase() + urge.emotion.slice(1)}
                       </Text>
                     </View>
-                    <Text style={styles.urgeTime}>
+                    <Text style={[styles.urgeTime, { color: colors.textSecondary }]}>
                       {formatDate(urge.timestamp)} • {formatTime(urge.timestamp)}
                     </Text>
                   </View>
                   {urge.note ? (
-                    <Text style={styles.urgeNote}>{urge.note}</Text>
+                    <Text style={[styles.urgeNote, { color: colors.textSecondary }]}>{urge.note}</Text>
                   ) : null}
                   <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginTop:4 }}>
                     {urge.intensity ? (
-                      <Text style={styles.urgeMeta}>Intensity: {urge.intensity}</Text>
+                      <Text style={[styles.urgeMeta, { color: colors.textTertiary }]}>Intensity: {urge.intensity}</Text>
                     ) : null}
                     {urge.outcome ? (
-                      <Text style={[styles.urgeMeta, urge.outcome === 'resisted' ? { color:'#065F46' } : { color:'#7F1D1D' }]}>Outcome: {urge.outcome}</Text>
+                      <Text style={[styles.urgeMeta, { color: colors.textTertiary }, urge.outcome === 'resisted' ? { color:'#065F46' } : { color:'#7F1D1D' }]}>Outcome: {urge.outcome}</Text>
                     ) : null}
                     {urge.trigger ? (
-                      <Text style={styles.urgeMeta}>Trigger: {urge.trigger}</Text>
+                      <Text style={[styles.urgeMeta, { color: colors.textTertiary }]}>Trigger: {urge.trigger}</Text>
                     ) : null}
                   </View>
                 </View>
@@ -369,7 +372,6 @@ export default function UrgeLogger({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
   },
   container: {
     flex: 1,
@@ -385,22 +387,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   form: {
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     marginTop: 12,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#EEF2FF',
-    borderColor: '#C7D2FE',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -408,7 +405,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   lawTitle: {
-    color: '#1E3A8A',
     fontSize: 13,
     fontWeight: '800',
     marginBottom: 4,
@@ -416,7 +412,6 @@ const styles = StyleSheet.create({
   },
   infoTextBanner: {
     flex: 1,
-    color: '#1E3A8A',
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '600',
@@ -424,7 +419,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
     marginBottom: 8,
   },
   chipRow: {
@@ -436,8 +430,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
@@ -454,7 +446,6 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    color: '#374151',
     fontWeight: '600',
   },
   chipTextActive: {
@@ -472,8 +463,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
   },
   intensityChipActive: {
     borderColor: '#4A90E2',
@@ -485,7 +474,6 @@ const styles = StyleSheet.create({
   },
   intensityText: {
     fontSize: 13,
-    color: '#374151',
     fontWeight: '600',
   },
   intensityTextActive: {
@@ -493,8 +481,6 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
     borderRadius: 12,
     padding: 12,
     minHeight: 80,
@@ -514,13 +500,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   suggestionsCard: {
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     position: 'relative',
     zIndex: 20,
   },
@@ -533,11 +517,9 @@ const styles = StyleSheet.create({
   suggestionsTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   suggestionsSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
     marginBottom: 8,
   },
   suggestionItem: {
@@ -545,32 +527,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   suggestionIcon: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#DBEAFE',
   },
   suggestionIconText: {
-    color: '#1D4ED8',
     fontWeight: '700',
   },
   suggestionContent: { flex: 1 },
   suggestionTask: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
   },
   suggestionWhy: {
     fontSize: 12,
-    color: '#6B7280',
   },
   gotItBtn: {
     marginTop: 12,
@@ -609,26 +585,21 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
     marginBottom: 12,
   },
   emptyState: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     padding: 24,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   emptyEmoji: { fontSize: 28, marginBottom: 8 },
-  emptyText: { fontWeight: '700', color: '#111827' },
-  emptySubtext: { color: '#6B7280', marginTop: 4 },
+  emptyText: { fontWeight: '700' },
+  emptySubtext: { marginTop: 4 },
   urgeCard: {
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     marginBottom: 12,
   },
   urgeHeader: {
@@ -639,9 +610,10 @@ const styles = StyleSheet.create({
   },
   urgeEmotion: { flexDirection: 'row', alignItems: 'center' },
   urgeEmoji: { marginRight: 6, fontSize: 16 },
-  urgeEmotionText: { fontWeight: '700', color: '#111827' },
-  urgeTime: { color: '#6B7280', fontSize: 12 },
-  urgeNote: { color: '#374151', marginTop: 4 },
+  urgeEmotionText: { fontWeight: '700' },
+  urgeTime: { fontSize: 12 },
+  urgeNote: { marginTop: 4 },
+  urgeMeta: { fontSize: 12 },
   blockOverlay: {
     position: 'absolute',
     top: 0,
@@ -654,13 +626,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   blockText: {
-    color: '#111827',
     fontWeight: '700',
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
 });
+
+// Wrap UrgeLogger with ErrorBoundary
+export default function UrgeLoggerWithErrorBoundary(props) {
+  return (
+    <ScreenErrorBoundary screenName="Urge Logger" navigation={props.navigation}>
+      <UrgeLogger {...props} />
+    </ScreenErrorBoundary>
+  );
+}

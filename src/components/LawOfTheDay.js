@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { lawLabels } from '../utils/lawLabels';
 import { AppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 
 function pickDailyLaw(devDayOffset) {
   const entries = Object.entries(lawLabels);
@@ -16,6 +17,7 @@ function pickDailyLaw(devDayOffset) {
 
 export default function LawOfTheDay({ onLearnMore }) {
   const { devDayOffset } = useContext(AppContext);
+  const { isDarkMode, colors } = useTheme();
   const law = pickDailyLaw(devDayOffset);
   if (!law) return null;
   
@@ -29,22 +31,22 @@ export default function LawOfTheDay({ onLearnMore }) {
     if (label.includes('Murphy')) return 'Prepare for friction — have a backup plan for slip-ups.';
     return 'Apply this in a tiny, concrete way today.';
   };
-  
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
       <View style={styles.headerRow}>
-        <Ionicons name="bulb" size={18} color="#1E3A8A" />
-        <Text style={styles.title}>Law of the Day</Text>
+        <Ionicons name="bulb" size={18} color={colors.accent} />
+        <Text style={[styles.title, { color: colors.accent }]}>Law of the Day</Text>
       </View>
-      <Text style={styles.lawName}>{law.label}</Text>
-      {!!law.description && <Text style={styles.description}>{law.description}</Text>}
-      <Text style={[styles.description, { marginTop: 4, color:'#374151' }]}>
+      <Text style={[styles.lawName, { color: colors.text }]}>{law.label}</Text>
+      {!!law.description && <Text style={[styles.description, { color: colors.textSecondary }]}>{law.description}</Text>}
+      <Text style={[styles.description, { marginTop: 4, color: colors.textSecondary }]}>
         Example: {getExample(law.label)}
       </Text>
       {onLearnMore && (
-        <TouchableOpacity style={styles.learnBtn} onPress={onLearnMore}>
-          <Ionicons name="book-outline" size={16} color="#1A56DB" style={{ marginRight: 6 }} />
-          <Text style={styles.learnText}>Learn about these laws</Text>
+        <TouchableOpacity style={[styles.learnBtn, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]} onPress={onLearnMore}>
+          <Ionicons name="book-outline" size={16} color={colors.accent} style={{ marginRight: 6 }} />
+          <Text style={[styles.learnText, { color: colors.accent }]}>Learn about these laws</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -53,8 +55,6 @@ export default function LawOfTheDay({ onLearnMore }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#C7D2FE',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -62,9 +62,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { color: '#1E3A8A', fontWeight: '800', fontSize: 12 },
-  lawName: { color: '#1A1A1A', fontWeight: '700', fontSize: 14, marginTop: 6 },
-  description: { color: '#1E3A8A', fontSize: 12, marginTop: 4 },
-  learnBtn: { marginTop: 10, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', backgroundColor: '#E5F0FF', borderWidth: 1, borderColor: '#BFDBFE', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 10 },
-  learnText: { color: '#1A56DB', fontWeight: '700', fontSize: 12 },
+  title: { fontWeight: '800', fontSize: 12 },
+  lawName: { fontWeight: '700', fontSize: 14, marginTop: 6 },
+  description: { fontSize: 12, marginTop: 4 },
+  learnBtn: { marginTop: 10, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 10 },
+  learnText: { fontWeight: '700', fontSize: 12 },
 });

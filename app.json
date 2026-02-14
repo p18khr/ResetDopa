@@ -59,29 +59,31 @@
       ],
       [
         "expo-build-properties",
-  {
-    "android": {
-      "compileSdkVersion": 35,
-      "targetSdkVersion": 35,
-      "buildToolsVersion": "35.0.0",
-      "minSdkVersion": 24,
-      "kotlinVersion": "2.0.21"
-    },
-    "ios": {
-      "deploymentTarget": "15.1"
-    }
-  }
-      ]
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "minSdkVersion": 24,
+            "kotlinVersion": "2.0.21"
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ],
+      "expo-font",
+      "expo-asset"
     ],
     "extra": {
       "privacyPolicyUrl": "https://resetdopa.com/privacy.html",
       "termsUrl": "https://resetdopa.com/terms.html",
       "eas": {
-        "projectId": "811d92bf-6eda-4bb4-ab42-f8f4b2aec318"
+        "projectId": "de4ee721-5de6-46b5-9533-63ac1b808ac3"
       }
     },
     "runtimeVersion": "1.0.0",
     "scheme": "com.dopareset.app",
-    "owner": "p18khr12345"
+    "owner": "p18k"
   }
 }

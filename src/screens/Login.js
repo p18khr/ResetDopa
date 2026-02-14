@@ -1,12 +1,12 @@
 // src/screens/Login.js
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, Alert, KeyboardAvoidingView, Platform, Animated, Image } from 'react-native';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../config/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { signIn, sendPasswordReset } from '../services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Login({ navigation }) {
+  const { isDarkMode, colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,10 @@ export default function Login({ navigation }) {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+      const result = await signIn(trimmedEmail, trimmedPassword);
+      if (!result.success) {
+        throw { code: result.code, message: result.error };
+      }
       // Navigation handled by App.js based on auth state
     } catch (error) {
       console.error('❌ Login error:', error?.code, error?.message);
@@ -86,15 +89,17 @@ export default function Login({ navigation }) {
       Alert.alert('Email Required', 'Please enter your email address first');
       return;
     }
-    
+
     if (!email.includes('@')) {
       Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
 
     try {
-      const { sendPasswordResetEmail } = await import('firebase/auth');
-      await sendPasswordResetEmail(auth, email);
+      const result = await sendPasswordReset(email);
+      if (!result.success) {
+        throw { code: result.code, message: result.error };
+      }
       Alert.alert(
         'Reset Email Sent',
         `A password reset link has been sent to ${email}. Please check your inbox.`,
@@ -108,8 +113,8 @@ export default function Login({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -130,46 +135,54 @@ export default function Login({ navigation }) {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={styles.title}>ResetDopa™</Text>
-            <Text style={styles.tagline}>Regain will. Rewire habits. Enjoy life again.</Text>
-            <Text style={styles.subtitle}>Welcome back! Ready to continue your journey?</Text>
-            <View style={styles.infoBanner}>
-              <Text style={styles.infoText}>Cloud sync resumes after login. Your progress will sync across devices.</Text>
+            <Text style={[styles.title, { color: colors.text }]}>ResetDopa™</Text>
+            <Text style={[styles.tagline, { color: colors.text }]}>Regain will. Rewire habits. Enjoy life again.</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Welcome back! Ready to continue your journey?</Text>
+            <View style={[styles.infoBanner, { backgroundColor: colors.surfaceSecondary }]}>
+              <Text style={[styles.infoText, { color: colors.text }]}>Cloud sync resumes after login. Your progress will sync across devices.</Text>
             </View>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, {
+                backgroundColor: colors.surfacePrimary,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
               placeholder="your@email.com"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textTertiary}
             />
 
-            <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
+            <Text style={[styles.label, { marginTop: 16, color: colors.text }]}>Password</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, {
+                backgroundColor: colors.surfacePrimary,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
               placeholder="Enter your password"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textTertiary}
             />
 
             <TouchableOpacity
               style={styles.forgotPassword}
               onPress={handleForgotPassword}
             >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Text style={[styles.forgotPasswordText, { color: colors.accent }]}>Forgot Password?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[styles.button, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -184,8 +197,8 @@ export default function Login({ navigation }) {
               style={styles.linkButton}
               onPress={() => navigation.navigate('Signup')}
             >
-              <Text style={styles.linkText}>
-                Don't have an account? <Text style={styles.linkTextBold}>Sign Up</Text>
+              <Text style={[styles.linkText, { color: colors.textSecondary }]}>
+                Don't have an account? <Text style={[styles.linkTextBold, { color: colors.accent }]}>Sign Up</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -198,7 +211,6 @@ export default function Login({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
   },
   keyboardView: {
     flex: 1,
@@ -215,7 +227,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#1A1A1A',
     marginTop: 16,
   },
   logo: {
@@ -232,13 +243,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginTop: 8,
     textAlign: 'center',
   },
   tagline: {
     fontSize: 14,
-    color: '#374151',
     marginTop: 6,
     textAlign: 'center',
     fontWeight: '600',
@@ -247,12 +256,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#E5F3FF',
     borderRadius: 8,
   },
   infoText: {
     fontSize: 12,
-    color: '#1F2937',
     textAlign: 'center',
   },
   form: {
@@ -261,17 +268,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#1A1A1A',
   },
   forgotPassword: {
     alignSelf: 'flex-end',
@@ -279,11 +282,9 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: '#4A90E2',
     fontWeight: '600',
   },
   button: {
-    backgroundColor: '#4A90E2',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -313,10 +314,8 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
-    color: '#6B7280',
   },
   linkTextBold: {
-    color: '#4A90E2',
     fontWeight: '600',
   },
 });

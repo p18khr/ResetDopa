@@ -1,8 +1,10 @@
 // src/components/BadgeToast.js
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Text, View, StyleSheet, Platform } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
-export default function BadgeToast({ badge, onHide }) {
+function BadgeToast({ badge, onHide }) {
+  const { isDarkMode, colors } = useTheme();
   const slide = useRef(new Animated.Value(-80)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -25,12 +27,12 @@ export default function BadgeToast({ badge, onHide }) {
   if (!badge) return null;
 
   return (
-    <Animated.View style={[styles.container, { transform: [{ translateY: slide }], opacity }]}> 
-      <View style={styles.toast}>
+    <Animated.View style={[styles.container, { transform: [{ translateY: slide }], opacity }]}>
+      <View style={[styles.toast, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
         <Text style={styles.emoji}>🏅</Text>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>{badge.title}</Text>
-          <Text style={styles.subtitle}>{badge.message || 'Badge Unlocked!'}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{badge.title}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{badge.message || 'Badge Unlocked!'}</Text>
         </View>
       </View>
     </Animated.View>
@@ -47,8 +49,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   toast: {
-    backgroundColor: '#111827EE',
     borderRadius: 12,
+    borderWidth: 1,
     paddingVertical: 12,
     paddingHorizontal: 14,
     flexDirection: 'row',
@@ -59,6 +61,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   emoji: { fontSize: 22, marginRight: 10 },
-  title: { color: 'white', fontWeight: '700', fontSize: 14 },
-  subtitle: { color: '#D1D5DB', fontSize: 13, marginTop: 2 },
+  title: { fontWeight: '700', fontSize: 14 },
+  subtitle: { fontSize: 13, marginTop: 2 },
 });
+
+// Memoize to prevent unnecessary re-renders when badge prop hasn't changed
+export default React.memo(BadgeToast);

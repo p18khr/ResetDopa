@@ -14,7 +14,7 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const systemColorScheme = useColorScheme();
-  const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [userPreference, setUserPreference] = useState(null);
 
   // Load user preference from AsyncStorage on mount
@@ -22,16 +22,18 @@ export const ThemeProvider = ({ children }) => {
     const loadThemePreference = async () => {
       try {
         const saved = await AsyncStorage.getItem('themePreference');
+
         if (saved) {
           setUserPreference(saved);
           setIsDarkMode(saved === 'dark');
         } else {
-          // Use system preference
-          setUserPreference(systemColorScheme);
-          setIsDarkMode(systemColorScheme === 'dark');
+          // Use system preference as default
+          const defaultMode = systemColorScheme === 'dark';
+          setUserPreference(null);
+          setIsDarkMode(defaultMode);
         }
       } catch (error) {
-        console.warn('Failed to load theme preference:', error);
+        console.error('Failed to load theme preference:', error);
       }
     };
 
@@ -48,11 +50,17 @@ export const ThemeProvider = ({ children }) => {
   const toggleTheme = async () => {
     try {
       const newMode = !isDarkMode;
+
+      // Update state immediately
       setIsDarkMode(newMode);
       setUserPreference(newMode ? 'dark' : 'light');
+
+      // Save to AsyncStorage
       await AsyncStorage.setItem('themePreference', newMode ? 'dark' : 'light');
     } catch (error) {
-      console.warn('Failed to save theme preference:', error);
+      console.error('Failed to save theme preference:', error);
+      // Revert on error
+      setIsDarkMode(!newMode);
     }
   };
 

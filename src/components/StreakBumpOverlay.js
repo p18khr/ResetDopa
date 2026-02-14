@@ -1,8 +1,10 @@
 // src/components/StreakBumpOverlay.js
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export default function StreakBumpOverlay({ bumpSeq }) {
+  const { isDarkMode, colors } = useTheme();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.9)).current;
@@ -31,7 +33,7 @@ export default function StreakBumpOverlay({ bumpSeq }) {
 
   return (
     <Animated.View pointerEvents="none" style={[styles.container, { opacity, transform: [{ translateY }, { scale }] }] }>
-      <View style={styles.badge}><Text style={styles.text}>+1</Text><Text style={styles.small}> Streak</Text></View>
+      <View style={[styles.badge, { backgroundColor: colors.accent }]}><Text style={styles.text}>+1</Text><Text style={styles.small}> Streak</Text></View>
     </Animated.View>
   );
 }
@@ -44,7 +46,6 @@ const styles = StyleSheet.create({
     zIndex: 9998,
   },
   badge: {
-    backgroundColor: '#10B981',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,

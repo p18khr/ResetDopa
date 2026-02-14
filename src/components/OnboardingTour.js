@@ -5,10 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 
 // Acts as a visual tour or a controller-only flow coordinator depending on props
 export default function OnboardingTour({ visible, onDone, navigationRef, controllerOnly }) {
   const { week1SetupDone, getCurrentDay, todayCompletions } = useContext(AppContext);
+  const { isDarkMode, colors } = useTheme();
   // Expanded tour: 7 steps for comprehensive education
   const steps = useMemo(() => ([
     { icon: 'planet-outline', title: 'Welcome', text: 'ResetDopa™ helps you rebuild focus and motivation with small, science-backed wins.' },
@@ -106,14 +108,14 @@ export default function OnboardingTour({ visible, onDone, navigationRef, control
   return (
     <Modal visible={!!visible} animationType="fade" transparent onRequestClose={() => {}}>
       <View style={styles.overlay}>
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
           <View style={styles.headerRow}>
-            <Text style={styles.title}>Quick Tour</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Quick Tour</Text>
             {/* Unskippable: remove close button */}
           </View>
           <View style={styles.stepHeader}>
-            <Ionicons name={step.icon} size={28} color="#2563EB" />
-            <Text style={styles.stepTitle}>{step.title}</Text>
+            <Ionicons name={step.icon} size={28} color={colors.accent} />
+            <Text style={[styles.stepTitle, { color: colors.text }]}>{step.title}</Text>
           </View>
           {/* Visuals: logo on Welcome, fireworks on Milestones */}
           {step.title === 'Welcome' && (
@@ -128,13 +130,13 @@ export default function OnboardingTour({ visible, onDone, navigationRef, control
           {step.title === 'Calm Points' && (
             <View style={styles.visualBox}>
               <Text style={styles.pointsDisplay}>+7</Text>
-              <Text style={styles.pointsLabel}>Points Earned</Text>
+              <Text style={[styles.pointsLabel, { color: colors.textSecondary }]}>Points Earned</Text>
             </View>
           )}
           {step.title === 'Streaks Matter' && (
             <View style={styles.visualBox}>
               <Text style={styles.streakDisplay}>🔥 5</Text>
-              <Text style={styles.pointsLabel}>Day Streak</Text>
+              <Text style={[styles.pointsLabel, { color: colors.textSecondary }]}>Day Streak</Text>
             </View>
           )}
           {step.title === 'Milestones Ahead' && (
@@ -148,23 +150,23 @@ export default function OnboardingTour({ visible, onDone, navigationRef, control
             </View>
           )}
           <ScrollView style={{ maxHeight: 180 }}>
-            <Text style={styles.stepText}>{step.text}</Text>
+            <Text style={[styles.stepText, { color: colors.textSecondary }]}>{step.text}</Text>
           </ScrollView>
           <View style={styles.footerRow}>
             <View style={{ flex: 1 }} />
             {last ? (
-              <TouchableOpacity onPress={done} style={[styles.btn, styles.primary]}>
+              <TouchableOpacity onPress={done} style={[styles.btn, styles.primary, { backgroundColor: colors.accent, borderColor: colors.accent }]}>
                 <Text style={[styles.btnText, { color: '#fff' }]}>Done</Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity onPress={next} style={[styles.btn, styles.primary]}>
+              <TouchableOpacity onPress={next} style={[styles.btn, styles.primary, { backgroundColor: colors.accent, borderColor: colors.accent }]}>
                 <Text style={[styles.btnText, { color: '#fff' }]}>Next</Text>
               </TouchableOpacity>
             )}
           </View>
           <View style={styles.dotsRow}>
             {steps.map((_, i) => (
-              <View key={i} style={[styles.dot, i===idx && styles.dotActive]} />
+              <View key={i} style={[styles.dot, { backgroundColor: colors.border }, i===idx && { backgroundColor: colors.accent }]} />
             ))}
           </View>
         </View>
@@ -181,11 +183,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   headerRow: {
     flexDirection: 'row',
@@ -193,21 +193,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  title: { fontSize: 16, fontWeight: '800', color: '#111827' },
+  title: { fontSize: 16, fontWeight: '800' },
   stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 6 },
-  stepTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  stepTitle: { fontSize: 16, fontWeight: '700' },
   visualBox: { alignItems: 'center', justifyContent: 'center', marginVertical: 8 },
   pointsDisplay: { fontSize: 48, fontWeight: '900', color: '#10B981' },
-  pointsLabel: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  pointsLabel: { fontSize: 12, marginTop: 4 },
   streakDisplay: { fontSize: 48, fontWeight: '900', color: '#EF4444' },
-  stepText: { fontSize: 14, color: '#374151', lineHeight: 20 },
+  stepText: { fontSize: 14, lineHeight: 20 },
   footerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
   btn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1 },
-  primary: { backgroundColor: '#2563EB', borderColor: '#1D4ED8' },
+  primary: { },
   secondary: { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' },
   btnText: { fontWeight: '700' },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8 },
   dotsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#E5E7EB' },
-  dotActive: { backgroundColor: '#2563EB' },
+  dot: { width: 6, height: 6, borderRadius: 3 },
 });

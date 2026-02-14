@@ -3,6 +3,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function StreakCalendar({ streak, urges }) {
   const {
@@ -11,6 +12,7 @@ export default function StreakCalendar({ streak, urges }) {
     todayCompletions,
     getDailyMetrics,
   } = useContext(AppContext);
+  const { isDarkMode, colors } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const [monthOffset, setMonthOffset] = useState(0); // 0 = current, -1 = previous, etc.
@@ -73,7 +75,7 @@ export default function StreakCalendar({ streak, urges }) {
   // Get color based on activity level
   const getColor = (day) => {
     // Dim days outside the current month
-    if (!day.inMonth) return '#E5E7EB';
+    if (!day.inMonth) return colors.border;
     // Clean day
     if (day.urgeCount === 0) return '#10B981';
     if (day.urgeCount === 1) return '#FBBF24';
@@ -126,43 +128,44 @@ export default function StreakCalendar({ streak, urges }) {
   };
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
         styles.container,
+        { backgroundColor: colors.surfacePrimary },
         {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }],
         },
       ]}
     >
-      <Text style={styles.title}>Monthly Progress</Text>
+      <Text style={[styles.title, { color: colors.text }]}>Monthly Progress</Text>
       <View style={styles.navRow}>
         <TouchableOpacity
           accessibilityLabel="Previous month"
           onPress={() => setMonthOffset(o => Math.max(MIN_OFFSET, o - 1))}
           disabled={monthOffset <= MIN_OFFSET}
-          style={[styles.navBtn, monthOffset <= MIN_OFFSET && { opacity: 0.4 }]}
+          style={[styles.navBtn, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }, monthOffset <= MIN_OFFSET && { opacity: 0.4 }]}
         >
-          <Ionicons name="chevron-back" size={20} color="#111827" />
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.subtitle}>{monthTitle}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{monthTitle}</Text>
         <TouchableOpacity
           accessibilityLabel="Next month"
           onPress={() => setMonthOffset(o => Math.min(MAX_OFFSET, o + 1))}
           disabled={monthOffset >= MAX_OFFSET}
-          style={[styles.navBtn, monthOffset >= MAX_OFFSET && { opacity: 0.4 }]}
+          style={[styles.navBtn, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }, monthOffset >= MAX_OFFSET && { opacity: 0.4 }]}
         >
-          <Ionicons name="chevron-forward" size={20} color="#111827" />
+          <Ionicons name="chevron-forward" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.calendarContainer}>
         <ScrollView showsVerticalScrollIndicator={false} style={styles.calendarScroll}>
           <View style={styles.calendar}>
             {/* Day-of-week header row */}
             <View style={styles.weekdayHeader}>
               {['S','M','T','W','T','F','S'].map((d, idx) => (
-                <Text key={idx} style={styles.weekdayLabel}>{d}</Text>
+                <Text key={idx} style={[styles.weekdayLabel, { color: colors.textSecondary }]}>{d}</Text>
               ))}
             </View>
             {/* Calendar grid */}
@@ -188,16 +191,16 @@ export default function StreakCalendar({ streak, urges }) {
           </View>
         </ScrollView>
       </View>
-      
+
       {/* Legend */}
       <View style={styles.legend}>
-        <Text style={styles.legendText}>Clean</Text>
+        <Text style={[styles.legendText, { color: colors.textSecondary }]}>Clean</Text>
         <View style={[styles.legendBox, { backgroundColor: '#10B981' }]} />
-        <Text style={styles.legendText}>1</Text>
+        <Text style={[styles.legendText, { color: colors.textSecondary }]}>1</Text>
         <View style={[styles.legendBox, { backgroundColor: '#FBBF24' }]} />
-        <Text style={styles.legendText}>2-3</Text>
+        <Text style={[styles.legendText, { color: colors.textSecondary }]}>2-3</Text>
         <View style={[styles.legendBox, { backgroundColor: '#F59E0B' }]} />
-        <Text style={styles.legendText}>4+</Text>
+        <Text style={[styles.legendText, { color: colors.textSecondary }]}>4+</Text>
         <View style={[styles.legendBox, { backgroundColor: '#EF4444' }]} />
       </View>
 
@@ -209,26 +212,26 @@ export default function StreakCalendar({ streak, urges }) {
         onRequestClose={() => setDetailVisible(false)}
       >
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDetailVisible(false)}>
-          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()} style={styles.modalCard}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()} style={[styles.modalCard, { backgroundColor: colors.surfacePrimary }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
                 {detailData?.date?.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) || 'Day details'}
               </Text>
               {typeof detailData?.programDay === 'number' && (
-                <Text style={styles.modalSubTitle}>
+                <Text style={[styles.modalSubTitle, { color: colors.textSecondary }]}>
                   {detailData.programDay >= 1 ? `Program Day ${detailData.programDay}` : 'Before program start'}
                 </Text>
               )}
             </View>
 
             <View style={styles.modalRow}>
-              <Text style={styles.modalLabel}>Urges:</Text>
-              <Text style={styles.modalValue}>{detailData?.urges ?? 0}</Text>
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Urges:</Text>
+              <Text style={[styles.modalValue, { color: colors.text }]}>{detailData?.urges ?? 0}</Text>
             </View>
 
             <View style={styles.modalRow}>
-              <Text style={styles.modalLabel}>Tasks completed / Min to move streak:</Text>
-              <Text style={styles.modalValue}>
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Tasks completed / Min to move streak:</Text>
+              <Text style={[styles.modalValue, { color: colors.text }]}>
                 {(detailData?.picks?.length || 0) > 0
                   ? `${detailData?.doneCount || 0}/${detailData?.target ?? detailData?.picks?.length}`
                   : 'No tasks assigned'}
@@ -244,10 +247,10 @@ export default function StreakCalendar({ streak, urges }) {
                       <Ionicons
                         name={done ? 'checkmark-circle' : 'ellipse-outline'}
                         size={18}
-                        color={done ? '#10B981' : '#9CA3AF'}
+                        color={done ? '#10B981' : colors.textTertiary}
                         style={{ marginRight: 8 }}
                       />
-                      <Text style={[styles.taskText, done && { color: '#10B981' }]} numberOfLines={1}>
+                      <Text style={[styles.taskText, { color: colors.text }, done && { color: '#10B981' }]} numberOfLines={1}>
                         {t}
                       </Text>
                     </View>
@@ -256,8 +259,8 @@ export default function StreakCalendar({ streak, urges }) {
               </View>
             )}
 
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setDetailVisible(false)}>
-              <Text style={styles.closeBtnText}>Close</Text>
+            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.text }]} onPress={() => setDetailVisible(false)}>
+              <Text style={[styles.closeBtnText, { color: colors.background }]}>Close</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -268,7 +271,6 @@ export default function StreakCalendar({ streak, urges }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
@@ -283,12 +285,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
     marginBottom: 16,
   },
   calendarContainer: {
@@ -314,7 +314,6 @@ const styles = StyleSheet.create({
   },
   monthLabel: {
     fontSize: 12,
-    color: '#6B7280',
     position: 'absolute',
   },
   grid: {
@@ -338,7 +337,6 @@ const styles = StyleSheet.create({
     width: 18,
     textAlign: 'center',
     fontSize: 10,
-    color: '#6B7280',
   },
   day: {
     width: 18,
@@ -354,7 +352,6 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: '#6B7280',
   },
   legendBox: {
     width: 12,
@@ -374,9 +371,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   modalOverlay: {
     flex: 1,
@@ -385,7 +380,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
@@ -400,11 +394,9 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
   },
   modalSubTitle: {
     fontSize: 12,
-    color: '#6B7280',
     marginTop: 2,
   },
   modalRow: {
@@ -415,11 +407,9 @@ const styles = StyleSheet.create({
   },
   modalLabel: {
     fontSize: 14,
-    color: '#374151',
   },
   modalValue: {
     fontSize: 14,
-    color: '#111827',
     fontWeight: '600',
   },
   taskList: {
@@ -433,19 +423,16 @@ const styles = StyleSheet.create({
   },
   taskText: {
     fontSize: 14,
-    color: '#111827',
     flexShrink: 1,
   },
   closeBtn: {
     alignSelf: 'center',
     marginTop: 8,
-    backgroundColor: '#111827',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   closeBtnText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },

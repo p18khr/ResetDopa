@@ -4,18 +4,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import { AppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 import { PROGRAM_DAY_TITLES, getTaskBenefit, TASK_METADATA, TASK_POOLS, getCanonicalTask, getTaskExplanation, getTaskScience } from '../utils/programData';
 import LawChip from '../components/LawChip';
 import { getLawForRoute } from '../utils/lawLabels';
 import FireworksOverlay from '../components/FireworksOverlay';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FirstVisitOverlay from '../components/FirstVisitOverlay';
+import ScreenErrorBoundary from '../components/ScreenErrorBoundary';
 // Removed Week1 modal onboarding (handled now in Dashboard)
 // Daily quote now provided by context (persisted & adherence-informed)
 
 
-export default function Program({ navigation, route }) {
+function Program({ navigation, route }) {
   const { todayPicks, todayCompletions, toggleTodayTaskCompletion, getCurrentDay, getAdherence, getGeneratedTasks, PROGRAM_DAY_TITLES, dailyQuote, dailyQuoteSource, urges, startDate, setStartDate, week1SetupDone, week1Anchors, enableEnhancedFeatures, week1Completed, backfillDisabledBeforeDay, advanceProgramDay, completeDaySilently, completedWeeksWithFireworks, markWeekFireworksFired, getDynamicTaskCount } = useContext(AppContext);
+  const { isDarkMode, colors } = useTheme();
   const currentDay = getCurrentDay();
   const [infoTask, setInfoTask] = useState(null);
   const [selectedDay, setSelectedDay] = useState(currentDay);
@@ -355,13 +358,13 @@ export default function Program({ navigation, route }) {
     }
   }, [isSelectedDayLoading]);
   return (
-    <SafeAreaView style={[styles.safeArea, { paddingTop: ANDROID_TOP }]} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+    <SafeAreaView style={[styles.safeArea, { paddingTop: ANDROID_TOP, backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       
       {/* ===== DAY 1: INTRO MODAL WITH BLOCKER ===== */}
       {/* WHITE BLOCKER: Appears immediately to block content */}
       {currentDay === 1 && (introCheckPending || showIntro) && (
-        <View style={styles.day1Blocker} />
+        <View style={[styles.day1Blocker, { backgroundColor: colors.background }]} />
       )}
       
       {/* MODAL: Fades in slowly on top of blocker (native FirstVisitOverlay) */}
@@ -375,11 +378,11 @@ export default function Program({ navigation, route }) {
       
       {/* ===== DAY 2+: LOADER OVERLAY ===== */}
       {showDay2Loader && (
-        <Animated.View style={[styles.fullscreenLoader, { opacity: loaderOverlayOpacity }]}>
+        <Animated.View style={[styles.fullscreenLoader, { opacity: loaderOverlayOpacity, backgroundColor: isDarkMode ? 'rgba(17,24,39,0.96)' : 'rgba(245,247,250,0.96)' }]}>
           <ActivityIndicator size="large" color="#2563EB" />
-          <Text style={styles.loaderTitle}>Curating your today's tasks</Text>
+          <Text style={[styles.loaderTitle, { color: colors.text }]}>Curating your today's tasks</Text>
           {todaysQuote ? (
-            <Animated.Text style={[styles.loaderQuote, { opacity: loaderQuoteOpacity }]}>
+            <Animated.Text style={[styles.loaderQuote, { opacity: loaderQuoteOpacity, color: colors.textSecondary }]}>
               "{todaysQuote.text}" — {todaysQuote.author}
             </Animated.Text>
           ) : null}
@@ -395,7 +398,7 @@ export default function Program({ navigation, route }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', width:'100%' }}>
-            <Text style={styles.title}>Daily Program</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Daily Program</Text>
             <LawChip law={getLawForRoute(route?.name || 'Program')} />
           </View>
           {(() => {
@@ -408,19 +411,19 @@ export default function Program({ navigation, route }) {
                 ? `Week ${weekNumber} Summary`
                 : `Day ${selectedDay}`;
             return (
-              <Text style={styles.subtitle}>Science-backed dopamine reset journey • Viewing: {viewLabel}</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Science-backed dopamine reset journey • Viewing: {viewLabel}</Text>
             );
           })()}
         </View>
 
         {/* Inline onboarding: prompt to mark one (unskippable but non-blocking) */}
         {guideNeedMarkOne && (
-          <View style={{ backgroundColor:'#EEF2FF', borderColor:'#C7D2FE', borderWidth:1, marginHorizontal:20, marginBottom:12, borderRadius:12, padding:12 }}>
+          <View style={{ backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF', borderColor: isDarkMode ? '#334155' : '#C7D2FE', borderWidth:1, marginHorizontal:20, marginBottom:12, borderRadius:12, padding:12 }}>
             <View style={{ flexDirection:'row', alignItems:'center' }}>
               <Ionicons name="hand-right-outline" size={18} color="#4F46E5" style={{ marginRight:6 }} />
-              <Text style={{ fontWeight:'700', color:'#1F2937' }}>Mark one task to proceed</Text>
+              <Text style={{ fontWeight:'700', color: colors.text }}>Mark one task to proceed</Text>
             </View>
-            <Text style={{ color:'#374151', marginTop:6 }}>Tap “Mark” on any task you feel ready to do today. We\'ll keep it tiny.</Text>
+            <Text style={{ color: colors.textSecondary, marginTop:6 }}>Tap "Mark" on any task you feel ready to do today. We\'ll keep it tiny.</Text>
           </View>
         )}
 
@@ -436,33 +439,33 @@ export default function Program({ navigation, route }) {
           };
           const msg = messages[weekNumber] || { title: "📈 Threshold Increased", desc: "Challenge yourself with a higher bar this week." };
           return (
-            <View style={{ backgroundColor:'#FEF3C7', borderColor:'#FCD34D', borderWidth:1, marginHorizontal:20, marginBottom:12, borderRadius:12, padding:12 }}>
+            <View style={{ backgroundColor: isDarkMode ? '#422006' : '#FEF3C7', borderColor: isDarkMode ? '#78350F' : '#FCD34D', borderWidth:1, marginHorizontal:20, marginBottom:12, borderRadius:12, padding:12 }}>
               <View style={{ flexDirection:'row', alignItems:'center', marginBottom:6 }}>
-                <Ionicons name="trending-up" size={18} color="#92400E" style={{ marginRight:6 }} />
-                <Text style={{ fontWeight:'700', color:'#92400E' }}>{msg.title}</Text>
+                <Ionicons name="trending-up" size={18} color={isDarkMode ? '#FCD34D' : '#92400E'} style={{ marginRight:6 }} />
+                <Text style={{ fontWeight:'700', color: isDarkMode ? '#FCD34D' : '#92400E' }}>{msg.title}</Text>
               </View>
-              <Text style={{ color:'#78350F', fontSize:13 }}>{msg.desc}</Text>
+              <Text style={{ color: isDarkMode ? '#FDE68A' : '#78350F', fontSize:13 }}>{msg.desc}</Text>
             </View>
           );
         })()}
 
         {/* Daily Quote Banner (persisted) */}
         {todaysQuote && (
-          <View style={styles.quoteCard}>
+          <View style={[styles.quoteCard, { backgroundColor: isDarkMode ? '#422006' : '#FFF9E6', borderLeftColor: isDarkMode ? '#F59E0B' : '#FBBF24' }]}>
             <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center' }}>
-              <Text style={styles.quoteTag}>{todaysQuote.tag.toUpperCase()}</Text>
+              <Text style={[styles.quoteTag, { color: isDarkMode ? '#FCD34D' : '#A16207' }]}>{todaysQuote.tag.toUpperCase()}</Text>
               {dailyQuoteSource && (
                 <View style={{ flexDirection:'row', alignItems:'center' }}>
-                  <Ionicons name={dailyQuoteSource === 'cloud' ? 'cloud-done-outline' : dailyQuoteSource === 'local' ? 'download-outline' : 'sparkles-outline'} size={16} color="#A16207" style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize:12, color:'#A16207', fontWeight:'600' }}>
+                  <Ionicons name={dailyQuoteSource === 'cloud' ? 'cloud-done-outline' : dailyQuoteSource === 'local' ? 'download-outline' : 'sparkles-outline'} size={16} color={isDarkMode ? '#FCD34D' : '#A16207'} style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize:12, color: isDarkMode ? '#FCD34D' : '#A16207', fontWeight:'600' }}>
                     {dailyQuoteSource === 'cloud' ? 'Synced' : dailyQuoteSource === 'local' ? 'Cached' : 'New'}
                   </Text>
                 </View>
               )}
             </View>
-            <Text style={styles.quoteText}>"{todaysQuote.text}"</Text>
-            <Text style={styles.quoteAuthor}>— {todaysQuote.author}</Text>
-            <Text style={styles.quoteExplanation}>Micro reminder: let this theme shape one tiny win today.</Text>
+            <Text style={[styles.quoteText, { color: colors.text }]}>"{todaysQuote.text}"</Text>
+            <Text style={[styles.quoteAuthor, { color: colors.textSecondary }]}>— {todaysQuote.author}</Text>
+            <Text style={[styles.quoteExplanation, { color: colors.textSecondary }]}>Micro reminder: let this theme shape one tiny win today.</Text>
           </View>
         )}
 
@@ -474,16 +477,16 @@ export default function Program({ navigation, route }) {
           const distinctCompletedCount = new Set(completedDays).size;
           return distinctCompletedCount >= 3;
         })() && (
-          <View style={styles.adherenceBanner}>
+          <View style={[styles.adherenceBanner, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
             <View style={styles.adherenceBannerHeader}>
               <Ionicons name="pulse" size={18} color="#2563EB" style={{ marginRight: 6 }} />
-              <Text style={styles.adherenceBannerTitle}>Consistency (rolling)</Text>
+              <Text style={[styles.adherenceBannerTitle, { color: colors.text }]}>Consistency (rolling)</Text>
               <Text style={styles.adherenceBannerPct}>{adherencePct}%</Text>
             </View>
-            <View style={styles.adherenceBarOuter}>
+            <View style={[styles.adherenceBarOuter, { backgroundColor: colors.surfaceSecondary }]}>
               <View style={[styles.adherenceBarInner,{ width: `${Math.min(100, adherencePct)}%`, backgroundColor: adherenceColor }]} />
             </View>
-            <Text style={styles.adherenceBannerMsg}>{adherenceMsg}</Text>
+            <Text style={[styles.adherenceBannerMsg, { color: colors.textSecondary }]}>{adherenceMsg}</Text>
           </View>
         )}
 
@@ -512,15 +515,15 @@ export default function Program({ navigation, route }) {
             Other: 'Name the trigger; pick one small counter-action',
           };
           return (
-            <View style={{ backgroundColor: '#FFF7E6', marginHorizontal: 20, marginBottom: 16, borderRadius: 16, padding: 12, borderLeftWidth: 4, borderLeftColor: '#FBBF24' }}>
-              <Text style={{ fontWeight: '700', marginBottom: 8 }}>Suggestions for your recent triggers</Text>
+            <View style={{ backgroundColor: isDarkMode ? '#422006' : '#FFF7E6', marginHorizontal: 20, marginBottom: 16, borderRadius: 16, padding: 12, borderLeftWidth: 4, borderLeftColor: isDarkMode ? '#F59E0B' : '#FBBF24' }}>
+              <Text style={{ fontWeight: '700', marginBottom: 8, color: colors.text }}>Suggestions for your recent triggers</Text>
               {top.map(t => (
                 <View key={t} style={{ marginBottom: 6 }}>
-                  <Text style={{ fontWeight: '600' }}>{t}</Text>
-                  <Text style={{ color: '#555' }}>{tips[t] || tips.Other}</Text>
+                  <Text style={{ fontWeight: '600', color: colors.text }}>{t}</Text>
+                  <Text style={{ color: colors.textSecondary }}>{tips[t] || tips.Other}</Text>
                 </View>
               ))}
-              <Text style={{ color: '#777', marginTop: 4, fontSize: 12 }}>Based on last 7 days of logs</Text>
+              <Text style={{ color: colors.textTertiary, marginTop: 4, fontSize: 12 }}>Based on last 7 days of logs</Text>
             </View>
           );
         })()}
@@ -530,13 +533,13 @@ export default function Program({ navigation, route }) {
         {/* Day Switcher */}
         <View style={{ flexDirection:'row', gap:8, paddingHorizontal:20, marginBottom:12 }}>
           {!isCurrentDayWeekEndComplete && (
-            <TouchableOpacity onPress={() => setSelectedDay(currentDay)} style={{ paddingHorizontal:12, paddingVertical:8, borderRadius:999, borderWidth:1, borderColor: selectedDay===currentDay?'#10B981':'#E5E7EB', backgroundColor: selectedDay===currentDay?'#ECFDF5':'#FFFFFF' }}>
-              <Text style={{ fontSize:12, fontWeight:'600', color: selectedDay===currentDay?'#065F46':'#374151' }}>Today</Text>
+            <TouchableOpacity onPress={() => setSelectedDay(currentDay)} style={{ paddingHorizontal:12, paddingVertical:8, borderRadius:999, borderWidth:1, borderColor: selectedDay===currentDay?'#10B981':colors.border, backgroundColor: selectedDay===currentDay?'#ECFDF5':colors.surfacePrimary }}>
+              <Text style={{ fontSize:12, fontWeight:'600', color: selectedDay===currentDay?'#065F46':colors.text }}>Today</Text>
             </TouchableOpacity>
           )}
           {isCurrentDayWeekEndComplete && (
-            <TouchableOpacity onPress={() => setSelectedDay(currentDay)} style={{ paddingHorizontal:12, paddingVertical:8, borderRadius:999, borderWidth:1, borderColor: selectedDay===currentDay?'#10B981':'#E5E7EB', backgroundColor: selectedDay===currentDay?'#ECFDF5':'#FFFFFF' }}>
-              <Text style={{ fontSize:12, fontWeight:'600', color: selectedDay===currentDay?'#065F46':'#374151' }}>{`Week ${currentDay/7}`}</Text>
+            <TouchableOpacity onPress={() => setSelectedDay(currentDay)} style={{ paddingHorizontal:12, paddingVertical:8, borderRadius:999, borderWidth:1, borderColor: selectedDay===currentDay?'#10B981':colors.border, backgroundColor: selectedDay===currentDay?'#ECFDF5':colors.surfacePrimary }}>
+              <Text style={{ fontSize:12, fontWeight:'600', color: selectedDay===currentDay?'#065F46':colors.text }}>{`Week ${currentDay/7}`}</Text>
             </TouchableOpacity>
           )}
           {(() => {
@@ -548,8 +551,8 @@ export default function Program({ navigation, route }) {
                 const weekNumber = Math.ceil(weekEnd / 7);
                 const isActive = selectedDay === weekEnd;
                 return (
-                  <TouchableOpacity key={weekEnd} onPress={() => setSelectedDay(weekEnd)} style={{ paddingHorizontal:12, paddingVertical:8, borderRadius:999, borderWidth:1, borderColor: isActive?'#10B981':'#E5E7EB', backgroundColor: isActive?'#ECFDF5':'#FFFFFF' }}>
-                    <Text style={{ fontSize:12, fontWeight:'600', color: isActive?'#065F46':'#374151' }}>Week {weekNumber}</Text>
+                  <TouchableOpacity key={weekEnd} onPress={() => setSelectedDay(weekEnd)} style={{ paddingHorizontal:12, paddingVertical:8, borderRadius:999, borderWidth:1, borderColor: isActive?'#10B981':colors.border, backgroundColor: isActive?'#ECFDF5':colors.surfacePrimary }}>
+                    <Text style={{ fontSize:12, fontWeight:'600', color: isActive?'#065F46':colors.text }}>Week {weekNumber}</Text>
                   </TouchableOpacity>
                 );
               });
@@ -561,10 +564,10 @@ export default function Program({ navigation, route }) {
           const dayData = PROGRAM_DAY_TITLES.find(d => d.day === selectedDay);
           if (!dayData) {
             return (
-              <View style={styles.selectorCard}>
+              <View style={[styles.selectorCard, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
                 <View style={styles.selectorHeader}>
-                  <Text style={styles.selectorTitle}>Program not initialized</Text>
-                  <Text style={styles.selectorSub}>Set start date to today to begin.</Text>
+                  <Text style={[styles.selectorTitle, { color: colors.text }]}>Program not initialized</Text>
+                  <Text style={[styles.selectorSub, { color: colors.textSecondary }]}>Set start date to today to begin.</Text>
                 </View>
                 <TouchableOpacity style={styles.modalConfirmBtn} onPress={async () => {
                   const iso = new Date().toISOString();
@@ -655,16 +658,17 @@ export default function Program({ navigation, route }) {
           // Loader gate moved to top-level to comply with Hooks rules
           
           return (
-            <View 
-              key={dayData.day} 
+            <View
+              key={dayData.day}
               style={[
-                styles.dayCard, 
+                styles.dayCard,
+                { backgroundColor: colors.surfacePrimary, borderColor: colors.border },
                 isWeekEnd && styles.dayCardHighlight,
                 isCurrentDay && styles.dayCardCurrent,
                 isLocked && styles.dayCardLocked
               ]}
             >
-              <View style={styles.dayHeader}>
+              <View style={[styles.dayHeader, { borderBottomColor: colors.border }]}>
                 <View style={styles.dayHeaderLeft}>
                   {isLocked && <Ionicons name="lock-closed" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />}
                   {isCompleted && <Ionicons name="checkmark-circle" size={20} color="#10B981" style={{ marginRight: 8 }} />}
@@ -673,7 +677,7 @@ export default function Program({ navigation, route }) {
                     <Text style={[styles.dayNumber, isLocked && styles.dayNumberLocked]}>
                       Day {dayData.day}
                     </Text>
-                    <Text style={[styles.dayTitle, isLocked && styles.dayTitleLocked]}>
+                    <Text style={[styles.dayTitle, { color: isLocked ? '#9CA3AF' : colors.text }]}>
                       {(dayData.day === 7 && !week1Completed) ? 'Keep Anchors Strong' : dayData.title}
                     </Text>
                   </View>
@@ -684,9 +688,9 @@ export default function Program({ navigation, route }) {
               </View>
 
           {overlayInfo && (
-            <View style={[styles.overlayBanner, overlayInfo.tone === 'week' ? styles.overlayBannerWeek : styles.overlayBannerDay]}>
-              <Ionicons name={overlayInfo.tone === 'week' ? 'trophy-outline' : 'checkmark-done-outline'} size={16} color={overlayInfo.tone === 'week' ? '#92400E' : '#065F46'} style={{ marginRight: 6 }} />
-              <Text style={styles.overlayBannerText}>{overlayInfo.text}</Text>
+            <View style={[styles.overlayBanner, { backgroundColor: overlayInfo.tone === 'week' ? (isDarkMode ? '#422006' : '#FEF3C7') : (isDarkMode ? '#064E3B' : '#ECFDF3'), borderColor: overlayInfo.tone === 'week' ? (isDarkMode ? '#78350F' : '#FCD34D') : (isDarkMode ? '#10B981' : '#A7F3D0'), borderWidth: 1 }]}>
+              <Ionicons name={overlayInfo.tone === 'week' ? 'trophy-outline' : 'checkmark-done-outline'} size={16} color={overlayInfo.tone === 'week' ? (isDarkMode ? '#FCD34D' : '#92400E') : (isDarkMode ? '#A7F3D0' : '#065F46')} style={{ marginRight: 6 }} />
+              <Text style={[styles.overlayBannerText, { color: colors.text }]}>{overlayInfo.text}</Text>
             </View>
           )}
 
@@ -729,16 +733,16 @@ export default function Program({ navigation, route }) {
               const topCategory = Object.entries(categoryFreq).sort((a,b) => b[1]-a[1])[0]?.[0];
               
               return (
-                <View style={{ backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', borderWidth: 1, marginTop: 16, borderRadius: 12, padding: 16 }}>
+                <View style={{ backgroundColor: isDarkMode ? '#064E3B' : '#ECFDF5', borderColor: isDarkMode ? '#10B981' : '#A7F3D0', borderWidth: 1, marginTop: 16, borderRadius: 12, padding: 16 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                     <Ionicons name="trophy" size={20} color="#10B981" style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#065F46' }}>Week {weekNumber} Summary</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: isDarkMode ? '#A7F3D0' : '#065F46' }}>Week {weekNumber} Summary</Text>
                   </View>
-                  <Text style={{ fontSize: 13, color: '#047857', marginBottom: 8 }}>📊 <Text style={{ fontWeight: '600' }}>Adherence: {adherenceRate}% • Tasks: {totalDone}/{totalAvailable} • Urges: {urgesLogged}</Text></Text>
+                  <Text style={{ fontSize: 13, color: isDarkMode ? '#D1FAE5' : '#047857', marginBottom: 8 }}>📊 <Text style={{ fontWeight: '600' }}>Adherence: {adherenceRate}% • Tasks: {totalDone}/{totalAvailable} • Urges: {urgesLogged}</Text></Text>
                   {topCategory && (
-                    <Text style={{ fontSize: 13, color: '#047857', marginBottom: 8 }}>🎯 Most frequent: <Text style={{ fontWeight: '600' }}>{topCategory}</Text></Text>
+                    <Text style={{ fontSize: 13, color: isDarkMode ? '#D1FAE5' : '#047857', marginBottom: 8 }}>🎯 Most frequent: <Text style={{ fontWeight: '600' }}>{topCategory}</Text></Text>
                   )}
-                  <Text style={{ fontSize: 13, color: '#047857' }}>Great momentum — keep your anchors strong next week.</Text>
+                  <Text style={{ fontSize: 13, color: isDarkMode ? '#D1FAE5' : '#047857' }}>Great momentum — keep your anchors strong next week.</Text>
                 </View>
               );
             }
@@ -751,13 +755,13 @@ export default function Program({ navigation, route }) {
           {!isLocked && enableEnhancedFeatures && (isLoadingTasks || gateLoading) && (
             <View style={{ paddingVertical: 12, flexDirection:'row', alignItems:'center' }}>
               <ActivityIndicator size="small" color="#4A90E2" style={{ marginRight:8 }} />
-              <Text style={{ fontSize:13, color:'#374151' }}>{curatedFlash ? 'Curated.' : 'Curating your program…'}</Text>
+              <Text style={{ fontSize:13, color: colors.textSecondary }}>{curatedFlash ? 'Curated.' : 'Curating your program…'}</Text>
             </View>
           )}
 
           {!isLocked && !isLoadingTasks && tasksToShow.length === 0 && (
             <View style={{ paddingVertical: 12 }}>
-              <Text style={{ fontSize:13, color:'#6B7280', fontStyle:'italic' }}>No tasks yet. Pick 5 anchors on Dashboard to begin.</Text>
+              <Text style={{ fontSize:13, color: colors.textSecondary, fontStyle:'italic' }}>No tasks yet. Pick 5 anchors on Dashboard to begin.</Text>
             </View>
           )}
 
@@ -777,11 +781,11 @@ export default function Program({ navigation, route }) {
                   const rationale = `${isAnchor ? 'Your Week 1 anchor. ' : ''}Variety: ${task.category}. ${adherence >= 0.8 ? 'Slight level-up based on strong consistency.' : adherence >= 0.5 ? 'Steady: keep building routine.' : 'Gentle: focus on one small win.'}`;
                   const isDone = (todayCompletions[dayData.day] || {})[task.task] || false;
                   return (
-                    <View key={taskIndex} style={styles.taskRow}>
+                    <View key={taskIndex} style={[styles.taskRow, { borderBottomColor: colors.border }]}>
                       <View style={styles.taskInfo}>
                         {/* Category hidden per request; show points prominently */}
-                        <Text style={[styles.taskText, isDone && { color: '#6B7280' }]}>{task.task}</Text>
-                        <Text style={styles.taskExplanation}>💡 {explanation || 'Helps build routine and reduce friction.'}</Text>
+                        <Text style={[styles.taskText, { color: isDone ? colors.textTertiary : colors.text }]}>{task.task}</Text>
+                        <Text style={[styles.taskExplanation, { color: colors.textSecondary }]}>💡 {explanation || 'Helps build routine and reduce friction.'}</Text>
                         <View style={{ flexDirection:'row', alignItems:'center', marginTop: 6 }}>
                           <TouchableOpacity onPress={() => setInfoTask({ day: dayData.day, task })} style={{ flexDirection:'row', alignItems:'center' }}>
                             <Ionicons name="information-circle-outline" size={16} color="#2563EB" style={{ marginRight: 4 }} />
@@ -798,7 +802,7 @@ export default function Program({ navigation, route }) {
                         }}
                         style={[
                           styles.checkPill,
-                          isDone && styles.checkPillDone,
+                          { borderColor: isDone ? '#10B981' : colors.border, backgroundColor: isDone ? '#10B981' : (isDarkMode ? '#1F2937' : '#FFFFFF') },
                           isDone && { opacity: 0.9 },
                           !canMark && styles.checkPillLocked
                         ]}
@@ -810,7 +814,7 @@ export default function Program({ navigation, route }) {
                             {!canMark && (
                               <Ionicons name="lock-closed" size={14} color="#9CA3AF" style={{ marginRight: 4 }} />
                             )}
-                            <Text style={[styles.checkPillText, !canMark && { color: '#9CA3AF' }]}>Mark</Text>
+                            <Text style={[styles.checkPillText, { color: !canMark ? '#9CA3AF' : colors.textSecondary }]}>Mark</Text>
                           </View>
                         )}
                       </TouchableOpacity>
@@ -822,13 +826,13 @@ export default function Program({ navigation, route }) {
 
               {/* Final inline onboarding card: point to Urges and Stats (non-blocking) */}
               {guideShowExplore && dayData.day === currentDay && (
-                <View style={{ backgroundColor:'#ECFDF5', borderColor:'#A7F3D0', borderWidth:1, marginTop:12, borderRadius:12, padding:12 }}>
+                <View style={{ backgroundColor: isDarkMode ? '#064E3B' : '#ECFDF5', borderColor: isDarkMode ? '#10B981' : '#A7F3D0', borderWidth:1, marginTop:12, borderRadius:12, padding:12 }}>
                   <View style={{ flexDirection:'row', alignItems:'center', marginBottom:6 }}>
                     <Ionicons name="sparkles-outline" size={18} color="#10B981" style={{ marginRight:6 }} />
-                    <Text style={{ fontWeight:'700', color:'#065F46' }}>Nice! Explore next:</Text>
+                    <Text style={{ fontWeight:'700', color: isDarkMode ? '#A7F3D0' : '#065F46' }}>Nice! Explore next:</Text>
                   </View>
-                  <Text style={{ color:'#065F46' }}>• Urge Logger: record urges with feelings and triggers to build resilience.
-                  {'\n'}• Stats: see trends, adherence, and variety with a clear “Today” marker.</Text>
+                  <Text style={{ color: isDarkMode ? '#D1FAE5' : '#065F46' }}>• Urge Logger: record urges with feelings and triggers to build resilience.
+                  {'\n'}• Stats: see trends, adherence, and variety with a clear "Today" marker.</Text>
                   <View style={{ flexDirection:'row', gap:10, marginTop:10 }}>
                     <TouchableOpacity onPress={() => navigation.navigate('UrgeLogger')} style={{ paddingHorizontal:12, paddingVertical:8, borderRadius:10, backgroundColor:'#10B981' }}>
                       <Text style={{ color:'#fff', fontWeight:'700' }}>Open Urges</Text>
@@ -838,8 +842,8 @@ export default function Program({ navigation, route }) {
                     </TouchableOpacity>
                     <View style={{ flex:1 }} />
                     {/* 'Finish Tour' persists completion so it won't appear again */}
-                    <TouchableOpacity onPress={async () => { try { await AsyncStorage.setItem('guideShowExplore','false'); await AsyncStorage.setItem('guideSeen_v2','true'); } catch {}; setGuideShowExplore(false); }} style={{ paddingHorizontal:12, paddingVertical:8, borderRadius:10, borderWidth:1, borderColor:'#A7F3D0', backgroundColor:'#FFFFFF' }}>
-                      <Text style={{ color:'#065F46', fontWeight:'700' }}>Finish Tour</Text>
+                    <TouchableOpacity onPress={async () => { try { await AsyncStorage.setItem('guideShowExplore','false'); await AsyncStorage.setItem('guideSeen_v2','true'); } catch {}; setGuideShowExplore(false); }} style={{ paddingHorizontal:12, paddingVertical:8, borderRadius:10, borderWidth:1, borderColor: isDarkMode ? '#10B981' : '#A7F3D0', backgroundColor: colors.surfacePrimary }}>
+                      <Text style={{ color: isDarkMode ? '#A7F3D0' : '#065F46', fontWeight:'700' }}>Finish Tour</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -848,10 +852,10 @@ export default function Program({ navigation, route }) {
               {isLocked && (
                 <View style={styles.lockedMessage}>
                   <Ionicons name="time-outline" size={32} color="#9CA3AF" />
-                  <Text style={styles.lockedText}>
+                  <Text style={[styles.lockedText, { color: colors.textSecondary }]}>
                     Complete previous days to unlock
                   </Text>
-                  <Text style={styles.lockedSubtext}>
+                  <Text style={[styles.lockedSubtext, { color: colors.textTertiary }]}>
                     Focus on today's journey
                   </Text>
                 </View>
@@ -866,8 +870,8 @@ export default function Program({ navigation, route }) {
               })() && (() => {
                 const weekNumber = Math.ceil(dayData.day / 7);
                 return (
-                  <View style={styles.milestoneTag}>
-                    <Text style={styles.milestoneText}>🎉 Week {weekNumber} Complete!</Text>
+                  <View style={[styles.milestoneTag, { backgroundColor: '#FBBF24' }]}>
+                    <Text style={[styles.milestoneText, { color: colors.text }]}>🎉 Week {weekNumber} Complete!</Text>
                   </View>
                 );
               })()}
@@ -881,7 +885,7 @@ export default function Program({ navigation, route }) {
                 const isShowingSummary = isInLastTwoDaysOfWeek && isWeekComplete && !isLocked;
                 // Only show banner if viewing tasks, not summary
                 return (dayData.day === currentDay && !isShowingSummary) && (
-                  <View style={styles.currentDayBanner}>
+                  <View style={[styles.currentDayBanner, { backgroundColor: '#2563EB' }]}>
                     <Ionicons name="flash" size={16} color="#fff" />
                     <Text style={styles.currentDayText}>TODAY'S FOCUS</Text>
                   </View>
@@ -897,19 +901,19 @@ export default function Program({ navigation, route }) {
       {/* Rationale Modal — task-specific explanation + benefit */}
       <Modal visible={!!infoTask} animationType="slide" transparent onRequestClose={() => setInfoTask(null)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Why this task</Text>
+          <View style={[styles.modalCard, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Why this task</Text>
             {infoTask && (
               <View>
-                <Text style={styles.selectorSub}>
-                  Task: <Text style={{ fontWeight:'700', color:'#111827' }}>{infoTask.task.task}</Text>
+                <Text style={[styles.selectorSub, { color: colors.textSecondary }]}>
+                  Task: <Text style={{ fontWeight:'700', color: colors.text }}>{infoTask.task.task}</Text>
                 </Text>
                 <View style={{ marginTop: 8 }}>
-                  <Text style={styles.selectorSub}>Why: {getTaskExplanation(infoTask.task.task) || 'Builds consistency and reduces friction'}</Text>
-                  <Text style={[styles.selectorSub, { marginTop: 6, color:'#374151' }]}>Benefit: {getTaskBenefit(infoTask.task.task) || 'Helps build routine and reduce friction.'}</Text>
-                  <Text style={[styles.selectorSub, { marginTop: 6, color:'#374151' }]}>Science: {getTaskScience(infoTask.task.task)}</Text>
+                  <Text style={[styles.selectorSub, { color: colors.textSecondary }]}>Why: {getTaskExplanation(infoTask.task.task) || 'Builds consistency and reduces friction'}</Text>
+                  <Text style={[styles.selectorSub, { marginTop: 6, color: colors.textSecondary }]}>Benefit: {getTaskBenefit(infoTask.task.task) || 'Helps build routine and reduce friction.'}</Text>
+                  <Text style={[styles.selectorSub, { marginTop: 6, color: colors.textSecondary }]}>Science: {getTaskScience(infoTask.task.task)}</Text>
                   {isPomodoroTask && (
-                    <Text style={[styles.selectorSub, { marginTop: 6, color:'#1F2937' }]}>Pomodoro = 25 minutes of focused work followed by a 5-minute break. Finish the deep-work block, take the short break, then repeat; “x2/x3” means stack rounds with breaks.</Text>
+                    <Text style={[styles.selectorSub, { marginTop: 6, color: colors.text }]}>Pomodoro = 25 minutes of focused work followed by a 5-minute break. Finish the deep-work block, take the short break, then repeat; "x2/x3" means stack rounds with breaks.</Text>
                   )}
                   <Text style={[styles.selectorSub, { marginTop: 6, fontWeight:'700', color:'#065F46' }]}>Points: {(infoTask.task.points || 0)} CP</Text>
                 </View>
@@ -1346,4 +1350,13 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
 });
+
+// Wrap Program with ErrorBoundary
+export default function ProgramWithErrorBoundary(props) {
+  return (
+    <ScreenErrorBoundary screenName="Program" navigation={props.navigation}>
+      <Program {...props} />
+    </ScreenErrorBoundary>
+  );
+}
 

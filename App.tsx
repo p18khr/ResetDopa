@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState, ReactNode } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
@@ -6,8 +6,14 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AppProvider, AppContext } from './src/context/AppContext';
-import { signOut } from 'firebase/auth';
-import { auth } from './src/config/firebase';
+import { AuthProvider } from './src/context/AuthContext';
+import { ProgramProvider } from './src/context/ProgramContext';
+import { UrgesProvider } from './src/context/UrgesContext';
+import { BadgesProvider } from './src/context/BadgesContext';
+import { SettingsProvider } from './src/context/SettingsContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import * as Font from 'expo-font';
+import type { AppContextValue } from './src/types';
 
 import Dashboard from './src/screens/Dashboard';
 import UrgeLogger from './src/screens/UrgeLogger';
@@ -23,21 +29,36 @@ import Settings from './src/screens/Settings';
 import Profile from './src/screens/Profile';
 import LearnLaws from './src/screens/LearnLaws';
 import LegalAcceptanceScreen from './src/screens/LegalAcceptanceScreen';
-import { useEffect, useState } from 'react';
-import ReactRef from 'react';
 
-const navigationRef = React.createRef();
+const navigationRef = React.createRef<any>();
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-class ErrorBoundary extends React.Component {
-  constructor(props) {
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
-  static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(error, info) { /* log or ignore */ }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    // Log error or handle it
+    console.error('ErrorBoundary caught:', error, info);
+  }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -51,24 +72,30 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function TabNavigator() {
+function TabNavigator(): React.ReactElement {
+  const { isDarkMode, colors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
+        tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
+          let iconName: keyof typeof Ionicons.glyphMap = 'home';
           if (route.name === 'Dashboard') iconName = 'home';
           else if (route.name === 'Program') iconName = 'calendar';
           else if (route.name === 'UrgeLogger') iconName = 'flash';
           else if (route.name === 'Badges') iconName = 'trophy';
           else if (route.name === 'Chat') iconName = 'chatbubbles';
           else if (route.name === 'Stats') iconName = 'analytics';
-          
+
           // Render standard tab icon for all routes
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#4A90E2',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: colors.surfacePrimary,
+          borderTopColor: colors.border,
+        },
         headerShown: false,
       })}
     >
@@ -87,8 +114,9 @@ function TabNavigator() {
 }
 
 // Root stack with a gentle fade between screens for smoother tour hops
-function AppNavigator() {
-  const { user, loading, hasAcceptedTerms, acceptanceLoaded } = useContext(AppContext);
+function AppNavigator(): React.ReactElement {
+  const context = useContext(AppContext) as AppContextValue;
+  const { user, loading, hasAcceptedTerms, acceptanceLoaded } = context;
 
   // Show a loader while global state or acceptance state is still resolving
   if (loading || (user && !acceptanceLoaded)) {
@@ -131,20 +159,22 @@ function AppNavigator() {
   );
 }
 
-function App() {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+function App(): React.ReactElement {
+  const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
-    async function loadFonts() {
-      try {
-        // 3. Manually trigger the font loading for Ionicons
-        await Font.loadAsync(Ionicons.font);
-      } catch (e) {
-        console.warn("Font loading error:", e);
-      } finally {
-        setFontsLoaded(true);
-      }
-    }
+    async function loadFonts(): Promise<void> {
+  try {
+    // We use the direct object to ensure nothing is 'undefined'
+    await Font.loadAsync({
+  'ionicons': require('./assets/font.ttf'), // Must be exactly the name on your folder
+    });
+  } catch (e) {
+    console.error("Font loading error:", e);
+  } finally {
+    setFontsLoaded(true);
+  }
+}
     loadFonts();
   }, []);
 
@@ -156,24 +186,36 @@ function App() {
       </View>
     );
   }
-  
+
   return (
     <ErrorBoundary>
-      <AppProvider>
-        <SafeAreaProvider>
-          <NavigationContainer ref={navigationRef}>
-            <AppNavigator />
-          </NavigationContainer>
-          <BannerLayer />
-        </SafeAreaProvider>
-      </AppProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ProgramProvider>
+            <UrgesProvider>
+              <BadgesProvider>
+                <SettingsProvider>
+                  <AppProvider>
+                    <SafeAreaProvider>
+                      <NavigationContainer ref={navigationRef}>
+                        <AppNavigator />
+                      </NavigationContainer>
+                      <BannerLayer />
+                    </SafeAreaProvider>
+                  </AppProvider>
+                </SettingsProvider>
+              </BadgesProvider>
+            </UrgesProvider>
+          </ProgramProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
 
 export default App;
 
-function BannerLayer() {
+function BannerLayer(): null {
   // AuthStatusBanner is disabled because:
   // 1. Navigation structure prevents unauthenticated users from accessing app screens
   // 2. When user is null, AppNavigator shows only Login/Signup screens

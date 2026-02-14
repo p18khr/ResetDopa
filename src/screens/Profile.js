@@ -2,10 +2,10 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, ScrollView, Alert } from 'react-native';
 import { AppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { updateUserData } from '../services/firestore.service';
 
 const AVATAR_OPTIONS = [
   { id: 1, emoji: '🧘', name: 'Zen' },
@@ -20,6 +20,7 @@ const AVATAR_OPTIONS = [
 
 export default function Profile({ navigation }) {
   const { user, claimBadge } = useContext(AppContext);
+  const { isDarkMode, colors } = useTheme();
   const [username, setUsername] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(1);
   const [goal, setGoal] = useState('');
@@ -58,8 +59,7 @@ export default function Profile({ navigation }) {
 
       // Save to Firestore if user is logged in
       if (user?.uid) {
-        const userRef = doc(db, 'users', user.uid);
-        await updateDoc(userRef, {
+        await updateUserData(user.uid, {
           username,
           avatar: selectedAvatar,
           goal,
@@ -83,29 +83,29 @@ export default function Profile({ navigation }) {
   const selectedAvatarData = AVATAR_OPTIONS.find(a => a.id === selectedAvatar);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
-      
-      <ScrollView 
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
+
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Edit Profile</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Edit Profile</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {/* Avatar Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Choose Your Avatar</Text>
-          
-          <View style={styles.avatarPreview}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Choose Your Avatar</Text>
+
+          <View style={[styles.avatarPreview, { backgroundColor: colors.surfacePrimary }]}>
             <Text style={styles.avatarPreviewEmoji}>{selectedAvatarData?.emoji}</Text>
-            <Text style={styles.avatarPreviewName}>{selectedAvatarData?.name}</Text>
+            <Text style={[styles.avatarPreviewName, { color: colors.accent }]}>{selectedAvatarData?.name}</Text>
           </View>
 
           <View style={styles.avatarGrid}>
@@ -114,7 +114,8 @@ export default function Profile({ navigation }) {
                 key={avatar.id}
                 style={[
                   styles.avatarOption,
-                  selectedAvatar === avatar.id && styles.avatarOptionSelected
+                  { backgroundColor: colors.surfacePrimary, borderColor: 'transparent' },
+                  selectedAvatar === avatar.id && { borderColor: colors.accent, backgroundColor: colors.surfaceSecondary }
                 ]}
                 onPress={() => setSelectedAvatar(avatar.id)}
               >
@@ -126,50 +127,52 @@ export default function Profile({ navigation }) {
 
         {/* Username */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Username</Text>
-          <View style={styles.inputContainer}>
-            <Ionicons name="person-outline" size={20} color="#6B7280" />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Username</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.surfacePrimary }]}>
+            <Ionicons name="person-outline" size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: colors.text }]}
               placeholder="Enter your username"
+              placeholderTextColor={colors.textTertiary}
               value={username}
               onChangeText={setUsername}
               maxLength={20}
               autoCapitalize="none"
             />
           </View>
-          <Text style={styles.inputHint}>{username.length}/20 characters</Text>
+          <Text style={[styles.inputHint, { color: colors.textTertiary }]}>{username.length}/20 characters</Text>
         </View>
 
         {/* Goal */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Goal</Text>
-          <View style={styles.inputContainer}>
-            <Ionicons name="flag-outline" size={20} color="#6B7280" />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Goal</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.surfacePrimary }]}>
+            <Ionicons name="flag-outline" size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: colors.text }]}
               placeholder="What's your main goal?"
+              placeholderTextColor={colors.textTertiary}
               value={goal}
               onChangeText={setGoal}
               maxLength={60}
               multiline
             />
           </View>
-          <Text style={styles.inputHint}>{goal.length}/60 characters</Text>
+          <Text style={[styles.inputHint, { color: colors.textTertiary }]}>{goal.length}/60 characters</Text>
         </View>
 
         {/* Account Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          <View style={styles.infoCard}>
-            <Ionicons name="mail-outline" size={20} color="#6B7280" />
-            <Text style={styles.infoText}>{user?.email}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
+          <View style={[styles.infoCard, { backgroundColor: colors.surfacePrimary }]}>
+            <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>{user?.email}</Text>
           </View>
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity 
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
+        <TouchableOpacity
+          style={[styles.saveButton, { backgroundColor: colors.accent }, saving && styles.saveButtonDisabled]}
           onPress={saveProfile}
           disabled={saving}
         >
@@ -186,7 +189,6 @@ export default function Profile({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
   },
   scrollContent: {
     paddingBottom: 40,
@@ -202,7 +204,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   section: {
     paddingHorizontal: 20,
@@ -211,12 +212,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A1A1A',
     marginBottom: 16,
   },
   avatarPreview: {
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 20,
     padding: 24,
     marginBottom: 16,
@@ -233,7 +232,6 @@ const styles = StyleSheet.create({
   avatarPreviewName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#4A90E2',
   },
   avatarGrid: {
     flexDirection: 'row',
@@ -244,12 +242,10 @@ const styles = StyleSheet.create({
   avatarOption: {
     width: 70,
     height: 70,
-    backgroundColor: '#fff',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -257,8 +253,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   avatarOptionSelected: {
-    borderColor: '#4A90E2',
-    backgroundColor: '#EFF6FF',
   },
   avatarEmoji: {
     fontSize: 36,
@@ -266,7 +260,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     gap: 12,
@@ -279,18 +272,15 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: '#1A1A1A',
   },
   inputHint: {
     fontSize: 12,
-    color: '#9CA3AF',
     marginTop: 8,
     textAlign: 'right',
   },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     gap: 12,
@@ -302,14 +292,12 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 15,
-    color: '#6B7280',
   },
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#4A90E2',
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 20,

@@ -3,13 +3,17 @@ import React, { createContext, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import uuid from 'react-native-uuid';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '../config/firebase';
+import { db } from '../config/firebase';
 import { TASK_METADATA, getTaskExplanation, generateDayTasks, PROGRAM_DAY_TITLES, getCanonicalTask } from '../utils/programData';
 import { scheduleMilestoneNotification, scheduleThresholdNotification, scheduleBadgeUnlockNotification } from '../utils/notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BadgeToast from '../components/BadgeToast';
 import StreakBumpOverlay from '../components/StreakBumpOverlay';
+import { useAuth } from './AuthContext';
+import { useProgram } from './ProgramContext';
+import { useUrges } from './UrgesContext';
+import { useBadges } from './BadgesContext';
+import { useSettings } from './SettingsContext';
 
 export const AppContext = createContext({
   week1Completed: false,
@@ -17,53 +21,49 @@ export const AppContext = createContext({
 });
 
 export function AppProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [calmPoints, setCalmPoints] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [urges, setUrges] = useState([]);
-  const [todayPicks, setTodayPicks] = useState({});
-  const [todayCompletions, setTodayCompletions] = useState({});
+  // Get auth state from AuthContext
+  const { user, loading, hasAcceptedTerms, acceptanceLoaded, acceptTerms, setHasAcceptedTerms, setAcceptanceLoaded } = useAuth();
+
+  // Get program state from ProgramContext
+  const program = useProgram();
+  const {
+    streak, startDate, startDateResets, todayPicks, todayCompletions, dailyMetrics,
+    adherenceWindowDays, devDayOffset, week1SetupDone, week1Anchors, week1RotationApplied,
+    week1Completed, backfillDisabledBeforeDay, graceUsages, lastStreakDayCounted,
+    streakEvaluatedForDay, thresholdMetToday, lastStreakMessage, lastRolloverPrevDayEvaluated,
+    rolloverBannerInfo, rolloverBannerDismissedDay, streakBumpSeq, observedDayKey,
+    getCurrentDay, getAdherence, getRampThreshold, ensurePicksForDay, evaluateStreakProgress,
+    updateStreak, getDisplayStreak, saveUserData: saveProgramData, setProgramState, queueEvaluation, getVirtualDateKey,
+    generatedDayTasksRef, streakEvaluatedForDayRefRef, lastRolloverPrevDayEvaluatedRefRef,
+    setTodayPicks, setTodayCompletions, setWeek1SetupDone, setWeek1Anchors,
+    setWeek1RotationApplied, setWeek1Completed, setBackfillDisabledBeforeDay,
+    setGraceUsages, setLastStreakDayCounted, setStreakEvaluatedForDay, setThresholdMetToday,
+    setLastStreakMessage, setLastRolloverPrevDayEvaluated, setRolloverBannerInfo,
+    setRolloverBannerDismissedDay, setStartDate, setDevDayOffset, setAdherenceWindowDays
+  } = program;
+
+  // Compute display streak for optimistic UI
+  // Shows +1 when threshold met today, actual value otherwise
+  const displayStreak = getDisplayStreak();
+
+  // Get urge state from UrgesContext
+  const { urges, addUrge, updateUrgeOutcome: updateUrgeOutcomeFromContext, setUrgesFromData, getUrgeCount, getRecentUrges, getUrgesForDate } = useUrges();
+
+  // Get badge state from BadgesContext
+  const { badges, calmPoints, badgeToast, claimBadge, checkAndClaimBadges, setCalmPoints, clearBadgeToast, setBadgesFromData, setBadges } = useBadges();
+
+  // Get settings state from SettingsContext
+  const { enableEnhancedFeatures, completedWeeksWithFireworks, markWeekFireworksFired, setCompletedWeeksFromData } = useSettings();
+
   const [tasks, setTasks] = useState([
     { id: 't1', title: '10 min sunlight', points: 5, done: false },
     { id: 't2', title: '5 min meditation', points: 8, done: false },
     { id: 't3', title: '25 min deep work', points: 10, done: false },
   ]);
-  const [badges, setBadges] = useState([
-    { id: 'b1', title: 'Awareness Rising', got: true },
-    { id: 'b2', title: 'Deep Worker', got: false },
-  ]);
   // UI signals
-  const [badgeToast, setBadgeToast] = useState(null); // { id, title }
-  const [streakBumpSeq, setStreakBumpSeq] = useState(0); // increments on +1
-  const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState(null); // ISO string
-  const [startDateResets, setStartDateResets] = useState(0); // limit 2
-  const [dailyMetrics, setDailyMetrics] = useState({}); // { 'YYYY-MM-DD': { urges: n, completions: n, target: n, adherence: 0-1, variety: 0-1, calmDelta: n, streak: n } }
-  const [week1SetupDone, setWeek1SetupDone] = useState(false);
-  const [adherenceWindowDays, setAdherenceWindowDays] = useState(3);
-  const [completedWeeksWithFireworks, setCompletedWeeksWithFireworks] = useState([]); // Track which weeks have already fired fireworks
-  const generatedDayTasksRef = React.useRef({});
   const [dailyQuote, setDailyQuote] = useState(null);
   const [dailyQuoteSource, setDailyQuoteSource] = useState(null); // 'cloud' | 'local' | 'generated'
-  const [devDayOffset, setDevDayOffset] = useState(0); // Demo: advance day without changing calendar
-    // Helper: virtual date key respecting devDayOffset (testing/demo)
-    const getVirtualDateKey = () => {
-      const d = new Date();
-      try { if (devDayOffset && Number.isFinite(devDayOffset)) d.setDate(d.getDate() + devDayOffset); } catch {}
-      return d.toISOString().slice(0,10);
-    };
-  // Track the observed day using the virtual date key; triggers daily updates
-  const [observedDayKey, setObservedDayKey] = useState(getVirtualDateKey());
-  useEffect(() => { setObservedDayKey(getVirtualDateKey()); }, [devDayOffset]);
-  useEffect(() => {
-    const id = setInterval(() => {
-      try {
-        const key = getVirtualDateKey();
-        if (key !== observedDayKey) setObservedDayKey(key);
-      } catch {}
-    }, 60000); // check every minute
-    return () => clearInterval(id);
-  }, [observedDayKey, devDayOffset]);
+
   // Threshold notification: Schedule on Days 8, 15, 22 at 8 AM
   useEffect(() => {
     const scheduleThresholdNotif = async () => {
@@ -91,36 +91,7 @@ export function AppProvider({ children }) {
   const [dailyQuestDone, setDailyQuestDone] = useState({}); // { 'YYYY-MM-DD': true }
   // Daily mood capture (YYYY-MM-DD -> 'Better' | 'Neutral' | 'Worse')
   const [dailyMood, setDailyMoodState] = useState({});
-  // Progressive streak system helpers
-  const [graceDayDates, setGraceDayDates] = useState([]); // array of YYYY-MM-DD for grace days
-  const [lastStreakDayCounted, setLastStreakDayCounted] = useState(0); // day number last advanced
-  const [streakEvaluatedForDay, setStreakEvaluatedForDay] = useState(0); // atomic lock: day number where streak was evaluated same-day
-  const [lastStreakMessage, setLastStreakMessage] = useState('');
-  const [lastRolloverPrevDayEvaluated, setLastRolloverPrevDayEvaluated] = useState(0); // prev day last processed
-  const [rolloverBannerInfo, setRolloverBannerInfo] = useState(null); // { day, type: 'advance'|'grace'|'reset', message }
-  const [rolloverBannerDismissedDay, setRolloverBannerDismissedDay] = useState(0);
-  // Week 1 anchors & rotation
-  const [week1Anchors, setWeek1Anchors] = useState([]); // user selected 5 core tasks
-  const [week1RotationApplied, setWeek1RotationApplied] = useState(false); // ensure single application
-  const [week1Completed, setWeek1Completed] = useState(false);
-  const [backfillDisabledBeforeDay, setBackfillDisabledBeforeDay] = useState(0);
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
-  const [acceptanceLoaded, setAcceptanceLoaded] = useState(false);
-  const enableEnhancedFeatures = true; // global flag to safely toggle enhancements
-  
-  // Prevent concurrent streak evaluations using a queue (not just a flag)
-  const evaluationQueueRef = React.useRef(Promise.resolve());
-  const queueEvaluation = (fn) => {
-    evaluationQueueRef.current = evaluationQueueRef.current.then(fn).catch(err => {
-      if (__DEV__) console.error('Queued evaluation error:', err?.message);
-    });
-    return evaluationQueueRef.current;
-  };
 
-  // Atomic lock using Ref (synchronous, not state) to prevent double-increment
-  // Survives across renders, guarantees no race conditions
-  const streakEvaluatedForDayRefRef = React.useRef(0);
-  const lastRolloverPrevDayEvaluatedRefRef = React.useRef(0); // Prevents multiple rollover evaluations
   // Curated rotating daily quotes with tags
   const QUOTES = [
     { text: 'Small wins compound into big change.', author: 'Unknown', tag: 'small wins' },
@@ -273,36 +244,39 @@ export function AppProvider({ children }) {
     computeQuest();
   }, [enableEnhancedFeatures, user, JSON.stringify(urges), adherenceWindowDays, observedDayKey]);
 
-  // Listen to auth state changes
+  // Listen to user changes from AuthContext and load/reset data accordingly
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      setAcceptanceLoaded(false);
-      if (firebaseUser) {
-        await loadUserData(firebaseUser.uid);
+    const handleUserChange = async () => {
+      if (user) {
+        await loadUserData(user.uid);
       } else {
-        // Reset to default state when logged out or unauthenticated
+        // Reset to default state when logged out
         setCalmPoints(0);
-        setStreak(0);
-        setUrges([]);
+        setUrgesFromData([]);
         setTasks([
           { id: 't1', title: '10 min sunlight', points: 5, done: false },
           { id: 't2', title: '5 min meditation', points: 8, done: false },
           { id: 't3', title: '25 min deep work', points: 10, done: false },
         ]);
-        setBadges([
+        setBadgesFromData([
           { id: 'b1', title: 'Awareness Rising', got: true },
           { id: 'b2', title: 'Deep Worker', got: false },
         ]);
-        setStartDate(null);
-        setHasAcceptedTerms(false);
-        setAcceptanceLoaded(false);
-      }
-      setLoading(false);
-    });
 
-    return unsubscribe;
-  }, []);
+        // Reset program state
+        setProgramState({
+          streak: 0,
+          startDate: null,
+          todayPicks: {},
+          todayCompletions: {},
+        });
+      }
+    };
+
+    if (!loading) {
+      handleUserChange();
+    }
+  }, [user, loading]);
 
   // Load dev day offset (for demo advancing day)
   useEffect(() => {
@@ -328,43 +302,65 @@ export function AppProvider({ children }) {
       if (userDoc.exists()) {
         const data = userDoc.data();
         setCalmPoints(typeof data.calmPoints === 'number' ? data.calmPoints : 0);
-        setStreak(typeof data.streak === 'number' ? data.streak : 0);
-        setUrges(data.urges || []);
-        setTodayPicks(data.todayPicks || {});
-        setTodayCompletions(data.todayCompletions || {});
+        setUrgesFromData(data.urges || []);
+        setBadgesFromData(data.badges || []);
         setTasks(data.tasks || []);
-        setBadges(data.badges || []);
-        setStartDate(data.startDate || new Date().toISOString());
-        setStartDateResets(typeof data.startDateResets === 'number' ? data.startDateResets : 0);
-        setWeek1SetupDone(!!data.week1SetupDone);
         setDailyMoodState(data.dailyMood || {});
-        // Load streak-related state
-        if (Array.isArray(data.graceDayDates)) setGraceDayDates(data.graceDayDates);
-        if (typeof data.lastStreakDayCounted === 'number') setLastStreakDayCounted(data.lastStreakDayCounted);
-        if (typeof data.streakEvaluatedForDay === 'number') {
-          setStreakEvaluatedForDay(data.streakEvaluatedForDay);
-          // SYNC REF WITH FIRESTORE: If app restarted, Firestore is ground truth
-          // Use Firestore value to prevent double-increment on restart
-          streakEvaluatedForDayRefRef.current = data.streakEvaluatedForDay;
-        }
-        if (typeof data.lastStreakMessage === 'string') setLastStreakMessage(data.lastStreakMessage);
-        if (typeof data.lastRolloverPrevDayEvaluated === 'number') {
-          setLastRolloverPrevDayEvaluated(data.lastRolloverPrevDayEvaluated);
-          // SYNC ROLLOVER REF: Prevent multiple rollover triggers on app reopen
-          lastRolloverPrevDayEvaluatedRefRef.current = data.lastRolloverPrevDayEvaluated;
-        }
-        if (typeof data.rolloverBannerDismissedDay === 'number') setRolloverBannerDismissedDay(data.rolloverBannerDismissedDay);
-        if (data.rolloverBannerInfo && typeof data.rolloverBannerInfo === 'object') {
-          const dismissedDay = typeof data.rolloverBannerDismissedDay === 'number' ? data.rolloverBannerDismissedDay : 0;
-          if (data.rolloverBannerInfo.day !== dismissedDay) setRolloverBannerInfo(data.rolloverBannerInfo);
-        }
-        if (typeof data.week1Completed === 'boolean') setWeek1Completed(data.week1Completed);
-        if (typeof data.backfillDisabledBeforeDay === 'number') setBackfillDisabledBeforeDay(data.backfillDisabledBeforeDay);
-        if (Array.isArray(data.completedWeeksWithFireworks)) setCompletedWeeksWithFireworks(data.completedWeeksWithFireworks);
+        setCompletedWeeksFromData(data.completedWeeksWithFireworks || []);
         if (typeof data.hasAcceptedTerms === 'boolean') setHasAcceptedTerms(data.hasAcceptedTerms);
+
+        // Update all program-related state via ProgramContext
+        // MIGRATION: Convert old graceDayDates to new graceUsages format
+        let graceUsages = [];
+        if (Array.isArray(data.graceUsages)) {
+          // New format already exists
+          graceUsages = data.graceUsages;
+        } else if (Array.isArray(data.graceDayDates) && data.graceDayDates.length > 0) {
+          // Migrate from old format: ['day-7', 'day-8'] → [{usedOnDay: 7, expiresOnDay: 14}, ...]
+          graceUsages = data.graceDayDates
+            .map(dateStr => {
+              const match = dateStr.match(/day-(\d+)/);
+              if (match) {
+                const usedOnDay = parseInt(match[1], 10);
+                return { usedOnDay, expiresOnDay: usedOnDay + 7 };
+              }
+              return null;
+            })
+            .filter(Boolean);
+
+          // Save migrated data to Firestore
+          try {
+            await updateDoc(doc(db, 'users', uid), {
+              graceUsages,
+              graceDayDates: null // Remove old field
+            });
+            if (__DEV__) console.log(`✅ Migrated ${data.graceDayDates.length} grace days to new format`);
+          } catch (e) {
+            if (__DEV__) console.error('Failed to migrate grace data:', e?.message);
+          }
+        }
+
+        setProgramState({
+          streak: typeof data.streak === 'number' ? data.streak : 0,
+          startDate: data.startDate || new Date().toISOString(),
+          startDateResets: typeof data.startDateResets === 'number' ? data.startDateResets : 0,
+          todayPicks: data.todayPicks || {},
+          todayCompletions: data.todayCompletions || {},
+          week1SetupDone: !!data.week1SetupDone,
+          graceUsages,
+          lastStreakDayCounted: typeof data.lastStreakDayCounted === 'number' ? data.lastStreakDayCounted : 0,
+          streakEvaluatedForDay: typeof data.streakEvaluatedForDay === 'number' ? data.streakEvaluatedForDay : 0,
+          lastStreakMessage: typeof data.lastStreakMessage === 'string' ? data.lastStreakMessage : '',
+          lastRolloverPrevDayEvaluated: typeof data.lastRolloverPrevDayEvaluated === 'number' ? data.lastRolloverPrevDayEvaluated : 0,
+          rolloverBannerDismissedDay: typeof data.rolloverBannerDismissedDay === 'number' ? data.rolloverBannerDismissedDay : 0,
+          rolloverBannerInfo: data.rolloverBannerInfo && typeof data.rolloverBannerInfo === 'object' ? data.rolloverBannerInfo : null,
+          week1Completed: typeof data.week1Completed === 'boolean' ? data.week1Completed : false,
+          backfillDisabledBeforeDay: typeof data.backfillDisabledBeforeDay === 'number' ? data.backfillDisabledBeforeDay : 0,
+        });
+
         if (!data.startDate) {
-          try { 
-            await updateDoc(doc(db, 'users', uid), { startDate: new Date().toISOString() }); 
+          try {
+            await updateDoc(doc(db, 'users', uid), { startDate: new Date().toISOString() });
           } catch (e) {
             if (__DEV__) console.error('Failed to set startDate:', e?.message);
           }
@@ -399,16 +395,20 @@ export function AppProvider({ children }) {
         }
         // Reflect baseline into local state
         setCalmPoints(0);
-        setStreak(0);
-        setUrges([]);
-        setTodayPicks({});
-        setTodayCompletions({});
+        setUrgesFromData([]);
         setTasks(baseline.tasks);
-        setBadges(baseline.badges);
-        setStartDate(baseline.startDate);
-        setStartDateResets(0);
-        setWeek1SetupDone(false);
+        setBadgesFromData(baseline.badges);
         setDailyMoodState({});
+
+        // Update program state
+        setProgramState({
+          streak: 0,
+          startDate: baseline.startDate,
+          startDateResets: 0,
+          todayPicks: {},
+          todayCompletions: {},
+          week1SetupDone: false,
+        });
       }
       setAcceptanceLoaded(true);
     } catch (error) {
@@ -565,7 +565,7 @@ export function AppProvider({ children }) {
         const recomputed = computeDailyMetrics(key);
         updated[key] = recomputed;
       }
-      setDailyMetrics(updated);
+      setProgramState({ dailyMetrics: updated });
       if (user) {
         try { 
           await updateDoc(doc(db, 'users', user.uid), { dailyMetrics: updated }); 
@@ -652,7 +652,7 @@ export function AppProvider({ children }) {
     setUrges([]);
     setTodayPicks({});
     setTodayCompletions({});
-    setDailyMetrics({});
+    setProgramState({ dailyMetrics: {} });
     setDailyMoodState({});
     // Clear quest state to avoid stale daily bonuses
     setDailyQuest(null);
@@ -689,31 +689,36 @@ export function AppProvider({ children }) {
     // Use date-only to avoid TZ drift when computing program day
     const now = new Date();
     const midnightIso = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    setStartDate(midnightIso);
-    setStartDateResets(0);
+
     setCalmPoints(0);
-    setStreak(0);
-    setGraceDayDates([]);
-    setLastStreakDayCounted(0);
-    setLastStreakMessage('');
     // Reset badges to baseline for test mode so unlocks can be re-tested
-    setBadges([
+    setBadgesFromData([
       { id: 'b1', title: 'Awareness Rising', got: true },
       { id: 'b2', title: 'Deep Worker', got: false },
     ]);
-    setUrges([]);
-    setTodayPicks({});
-    setTodayCompletions({});
-    setDailyMetrics({});
+    setUrgesFromData([]);
     setDailyMoodState({});
     // Clear quest state to prevent stale +5 Today indicators
     setDailyQuest(null);
     setDailyQuestDone({});
-    setWeek1SetupDone(false);
-      setWeek1Anchors([]);
-      setWeek1RotationApplied(false);
-      setWeek1Completed(false);
-      setBackfillDisabledBeforeDay(0);
+
+    // Update program state via ProgramContext
+    setProgramState({
+      startDate: midnightIso,
+      startDateResets: 0,
+      streak: 0,
+      graceUsages: [],
+      lastStreakDayCounted: 0,
+      lastStreakMessage: '',
+      todayPicks: {},
+      todayCompletions: {},
+      dailyMetrics: {},
+      week1SetupDone: false,
+      week1Anchors: [],
+      week1RotationApplied: false,
+      week1Completed: false,
+      backfillDisabledBeforeDay: 0,
+    });
     generatedDayTasksRef.current = {};
     
     // Set devDayOffset to 0 FIRST in state
@@ -744,7 +749,7 @@ export function AppProvider({ children }) {
           startDateResets: 0,
           calmPoints: 0,
           streak: 0,
-          graceDayDates: [],
+          graceUsages: [],
           lastStreakDayCounted: 0,
           lastStreakMessage: '',
           urges: [],
@@ -775,7 +780,7 @@ export function AppProvider({ children }) {
         startDateResets: 0,
         calmPoints: 0,
         streak: 0,
-        graceDayDates: [],
+        graceUsages: [],
         lastStreakDayCounted: 0,
         lastStreakMessage: '',
         todayPicks: {},
@@ -803,22 +808,23 @@ export function AppProvider({ children }) {
     const msPerDay = 24 * 60 * 60 * 1000;
     let ts = Date.now();
     try { if (devDayOffset && Number.isFinite(devDayOffset)) ts += devDayOffset * msPerDay; } catch {}
-    const item = { id: uuid.v4(), timestamp: ts, emotion, note, intensity, trigger: trigger || null, outcome: null };
-    const newUrges = [item, ...urges];
-    setUrges(newUrges);
+
+    // Use addUrge from UrgesContext (intensity, triggerText, momentNotes, emotion)
+    const item = addUrge(intensity, trigger || '', note || '', emotion);
+
+    // Award calm points
     const newPoints = calmPoints + 2;
     setCalmPoints(newPoints);
+
     // Check and claim badges based on new urge count and calm points
-    checkAndClaimBadges({ urgesVal: newUrges, calmPointsVal: newPoints, tasksVal: tasks, streakVal: streak, completionsState: todayCompletions });
-    saveUserData({ urges: newUrges, calmPoints: newPoints });
+    checkAndClaimBadges({ urgesVal: [...urges, item], calmPointsVal: newPoints, tasksVal: tasks, streakVal: streak, completionsState: todayCompletions });
+    saveUserData({ calmPoints: newPoints });
     Alert.alert('Urge logged', 'Nice — awareness logged.');
     return item.id;
   };
 
   const updateUrgeOutcome = (id, outcome) => {
-    const newUrges = urges.map(u => u.id === id ? { ...u, outcome } : u);
-    setUrges(newUrges);
-    saveUserData({ urges: newUrges });
+    updateUrgeOutcomeFromContext(id, outcome);
   };
 
   // Simple catalog of tasks with categories for recommendations
@@ -987,8 +993,9 @@ export function AppProvider({ children }) {
     }
     
     // Check and claim badges based on task completion (for tasks_10, tasks_50, tasks_100)
-    checkAndClaimBadges({ streakVal: streak, calmPointsVal: persistedPoints, tasksVal: tasks, urgesVal: urges, completionsState: updated });
-    
+    // Use displayStreak for consistent UX with what user sees
+    checkAndClaimBadges({ streakVal: displayStreak, calmPointsVal: persistedPoints, tasksVal: tasks, urgesVal: urges, completionsState: updated });
+
     // Show win message when marking complete
     const meta = TASK_METADATA[title] || {};
     const domain = meta.domain || 'focus';
@@ -1026,261 +1033,6 @@ export function AppProvider({ children }) {
     }
   };
 
-  const claimBadge = (badgeId) => {
-    let newBadges;
-    const idx = badges.findIndex(b => b.id === badgeId);
-    let unlockedTitle = null;
-    let unlockedMessage = null;
-    
-    // Badge messages mapping
-    const badgeMessages = {
-      'first_day': 'Welcome to ResetDopa™! 🌱 Every step counts. Keep going!',
-      'streak_3': '🔥 3-Day Streak! You\'re building momentum!',
-      'streak_7': '⭐ 7-Day Streak! One full week down!',
-      'streak_30': '🏆 30-Day Streak! You\'re a champion!',
-      'streak_90': '👑 90-Day Streak! You\'re a legend!',
-      'tasks_10': '✅ 10 Tasks Done! You\'re on fire!',
-      'tasks_50': '💪 50 Tasks Completed! Keep crushing it!',
-      'tasks_100': '🚀 100 Tasks! You\'re unstoppable!',
-      'calm_100': '🌟 100 Calm Points! Peace is power!',
-      'calm_500': '💎 500 Calm Points! You\'re in the zone!',
-      'calm_1000': '🎯 1000 Calm Points! Peak serenity achieved!',
-      'urge_resist_10': '🛡️ 10 Urges Resisted! You\'re strong!',
-      'urge_resist_50': '⚔️ 50 Urges Resisted! You\'re a warrior!',
-      'profile_complete': '👤 Profile Complete! You\'ve claimed your identity!',
-      'identity_set': '👤 Profile Complete! You\'ve claimed your identity!',
-    };
-    
-    if (idx >= 0) {
-      const wasLocked = !badges[idx].got;
-      const updated = badges.map(b => b.id === badgeId ? { ...b, got: true } : b);
-      newBadges = updated;
-      if (wasLocked) {
-        unlockedTitle = updated[idx]?.title || null;
-        unlockedMessage = badgeMessages[badgeId] || null;
-      }
-    } else {
-      // If badge not present, append with inferred title
-      const title = badgeId === 'identity_set' ? 'Identity Set' : 'Badge';
-      newBadges = [...badges, { id: badgeId, title, got: true }];
-      unlockedTitle = title;
-      unlockedMessage = badgeMessages[badgeId] || null;
-    }
-    setBadges(newBadges);
-    saveUserData({ badges: newBadges });
-    // Fire toast notification and push notification only when newly unlocked
-    if (unlockedTitle) {
-      setBadgeToast({ id: badgeId, title: unlockedTitle, message: unlockedMessage });
-      scheduleBadgeUnlockNotification(unlockedTitle, unlockedMessage);
-    }
-  };
-
-  // Check and auto-claim badges based on current metrics
-  const checkAndClaimBadges = (metricsState) => {
-    const { streakVal = streak, calmPointsVal = calmPoints, tasksVal = tasks, urgesVal = urges, completionsState = todayCompletions } = metricsState;
-    const badgesToClaim = [];
-
-    // First day badge (always claim if not already claimed)
-    if (!badges.some(b => b.id === 'first_day' && b.got)) {
-      badgesToClaim.push('first_day');
-    }
-
-    // Streak badges
-    if (streakVal >= 3 && !badges.some(b => b.id === 'streak_3' && b.got)) {
-      badgesToClaim.push('streak_3');
-    }
-    if (streakVal >= 7 && !badges.some(b => b.id === 'streak_7' && b.got)) {
-      badgesToClaim.push('streak_7');
-    }
-    if (streakVal >= 30 && !badges.some(b => b.id === 'streak_30' && b.got)) {
-      badgesToClaim.push('streak_30');
-    }
-    if (streakVal >= 90 && !badges.some(b => b.id === 'streak_90' && b.got)) {
-      badgesToClaim.push('streak_90');
-    }
-
-    // Task completion badges
-    // Task completion badges - count all completed tasks across all days (from todayCompletions)
-    // Note: todayCompletions = { dayNumber: { taskTitle: true/false, ... }, ... }
-    const completedTasks = Object.values(completionsState || {}).reduce((sum, dayMap) => {
-      return sum + Object.values(dayMap || {}).filter(Boolean).length;
-    }, 0);
-    if (completedTasks >= 10 && !badges.some(b => b.id === 'tasks_10' && b.got)) {
-      badgesToClaim.push('tasks_10');
-    }
-    if (completedTasks >= 50 && !badges.some(b => b.id === 'tasks_50' && b.got)) {
-      badgesToClaim.push('tasks_50');
-    }
-    if (completedTasks >= 100 && !badges.some(b => b.id === 'tasks_100' && b.got)) {
-      badgesToClaim.push('tasks_100');
-    }
-
-    // Calm points badges
-    if (calmPointsVal >= 100 && !badges.some(b => b.id === 'calm_100' && b.got)) {
-      badgesToClaim.push('calm_100');
-    }
-    if (calmPointsVal >= 500 && !badges.some(b => b.id === 'calm_500' && b.got)) {
-      badgesToClaim.push('calm_500');
-    }
-    if (calmPointsVal >= 1000 && !badges.some(b => b.id === 'calm_1000' && b.got)) {
-      badgesToClaim.push('calm_1000');
-    }
-
-    // Urge resistance badges
-    const urgeCount = (urgesVal || []).length;
-    if (urgeCount >= 10 && !badges.some(b => b.id === 'urge_resist_10' && b.got)) {
-      badgesToClaim.push('urge_resist_10');
-    }
-    if (urgeCount >= 50 && !badges.some(b => b.id === 'urge_resist_50' && b.got)) {
-      badgesToClaim.push('urge_resist_50');
-    }
-
-    // Claim all newly unlocked badges
-    badgesToClaim.forEach(badgeId => claimBadge(badgeId));
-  };
-
-  const updateStreak = (newStreak) => {
-    // Check for streak milestones
-    if (newStreak === 7 && streak < 7) {
-      scheduleMilestoneNotification('streak_7');
-    } else if (newStreak === 30 && streak < 30) {
-      scheduleMilestoneNotification('streak_30');
-    } else if (newStreak === 90 && streak < 90) {
-      scheduleMilestoneNotification('streak_90');
-    }
-    
-    // Trigger streak bump animation when increasing
-    if (typeof newStreak === 'number' && newStreak > (typeof streak === 'number' ? streak : 0)) {
-      setStreakBumpSeq(s => s + 1);
-    }
-    
-    // Check and claim badges based on new streak
-    checkAndClaimBadges({ streakVal: newStreak, calmPointsVal: calmPoints, tasksVal: tasks, urgesVal: urges, completionsState: todayCompletions });
-    
-    setStreak(newStreak);
-    saveUserData({ streak: newStreak });
-  };
-
-  // Progressive threshold function
-  const getRampThreshold = (day) => {
-    if (day <= 7) return 0.5;
-    if (day <= 14) return 0.6;
-    if (day <= 21) return 0.65;
-    if (day > 30) return 0.6; // maintenance mode: lighter bar to reduce fatigue
-    return 0.7;
-  };
-
-  // Ensure we have picks for a given day; if empty, backfill from last known or defaults
-  const ensurePicksForDay = (dayNumber) => {
-    const existing = todayPicks[dayNumber];
-    if (Array.isArray(existing) && existing.length > 0) return existing;
-
-    const MAINTENANCE_ROTATIONS = [
-      ['10-min walk', '5-min breathing', 'Plan tomorrow 3-min', 'Text a friend'],
-      ['Light stretch 5-min', '2-min tidy', 'Identity check-in', 'Gratitude x3'],
-      ['Detox 30-min (screen-free)', 'Sip water often', 'Calm breath 4 cycles', 'Note 1 win'],
-    ];
-
-    // Maintenance mode (post day 30): rotate fresh, light tasks to avoid staleness
-    if (dayNumber > 30) {
-      const rotation = MAINTENANCE_ROTATIONS[(dayNumber - 31) % MAINTENANCE_ROTATIONS.length];
-      const updatedMaint = { ...todayPicks, [dayNumber]: rotation };
-      setTodayPicks(updatedMaint);
-      saveUserData({ todayPicks: updatedMaint });
-      return rotation;
-    }
-
-    // Try to use most recent prior day's picks
-    let fallback = [];
-    for (let d = dayNumber - 1; d >= 1; d--) {
-      const prior = todayPicks[d];
-      if (Array.isArray(prior) && prior.length > 0) { fallback = prior; break; }
-    }
-
-    // If still empty, use minimal defaults
-    if (!fallback || fallback.length === 0) {
-      fallback = ['5 min breathing', 'Stretch 2 min', '2-min tidy'];
-    }
-
-    const updated = { ...todayPicks, [dayNumber]: fallback };
-    setTodayPicks(updated);
-    saveUserData({ todayPicks: updated });
-    return fallback;
-  };
-
-  // Evaluate streak progression during the day (same-day advancement when threshold met)
-  // Grace is evaluated NEXT day only
-  const evaluateStreakProgress = (dayNumber, completionsState) => {
-    // ATOMIC LOCK: Use Ref (synchronous) instead of state for guaranteed protection
-    // Ref.current updates immediately, no microtask timing issues
-    if (streakEvaluatedForDayRefRef.current === dayNumber) {
-      setLastStreakMessage('Threshold already counted today — keep momentum going.');
-      return;
-    }
-
-    // ADDITIONAL SAFETY: Also check state (in case app was restarted and state hasn't synced yet)
-    // If streakEvaluatedForDay from Firestore equals current dayNumber, skip
-    if (streakEvaluatedForDay === dayNumber && streakEvaluatedForDay > 0) {
-      // Sync the Ref in case it got out of sync on startup
-      streakEvaluatedForDayRefRef.current = dayNumber;
-      setLastStreakMessage('Threshold already counted today — keep momentum going.');
-      return;
-    }
-
-    const picks = ensurePicksForDay(dayNumber);
-    const assignedCount = picks.length > 0 ? picks.length : (dayNumber <= 7 ? 5 : 6);
-    const doneMap = completionsState[dayNumber] || {};
-    const doneCount = Object.values(doneMap).filter(Boolean).length;
-    const adherence = assignedCount === 0 ? 0 : doneCount / assignedCount;
-    const threshold = getRampThreshold(dayNumber);
-    const tasksNeeded = Math.ceil(threshold * assignedCount);
-
-    // Early onboarding leniency (Days 1-2): just 1 task advances streak SAME DAY
-    if (dayNumber <= 2 && doneCount >= 1) {
-      const newStreakVal = streak + 1;
-      updateStreak(newStreakVal);
-      setLastStreakDayCounted(dayNumber);
-      // ATOMIC LOCK: Update both Ref (synchronous) and state (for Firestore)
-      streakEvaluatedForDayRefRef.current = dayNumber;
-      setStreakEvaluatedForDay(dayNumber);
-      const msg = 'Streak advanced — strong start. Keep locking anchors.';
-      setLastStreakMessage(msg);
-      const bannerInfo = rolloverBannerDismissedDay !== dayNumber
-        ? { day: dayNumber, type: 'advance', message: msg }
-        : null;
-      setRolloverBannerInfo(bannerInfo);
-      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo });
-      return;
-    }
-
-    // Met threshold - advance streak immediately (SAME DAY)
-    if (adherence >= threshold) {
-      const newStreakVal = streak + 1;
-      updateStreak(newStreakVal);
-      setLastStreakDayCounted(dayNumber);
-      // ATOMIC LOCK: Update both Ref (synchronous) and state (for Firestore)
-      streakEvaluatedForDayRefRef.current = dayNumber;
-      setStreakEvaluatedForDay(dayNumber);
-      const msg = 'Streak advanced — consistency is compounding.';
-      setLastStreakMessage(msg);
-      const bannerInfo = rolloverBannerDismissedDay !== dayNumber
-        ? { day: dayNumber, type: 'advance', message: msg }
-        : null;
-      setRolloverBannerInfo(bannerInfo);
-      saveUserData({ graceDayDates, lastStreakDayCounted: dayNumber, streakEvaluatedForDay: dayNumber, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo });
-      return;
-    }    // Below threshold - guidance only (no grace during day)
-    if (adherence >= 0.3 && adherence < threshold) {
-      const needed = Math.max(1, tasksNeeded - doneCount);
-      const msg = `Complete ${needed} more task${needed>1?'s':''} to reach today's threshold (${doneCount}/${assignedCount}). Grace (if close) is checked overnight.`;
-      setLastStreakMessage(msg);
-      return;
-    }
-
-    // Low adherence (<30%) — warning only
-    const warnMsg = `Low progress — aim for ${tasksNeeded}/${assignedCount} tasks. Grace/streak checks happen overnight.`;
-    setLastStreakMessage(warnMsg);
-  };
 
   // Auto-detect Week 1 completion outside of helper functions
   useEffect(() => {
@@ -1298,17 +1050,6 @@ export function AppProvider({ children }) {
       }
     } catch {}
   }, [JSON.stringify(todayCompletions[7]), JSON.stringify(todayPicks[7]), week1Completed]);
-
-  // Compute current day (1..30) from startDate
-  const getCurrentDay = () => {
-    const sd = startDate ? new Date(startDate) : new Date();
-    const now = new Date();
-    const msPerDay = 24 * 60 * 60 * 1000;
-    const startMid = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate()).getTime();
-    const nowMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const diff = Math.floor((nowMid - startMid) / msPerDay) + 1 + (devDayOffset || 0);
-    return Math.max(diff, 1); // allow maintenance mode beyond day 30
-  };
 
   // Advance program day for demo/testing without altering startDate
   const advanceProgramDay = async (steps = 1) => {
@@ -1360,44 +1101,27 @@ export function AppProvider({ children }) {
     return baseCount + increment; // 6, 7, or 8 tasks depending on adherence
   };
 
-  // Rolling adherence score over last N days (0..1)
-  const getAdherence = (windowDays = adherenceWindowDays) => {
-    const day = getCurrentDay();
-    let assignedSum = 0;
-    let doneSum = 0;
-    for (let d = Math.max(1, day - windowDays + 1); d <= day; d++) {
-      const picks = todayPicks[d] || [];
-      const assignedCount = picks.length > 0 ? picks.length : (d <= 7 ? 5 : 6);
-      const doneMap = todayCompletions[d] || {};
-      const doneCount = Object.values(doneMap).filter(Boolean).length;
-      assignedSum += assignedCount;
-      doneSum += doneCount;
-    }
-    if (assignedSum === 0) return 0;
-    return doneSum / assignedSum;
-  };
-
   // Debug helper: show grace availability status and when it will be available
   const getGraceStatus = () => {
     const currentDay = getCurrentDay();
-    const recentGrace = graceDayDates.filter(d => {
-      if (d.startsWith('day_')) {
-        const dayNum = parseInt(d.replace('day_', ''), 10);
-        return dayNum >= currentDay - 6 && dayNum < currentDay;
-      }
-      return false;
-    });
-    const graceAvailable = recentGrace.length < 1;
-    const nextAvailableDay = graceAvailable 
-      ? currentDay 
-      : Math.max(...recentGrace.map(d => parseInt(d.replace('day_', ''), 10))) + 7;
-    
+
+    // Filter active graces (not expired yet)
+    const activeGraces = graceUsages.filter(g => currentDay < g.expiresOnDay);
+
+    // Max 2 graces in rolling 7-day window
+    const graceAvailable = activeGraces.length < 2;
+
+    // Find when next grace becomes available (when oldest expires)
+    const nextAvailableDay = graceAvailable
+      ? currentDay
+      : Math.min(...activeGraces.map(g => g.expiresOnDay));
+
     return {
       graceAvailable,
-      graceDaysUsedInPast7: recentGrace.map(d => parseInt(d.replace('day_', ''), 10)),
+      graceDaysUsedInPast7: activeGraces.map(g => g.usedOnDay),
+      activeGracesCount: activeGraces.length,
       nextAvailableDay,
-      nextAvailableDaysFromNow: nextAvailableDay - currentDay,
-      allGraceDayDates: graceDayDates
+      allGraceUsages: graceUsages
     };
   };
 
@@ -1434,19 +1158,48 @@ export function AppProvider({ children }) {
         return;
       }
 
-      // ATOMIC LOCK: Skip all streak logic if this day was already evaluated same-day
-      // This prevents grace from running on days that already had threshold evaluation
+      // ATOMIC LOCK: Check if day was already evaluated same-day
+      // If thresholdMetToday === prevDay, user met threshold during day → confirm optimistic increment
+      // Otherwise, already confirmed → skip to prevent double-counting
       if (streakEvaluatedForDay === prevDay) {
-        streakEvaluatedForDayRefRef.current = prevDay;
-        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
-        setLastRolloverPrevDayEvaluated(prevDay);
-        const bannerInfo = rolloverBannerDismissedDay !== prevDay 
-          ? { day: prevDay, type: 'hold', message: `Day ${prevDay} evaluated — no overnight changes.` }
-          : null;
-        setRolloverBannerInfo(bannerInfo);
-        saveUserData({ lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
-        if (__DEV__) console.log(`[Rollover Guard 4] prevDay ${prevDay} already evaluated same-day. Locking and returning.`);
-        return;
+        // Check if this is optimistic UI awaiting overnight confirmation
+        if (thresholdMetToday === prevDay) {
+          // Confirm the optimistic increment that was shown during the day
+          const newStreakVal = streak + 1;
+          updateStreak(newStreakVal);
+          setLastStreakDayCounted(prevDay);
+          setThresholdMetToday(0); // Clear optimistic flag
+          const msg = `Streak confirmed: ${streak} → ${newStreakVal}`;
+          setLastStreakMessage(msg);
+          lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
+          setLastRolloverPrevDayEvaluated(prevDay);
+          const bannerInfo = rolloverBannerDismissedDay !== prevDay
+            ? { day: prevDay, type: 'advance', message: 'Streak confirmed — excellent consistency!' }
+            : null;
+          setRolloverBannerInfo(bannerInfo);
+          saveUserData({
+            graceUsages,
+            lastStreakDayCounted: prevDay,
+            lastStreakMessage: msg,
+            lastRolloverPrevDayEvaluated: prevDay,
+            rolloverBannerInfo: bannerInfo,
+            thresholdMetToday: 0,
+          });
+          if (__DEV__) console.log(`[Rollover Guard 4 - Confirm] prevDay ${prevDay} optimistic UI confirmed: ${streak} → ${newStreakVal}`);
+          return;
+        } else {
+          // Already confirmed (no optimistic flag) - skip to prevent double-counting
+          streakEvaluatedForDayRefRef.current = prevDay;
+          lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
+          setLastRolloverPrevDayEvaluated(prevDay);
+          const bannerInfo = rolloverBannerDismissedDay !== prevDay
+            ? { day: prevDay, type: 'hold', message: `Day ${prevDay} evaluated — no overnight changes.` }
+            : null;
+          setRolloverBannerInfo(bannerInfo);
+          saveUserData({ lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
+          if (__DEV__) console.log(`[Rollover Guard 4 - Skip] prevDay ${prevDay} already confirmed. Skipping.`);
+          return;
+        }
       }
 
       const picksPrev = ensurePicksForDay(prevDay);
@@ -1456,34 +1209,32 @@ export function AppProvider({ children }) {
       const adherencePrev = assignedCount === 0 ? 0 : donePrev / assignedCount;
       const thresholdPrev = getRampThreshold(prevDay);
       
-      // CRITICAL GUARD: If no tasks completed, NEVER advance streak, ever
-      // This prevents the bug where streak auto-advances with 0% adherence
-      if (donePrev === 0) {
-        if (__DEV__) console.log(`[Rollover Guard 5] prevDay ${prevDay} has 0 tasks completed. No streak changes allowed.`);
+      // GUARD: If no tasks completed and streak is already 0, just mark as evaluated
+      // No need to reset an already-zero streak
+      if (donePrev === 0 && streak === 0) {
+        if (__DEV__) console.log(`[Rollover Guard 5] prevDay ${prevDay} has 0 tasks and streak already 0. Marking evaluated.`);
         lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
-        const msg = `Day ${prevDay}: 0/${assignedCount} tasks completed. Streak on hold — restart today with small wins.`;
+        const msg = `Day ${prevDay}: 0/${assignedCount} tasks completed. Build momentum today with small wins.`;
         setLastStreakMessage(msg);
-        const bannerInfo = rolloverBannerDismissedDay !== prevDay 
+        const bannerInfo = rolloverBannerDismissedDay !== prevDay
           ? { day: prevDay, type: 'hold', message: msg }
           : null;
         setRolloverBannerInfo(bannerInfo);
         saveUserData({ lastRolloverPrevDayEvaluated: prevDay, lastStreakMessage: msg, rolloverBannerInfo: bannerInfo });
         return;
       }
-      
-      // Grace tracking
-      const gracePrevKey = `day_${prevDay}`;
+
+      // If 0 tasks completed but streak > 0, let the reset logic below handle it
+      // (0% adherence < 30% threshold = streak reset)
+
+      // Grace tracking with rolling 7-day window
       if (__DEV__) console.log(`[Rollover Day ${prevDay}] adherence=${(adherencePrev*100).toFixed(1)}%, threshold=${(thresholdPrev*100).toFixed(1)}%, lastStreakDayCounted=${lastStreakDayCounted}, streakEvaluatedForDay=${streakEvaluatedForDay}, graceStatus:`, getGraceStatus());
-      const recentGrace = graceDayDates.filter(d => {
-        if (d.startsWith('day_')) {
-          const dayNum = parseInt(d.replace('day_', ''), 10);
-          return dayNum >= prevDay - 6 && dayNum < prevDay;
-        }
-        return false;
-      });
-      const graceAvailable = recentGrace.length < 1;
-      const graceUsedYesterday = graceDayDates.includes(gracePrevKey);
+
+      // Check active graces (not expired yet)
+      const activeGraces = graceUsages.filter(g => prevDay < g.expiresOnDay);
+      const graceAvailable = activeGraces.length < 2; // Max 2 graces in rolling window
+      const graceUsedForPrevDay = graceUsages.some(g => g.usedOnDay === prevDay);
 
       // If prev day already counted same-day, it's already locked in (unmarking disabled)
       // Adherence can't drop below threshold after counting, so just acknowledge and continue
@@ -1498,79 +1249,139 @@ export function AppProvider({ children }) {
         return;
       }
 
-      // Early onboarding leniency (Days 1-2): just 1 task advances streak overnight (fallback)
+      // Early onboarding leniency (Days 1-2): just 1 task advances streak (fallback)
       if (prevDay <= 2 && donePrev >= 1) {
         const newStreakVal = streak + 1;
         updateStreak(newStreakVal);
         setLastStreakDayCounted(prevDay);
-        const msg = 'Streak advanced overnight — strong start! Keep locking anchors.';
+        const msg = 'Streak advanced — strong start! Keep locking anchors.';
         setLastStreakMessage(msg);
         lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
-        const bannerInfo = rolloverBannerDismissedDay !== prevDay 
+        const bannerInfo = rolloverBannerDismissedDay !== prevDay
           ? { day: prevDay, type: 'advance', message: msg }
           : null;
         setRolloverBannerInfo(bannerInfo);
-        saveUserData({ graceDayDates, lastStreakDayCounted: prevDay, lastStreakMessage: msg, lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
+        // Clear thresholdMetToday flag
+        setThresholdMetToday(0);
+        saveUserData({
+          graceUsages,
+          lastStreakDayCounted: prevDay,
+          lastStreakMessage: msg,
+          lastRolloverPrevDayEvaluated: prevDay,
+          rolloverBannerInfo: bannerInfo,
+          thresholdMetToday: 0,
+        });
         return;
       }
 
-      // Case 1: Met threshold - advance streak overnight
+      // Case 1: Met threshold - confirm optimistic streak increment
       if (adherencePrev >= thresholdPrev) {
         const newStreakVal = streak + 1;
         updateStreak(newStreakVal);
         setLastStreakDayCounted(prevDay);
-        setLastStreakMessage('Streak advanced overnight — great consistency!');
+        setLastStreakMessage('Streak confirmed — excellent consistency!');
         lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
         setLastRolloverPrevDayEvaluated(prevDay);
-        const bannerInfo = rolloverBannerDismissedDay !== prevDay 
-          ? { day: prevDay, type: 'advance', message: 'Streak advanced overnight — great consistency!' }
+        const bannerInfo = rolloverBannerDismissedDay !== prevDay
+          ? { day: prevDay, type: 'advance', message: 'Streak confirmed — excellent consistency!' }
           : null;
         setRolloverBannerInfo(bannerInfo);
-        saveUserData({ graceDayDates, lastStreakDayCounted: prevDay, lastStreakMessage: 'Streak advanced overnight — great consistency!', lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
+        // Clear thresholdMetToday flag since streak is now confirmed
+        setThresholdMetToday(0);
+        saveUserData({
+          graceUsages,
+          lastStreakDayCounted: prevDay,
+          lastStreakMessage: 'Streak confirmed — excellent consistency!',
+          lastRolloverPrevDayEvaluated: prevDay,
+          rolloverBannerInfo: bannerInfo,
+          thresholdMetToday: 0,
+        });
         return;
       }
 
       // Case 2: Grace band (30% to threshold) - apply grace if available
       if (adherencePrev >= 0.3 && adherencePrev < thresholdPrev) {
-        if (__DEV__) console.log(`[Grace Check Day ${prevDay}] In grace band. graceAvailable=${graceAvailable}, graceUsedYesterday=${graceUsedYesterday}, recentGrace=`, recentGrace);
-        if (graceAvailable && !graceUsedYesterday) {
+        if (__DEV__) console.log(`[Grace Check Day ${prevDay}] In grace band. graceAvailable=${graceAvailable}, graceUsedForPrevDay=${graceUsedForPrevDay}, activeGraces=`, activeGraces);
+        if (graceAvailable && !graceUsedForPrevDay) {
           if (__DEV__) console.log(`[Grace Apply Day ${prevDay}] ✅ Applying grace!`);
-          const updatedGrace = [...graceDayDates, gracePrevKey];
-          setGraceDayDates(updatedGrace);
+          const updatedGrace = [...graceUsages, { usedOnDay: prevDay, expiresOnDay: prevDay + 7 }];
+          setGraceUsages(updatedGrace);
           const newStreakVal = streak + 1;
           updateStreak(newStreakVal);
           setLastStreakDayCounted(prevDay);
           const tasksNeeded = Math.ceil(thresholdPrev * assignedCount);
-          const msg = `Grace applied for Day ${prevDay}. You completed ${donePrev}/${assignedCount} tasks (needed ${tasksNeeded}). Streak advanced to ${newStreakVal} via grace. One grace per week — make today count!`;
+          const msg = `Grace applied for Day ${prevDay}. You completed ${donePrev}/${assignedCount} tasks (needed ${tasksNeeded}). Streak advanced to ${newStreakVal} via grace. Max 2 graces in rolling 7-day window — make today count!`;
           setLastStreakMessage(msg);
           lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
           setLastRolloverPrevDayEvaluated(prevDay);
-          const bannerInfo = rolloverBannerDismissedDay !== prevDay 
+          const bannerInfo = rolloverBannerDismissedDay !== prevDay
             ? { day: prevDay, type: 'grace', message: msg }
             : null;
           setRolloverBannerInfo(bannerInfo);
+          // Clear thresholdMetToday flag since streak is now confirmed via grace
+          setThresholdMetToday(0);
           if (__DEV__) console.log(`[Grace Apply Day ${prevDay}] Banner info being persisted:`, bannerInfo);
-          saveUserData({ graceDayDates: updatedGrace, lastStreakDayCounted: prevDay, lastStreakMessage: msg, lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
+          saveUserData({
+            graceUsages: updatedGrace,
+            lastStreakDayCounted: prevDay,
+            lastStreakMessage: msg,
+            lastRolloverPrevDayEvaluated: prevDay,
+            rolloverBannerInfo: bannerInfo,
+            thresholdMetToday: 0,
+          });
           if (!silent) Alert.alert('Grace Day ⚖️', msg);
           return;
-        } else if (graceUsedYesterday) {
+        } else if (graceUsedForPrevDay) {
           lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
           setLastRolloverPrevDayEvaluated(prevDay);
           saveUserData({ lastRolloverPrevDayEvaluated: prevDay });
           return; // Already grace-protected
         } else {
-          // Grace unavailable - used recently within 7-day window
-          const msg = `Day ${prevDay}: ${donePrev}/${assignedCount} tasks (${Math.round(adherencePrev*100)}%). Grace unavailable (used recently). Streak holding at ${streak}.`;
-          setLastStreakMessage(msg);
-          lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
-          setLastRolloverPrevDayEvaluated(prevDay);
-          const bannerInfo = rolloverBannerDismissedDay !== prevDay 
-            ? { day: prevDay, type: 'hold', message: msg }
-            : null;
-          setRolloverBannerInfo(bannerInfo);
-          saveUserData({ lastStreakMessage: msg, lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
-          return;
+          // Grace unavailable - check if soft penalty applies
+          // Soft penalty: streak ≥7 and adherence ≥40% → lose 1 day
+          // Otherwise: hold streak (no change)
+          if (streak >= 7 && adherencePrev >= 0.4) {
+            const newStreakVal = Math.max(0, streak - 1);
+            updateStreak(newStreakVal);
+            const msg = `Streak dipped by 1 — rebuild momentum today. Grace unavailable (used recently).`;
+            setLastStreakMessage(msg);
+            lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
+            setLastRolloverPrevDayEvaluated(prevDay);
+            const bannerInfo = rolloverBannerDismissedDay !== prevDay
+              ? { day: prevDay, type: 'hold', message: msg }
+              : null;
+            setRolloverBannerInfo(bannerInfo);
+            // Clear thresholdMetToday flag - optimistic increment was wrong
+            setThresholdMetToday(0);
+            saveUserData({
+              streak: newStreakVal,
+              lastStreakMessage: msg,
+              lastRolloverPrevDayEvaluated: prevDay,
+              rolloverBannerInfo: bannerInfo,
+              thresholdMetToday: 0,
+            });
+            return;
+          } else {
+            // Hold streak - low streak or low adherence
+            const msg = `Day ${prevDay}: ${donePrev}/${assignedCount} tasks (${Math.round(adherencePrev*100)}%). Grace unavailable (used recently). Streak holding at ${streak}.`;
+            setLastStreakMessage(msg);
+            lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
+            setLastRolloverPrevDayEvaluated(prevDay);
+            const bannerInfo = rolloverBannerDismissedDay !== prevDay
+              ? { day: prevDay, type: 'hold', message: msg }
+              : null;
+            setRolloverBannerInfo(bannerInfo);
+            // Clear thresholdMetToday flag - optimistic increment was wrong
+            setThresholdMetToday(0);
+            saveUserData({
+              lastStreakMessage: msg,
+              lastRolloverPrevDayEvaluated: prevDay,
+              rolloverBannerInfo: bannerInfo,
+              thresholdMetToday: 0,
+            });
+            return;
+          }
         }
       }
 
@@ -1582,11 +1393,19 @@ export function AppProvider({ children }) {
           setLastStreakMessage(msg);
           lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
           setLastRolloverPrevDayEvaluated(prevDay);
-          const bannerInfo = rolloverBannerDismissedDay !== prevDay 
+          const bannerInfo = rolloverBannerDismissedDay !== prevDay
             ? { day: prevDay, type: 'reset', message: msg }
             : null;
           setRolloverBannerInfo(bannerInfo);
-          saveUserData({ streak: 0, lastStreakMessage: msg, lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
+          // Clear thresholdMetToday flag - streak reset
+          setThresholdMetToday(0);
+          saveUserData({
+            streak: 0,
+            lastStreakMessage: msg,
+            lastRolloverPrevDayEvaluated: prevDay,
+            rolloverBannerInfo: bannerInfo,
+            thresholdMetToday: 0,
+          });
           if (!silent) Alert.alert('Streak Reset', msg);
         } else {
           lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
@@ -1594,31 +1413,6 @@ export function AppProvider({ children }) {
           saveUserData({ lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: null });
         }
         return;
-      }
-
-      // Case 4: Below threshold but not severe (30-threshold%) - soft penalty or hold
-      if (streak >= 7 && adherencePrev >= 0.4) {
-        const newStreakVal = Math.max(0, streak - 1);
-        updateStreak(newStreakVal);
-        const msg = 'Streak dipped by 1 — rebuild momentum today.';
-        setLastStreakMessage(msg);
-        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
-        setLastRolloverPrevDayEvaluated(prevDay);
-        const bannerInfo = rolloverBannerDismissedDay !== prevDay 
-          ? { day: prevDay, type: 'hold', message: msg }
-          : null;
-        setRolloverBannerInfo(bannerInfo);
-        saveUserData({ streak: newStreakVal, lastStreakMessage: msg, lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
-      } else {
-        const msg = 'Yesterday fell short — lock anchors early today to rebuild.';
-        setLastStreakMessage(msg);
-        lastRolloverPrevDayEvaluatedRefRef.current = prevDay;
-        setLastRolloverPrevDayEvaluated(prevDay);
-        const bannerInfo = rolloverBannerDismissedDay !== prevDay 
-          ? { day: prevDay, type: 'hold', message: msg }
-          : null;
-        setRolloverBannerInfo(bannerInfo);
-        saveUserData({ lastStreakMessage: msg, lastRolloverPrevDayEvaluated: prevDay, rolloverBannerInfo: bannerInfo });
       }
   };
   // Day rollover effect: evaluate prior day once per day
@@ -1717,43 +1511,18 @@ export function AppProvider({ children }) {
     }
   };
 
-  // Mark a week as having fired fireworks (prevents re-triggering on reopen)
-  const markWeekFireworksFired = async (weekNumber) => {
-    if (completedWeeksWithFireworks.includes(weekNumber)) return; // Already tracked
-    const updated = [...completedWeeksWithFireworks, weekNumber];
-    setCompletedWeeksWithFireworks(updated);
-    if (user) {
-      try { await updateDoc(doc(db, 'users', user.uid), { completedWeeksWithFireworks: updated }); } catch {}
-    }
-  };
-
-  const acceptTerms = async () => {
-    setHasAcceptedTerms(true);
-    setAcceptanceLoaded(true);
-    if (user) {
-      try {
-        await updateDoc(doc(db, 'users', user.uid), {
-          hasAcceptedTerms: true,
-          termsAcceptedAt: new Date().toISOString(),
-        });
-      } catch (e) {
-        if (__DEV__) console.error('Failed to save terms acceptance:', e?.message);
-      }
-    }
-  };
-
   return (
     <AppContext.Provider value={{
       enableEnhancedFeatures,
       user,
       loading,
       calmPoints,
-      streak,
+      streak: displayStreak,
       urges,
       tasks,
       badges,
       badgeToast,
-      clearBadgeToast: () => setBadgeToast(null),
+      clearBadgeToast,
       startDate,
       setStartDate: async (iso) => { setStartDate(iso); await saveUserData({ startDate: iso }); },
       startDateResets,
@@ -1770,10 +1539,7 @@ export function AppProvider({ children }) {
       claimBadge,
       setStreak: updateStreak,
       streakBumpSeq,
-      setCalmPoints: (newPoints) => {
-        setCalmPoints(newPoints);
-        saveUserData({ calmPoints: newPoints });
-      },
+      setCalmPoints,
       getAdherence,
       getPicksIncrement,
       getDynamicTaskCount,
@@ -1828,7 +1594,7 @@ export function AppProvider({ children }) {
           try { await updateDoc(doc(db, 'users', user.uid), { [`dailyQuestDone.${dateKey}`]: true, calmPoints: newPoints }); } catch {}
         }
       }
-      , graceDayDates
+      , graceUsages
       , lastStreakDayCounted
       , lastStreakMessage
       , evaluateStreakProgress
@@ -1874,7 +1640,7 @@ export function AppProvider({ children }) {
       {children}
       {/* Global overlays for UX signals */}
       {badgeToast ? (
-        <BadgeToast badge={badgeToast} onHide={() => setBadgeToast(null)} />
+        <BadgeToast badge={badgeToast} onHide={clearBadgeToast} />
       ) : null}
       <StreakBumpOverlay bumpSeq={streakBumpSeq} />
     </AppContext.Provider>

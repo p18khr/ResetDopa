@@ -2,12 +2,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, Alert, KeyboardAvoidingView, Platform, ScrollView, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { signUp } from '../services/auth.service';
+import { createUserDocument } from '../services/firestore.service';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Signup({ navigation }) {
+  const { isDarkMode, colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -87,11 +88,14 @@ export default function Signup({ navigation }) {
   const createAccount = async (validatedEmail, validatedPassword) => {
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, validatedEmail, validatedPassword);
-      const user = userCredential.user;
+      const result = await signUp(validatedEmail, validatedPassword);
+      if (!result.success) {
+        throw { code: result.code, message: result.error };
+      }
+      const user = result.user;
 
       // Create initial user data in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      await createUserDocument(user.uid, {
         email: user.email,
         createdAt: new Date().toISOString(),
         startDate: new Date().toISOString(),
@@ -99,6 +103,7 @@ export default function Signup({ navigation }) {
         calmPoints: 0,
         streak: 0,
         streakEvaluatedForDay: 0,
+        thresholdMetToday: 0,
         lastStreakDayCounted: 0,
         urges: [],
         todayPicks: {},
@@ -161,8 +166,8 @@ export default function Signup({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -179,49 +184,61 @@ export default function Signup({ navigation }) {
           >
             {/* Header */}
             <View style={styles.header}>
-              <Ionicons name="flash" size={60} color="#4A90E2" />
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Start your dopamine reset journey today</Text>
-              <View style={styles.infoBanner}>
-                <Text style={styles.infoText}>Cloud sync begins after signup. Your progress will sync across devices.</Text>
+              <Ionicons name="flash" size={60} color={colors.accent} />
+              <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Start your dopamine reset journey today</Text>
+              <View style={[styles.infoBanner, { backgroundColor: colors.surfaceSecondary }]}>
+                <Text style={[styles.infoText, { color: colors.text }]}>Cloud sync begins after signup. Your progress will sync across devices.</Text>
               </View>
             </View>
 
             {/* Form */}
             <View style={styles.form}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Email</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, {
+                  backgroundColor: colors.surfacePrimary,
+                  borderColor: colors.border,
+                  color: colors.text
+                }]}
                 placeholder="your@email.com"
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textTertiary}
               />
 
-              <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
+              <Text style={[styles.label, { marginTop: 16, color: colors.text }]}>Password</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, {
+                  backgroundColor: colors.surfacePrimary,
+                  borderColor: colors.border,
+                  color: colors.text
+                }]}
                 placeholder="At least 6 characters"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textTertiary}
               />
 
-              <Text style={[styles.label, { marginTop: 16 }]}>Confirm Password</Text>
+              <Text style={[styles.label, { marginTop: 16, color: colors.text }]}>Confirm Password</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, {
+                  backgroundColor: colors.surfacePrimary,
+                  borderColor: colors.border,
+                  color: colors.text
+                }]}
                 placeholder="Re-enter your password"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textTertiary}
               />
 
               <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
+                style={[styles.button, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
                 onPress={handleSignup}
                 disabled={loading}
               >
@@ -234,8 +251,8 @@ export default function Signup({ navigation }) {
                 style={styles.linkButton}
                 onPress={() => navigation.navigate('Login')}
               >
-                <Text style={styles.linkText}>
-                  Already have an account? <Text style={styles.linkTextBold}>Login</Text>
+                <Text style={[styles.linkText, { color: colors.textSecondary }]}>
+                  Already have an account? <Text style={[styles.linkTextBold, { color: colors.accent }]}>Login</Text>
                 </Text>
               </TouchableOpacity>
             </View>
@@ -249,7 +266,6 @@ export default function Signup({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
   },
   keyboardView: {
     flex: 1,
@@ -269,12 +285,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#1A1A1A',
     marginTop: 16,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginTop: 8,
     textAlign: 'center',
   },
@@ -282,12 +296,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#E5F3FF',
     borderRadius: 8,
   },
   infoText: {
     fontSize: 12,
-    color: '#1F2937',
     textAlign: 'center',
   },
   form: {
@@ -296,20 +308,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#1A1A1A',
   },
   button: {
-    backgroundColor: '#4A90E2',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -334,10 +341,8 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
-    color: '#6B7280',
   },
   linkTextBold: {
-    color: '#4A90E2',
     fontWeight: '600',
   },
 });

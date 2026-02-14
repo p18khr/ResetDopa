@@ -11,8 +11,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import FirstVisitOverlay from '../components/FirstVisitOverlay';
 import StreakNumber from '../components/StreakNumber';
 import { useIsFocused } from '@react-navigation/native';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Stats({ navigation, route }) {
+  const { isDarkMode, colors } = useTheme();
   const { calmPoints, urges, streak, getRecentMetrics, dailyMetrics, devDayOffset, getCurrentDay, startDate, dailyQuote } = useContext(AppContext);
   const currentDay = getCurrentDay();
   const isFocused = useIsFocused();
@@ -218,15 +220,15 @@ export default function Stats({ navigation, route }) {
 
   const ANDROID_TOP = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
   return (
-    <SafeAreaView style={[styles.safeArea, { paddingTop: ANDROID_TOP }]} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+    <SafeAreaView style={[styles.safeArea, { paddingTop: ANDROID_TOP, backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       
       {/* ===== DAY 1: INTRO MODAL WITH BLOCKER ===== */}
       {/* WHITE BLOCKER: Appears immediately to block content */}
       {(currentDay === 1) && (introCheckPending || showIntro) && (
-        <View style={styles.day1Blocker} />
+        <View style={[styles.day1Blocker, { backgroundColor: colors.background }]} />
       )}
-      
+
       {/* MODAL: Native FirstVisitOverlay */}
       <FirstVisitOverlay
         visible={showIntro}
@@ -234,14 +236,14 @@ export default function Stats({ navigation, route }) {
         text="See adherence, variety, urges, and clear Today markers. Use trends to steer tiny improvements."
         onClose={async () => { setShowIntro(false); try { await AsyncStorage.setItem('seen_intro_stats','true'); } catch {} }}
       />
-      
+
       {/* ===== DAY 2+: LOADER OVERLAY ===== */}
       {showDay2Loader && (
-        <Animated.View style={[styles.fullscreenLoader, { opacity: loaderOverlayOpacity }]}>
-          <ActivityIndicator size="large" color="#2563EB" />
-          <Text style={styles.loaderTitle}>Curating your stats</Text>
+        <Animated.View style={[styles.fullscreenLoader, { opacity: loaderOverlayOpacity, backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.95)' : 'rgba(255, 255, 255, 0.95)' }]}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={[styles.loaderTitle, { color: colors.textSecondary }]}>Curating your stats</Text>
           {dailyQuote ? (
-            <Animated.Text style={[styles.loaderQuote, { opacity: loaderQuoteOpacity }]}>
+            <Animated.Text style={[styles.loaderQuote, { opacity: loaderQuoteOpacity, color: colors.textTertiary }]}>
               "{dailyQuote.text}" — {dailyQuote.author}
             </Animated.Text>
           ) : null}
@@ -253,7 +255,7 @@ export default function Stats({ navigation, route }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', width:'100%' }}>
-            <Text style={styles.title}>Stats & Progress</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Stats & Progress</Text>
             <LawChip law={getLawForRoute(route?.name || 'Stats')} />
           </View>
         </View>
@@ -261,36 +263,36 @@ export default function Stats({ navigation, route }) {
 
         {/* Urges Weekly Chart */}
         <View style={styles.chartSection}>
-          <Text style={styles.chartTitle}>📊 Urges (last {daysSinceStart}d)</Text>
-          <Text style={styles.chartSubtitle}>Track your urge patterns over the last {daysSinceStart} days</Text>
+          <Text style={[styles.chartTitle, { color: colors.text }]}>📊 Urges (last {daysSinceStart}d)</Text>
+          <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>Track your urge patterns over the last {daysSinceStart} days</Text>
           <View style={styles.intensityLegend}>
-            <View style={styles.legendItem}><View style={[styles.legendDot,{ backgroundColor:'#10B981' }]} /><Text style={styles.legendLabel}>Low: {intensityCounts.low}</Text></View>
-            <View style={styles.legendItem}><View style={[styles.legendDot,{ backgroundColor:'#F59E0B' }]} /><Text style={styles.legendLabel}>Med: {intensityCounts.medium}</Text></View>
-            <View style={styles.legendItem}><View style={[styles.legendDot,{ backgroundColor:'#EF4444' }]} /><Text style={styles.legendLabel}>High: {intensityCounts.high}</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendDot,{ backgroundColor:'#10B981' }]} /><Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Low: {intensityCounts.low}</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendDot,{ backgroundColor:'#F59E0B' }]} /><Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Med: {intensityCounts.medium}</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendDot,{ backgroundColor:'#EF4444' }]} /><Text style={[styles.legendLabel, { color: colors.textSecondary }]}>High: {intensityCounts.high}</Text></View>
           </View>
-          <View style={{ marginTop: 12, padding: 12, backgroundColor: '#eef7f1', borderRadius: 8 }}>
-            <Text style={{ fontWeight: '600', marginBottom: 4 }}>Resilience ({daysSinceStart} days)</Text>
-            <Text style={{ fontSize: 24, fontWeight: '700' }}>{resilience.pct}% resisted</Text>
+          <View style={{ marginTop: 12, padding: 12, backgroundColor: colors.surfaceSecondary, borderRadius: 8 }}>
+            <Text style={{ fontWeight: '600', marginBottom: 4, color: colors.text }}>Resilience ({daysSinceStart} days)</Text>
+            <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text }}>{resilience.pct}% resisted</Text>
             <Text style={{ color: resilience.delta >= 0 ? '#2e7d32' : '#c62828', marginTop: 4 }}>
               {resilience.delta >= 0 ? 'Up ' : 'Down '}{Math.abs(resilience.delta)} pts vs prior
             </Text>
           </View>
-          <View style={[styles.chartWrapper, { width: screenW }]}> 
+          <View style={[styles.chartWrapper, { width: screenW }]}>
             <LineChart
-              data={{ 
-                labels: urgesData.labels, 
+              data={{
+                labels: urgesData.labels,
                 datasets: [
                   { data: urgesData.data.length > 0 ? urgesData.data : [0,0,0,0,0,0,0] },
                   { data: urgesData.data.map(() => Math.max(maxUrges, 5)), withDots: false, color: () => 'transparent' }
-                ] 
+                ]
               }}
               width={screenW}
               height={220}
               chartConfig={{
-                backgroundGradientFrom: '#fff',
-                backgroundGradientTo: '#fff',
+                backgroundGradientFrom: colors.surfacePrimary,
+                backgroundGradientTo: colors.surfacePrimary,
                 color: (opacity = 1) => `rgba(234, 88, 12, ${opacity})`,
-                labelColor: () => '#6B7280',
+                labelColor: () => colors.textTertiary,
                 propsForDots: { r: '5', strokeWidth: '2', stroke: '#EA580C' },
                 decimalPlaces: 0,
               }}
@@ -303,53 +305,53 @@ export default function Stats({ navigation, route }) {
               formatYLabel={(val) => Math.round(Number(val)).toString()}
             />
           </View>
-          <Text style={styles.todayMarker}>Today: {labelsSeries[labelsSeries.length - 1]}</Text>
+          <Text style={[styles.todayMarker, { color: colors.textSecondary }]}>Today: {labelsSeries[labelsSeries.length - 1]}</Text>
         </View>
 
         {/* Stats Tiles */}
         <View style={styles.tiles}>
-          <View style={styles.tile}>
-            <Text style={styles.tileTitle}>Calm Points</Text>
-            <Text style={styles.tileValue}>{calmPoints}</Text>
+          <View style={[styles.tile, { backgroundColor: colors.surfacePrimary }]}>
+            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>Calm Points</Text>
+            <Text style={[styles.tileValue, { color: colors.text }]}>{calmPoints}</Text>
           </View>
-          <View style={styles.tile}>
-            <Text style={styles.tileTitle}>Streak</Text>
-            <StreakNumber style={styles.tileValue} suffix="d" />
+          <View style={[styles.tile, { backgroundColor: colors.surfacePrimary }]}>
+            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>Streak</Text>
+            <StreakNumber style={[styles.tileValue, { color: colors.text }]} suffix="d" />
           </View>
-          <View style={styles.tile}>
-            <Text style={styles.tileTitle}>Total Urges</Text>
-            <Text style={styles.tileValue}>{urges.length}</Text>
+          <View style={[styles.tile, { backgroundColor: colors.surfacePrimary }]}>
+            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>Total Urges</Text>
+            <Text style={[styles.tileValue, { color: colors.text }]}>{urges.length}</Text>
           </View>
         </View>
 
         <View style={[styles.tiles, { marginTop: 8 }]}>
-          <View style={styles.tile}>
-            <Text style={styles.tileTitle}>Today Adherence</Text>
-            <Text style={styles.tileValue}>{todayMetrics ? Math.round(todayMetrics.adherence * 100) + '%' : '—'}</Text>
+          <View style={[styles.tile, { backgroundColor: colors.surfacePrimary }]}>
+            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>Today Adherence</Text>
+            <Text style={[styles.tileValue, { color: colors.text }]}>{todayMetrics ? Math.round(todayMetrics.adherence * 100) + '%' : '—'}</Text>
           </View>
-          <View style={styles.tile}>
-            <Text style={styles.tileTitle}>Completions</Text>
-            <Text style={styles.tileValue}>{todayMetrics ? `${todayMetrics.completions}/${todayMetrics.target}` : '—'}</Text>
+          <View style={[styles.tile, { backgroundColor: colors.surfacePrimary }]}>
+            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>Completions</Text>
+            <Text style={[styles.tileValue, { color: colors.text }]}>{todayMetrics ? `${todayMetrics.completions}/${todayMetrics.target}` : '—'}</Text>
           </View>
-          <View style={styles.tile}>
-            <Text style={styles.tileTitle}>Variety</Text>
-            <Text style={styles.tileValue}>{todayMetrics ? Math.round(todayMetrics.variety * 100) + '%' : '—'}</Text>
+          <View style={[styles.tile, { backgroundColor: colors.surfacePrimary }]}>
+            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>Variety</Text>
+            <Text style={[styles.tileValue, { color: colors.text }]}>{todayMetrics ? Math.round(todayMetrics.variety * 100) + '%' : '—'}</Text>
           </View>
         </View>
         {/* Adherence Chart */}
         <View style={styles.chartSection}>
-          <Text style={styles.chartTitle}>📈 Adherence ({daysSinceStart}d)</Text>
-          <Text style={styles.chartSubtitle}>Consistency percentage per day</Text>
-          <View style={[styles.chartWrapper, { width: screenW }]}> 
+          <Text style={[styles.chartTitle, { color: colors.text }]}>📈 Adherence ({daysSinceStart}d)</Text>
+          <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>Consistency percentage per day</Text>
+          <View style={[styles.chartWrapper, { width: screenW }]}>
             <LineChart
               data={adherenceChartData}
               width={screenW}
               height={220}
               chartConfig={{
-                backgroundGradientFrom: '#fff',
-                backgroundGradientTo: '#fff',
+                backgroundGradientFrom: colors.surfacePrimary,
+                backgroundGradientTo: colors.surfacePrimary,
                 color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
-                labelColor: () => '#6B7280',
+                labelColor: () => colors.textTertiary,
                 propsForDots: { r: '5', strokeWidth: '2', stroke: '#10B981' },
                 decimalPlaces: 0,
               }}
@@ -359,32 +361,32 @@ export default function Stats({ navigation, route }) {
               segments={5}
               formatYLabel={(val) => Math.round(Number(val)).toString()}
             />
-            <View style={styles.todayLine} />
+            <View style={[styles.todayLine, { backgroundColor: colors.textTertiary }]} />
           </View>
-          <Text style={styles.todayMarker}>Today: {labelsSeries[labelsSeries.length - 1]}</Text>
+          <Text style={[styles.todayMarker, { color: colors.textSecondary }]}>Today: {labelsSeries[labelsSeries.length - 1]}</Text>
         </View>
 
         {/* Completions Chart */}
         <View style={styles.chartSection}>
-          <Text style={styles.chartTitle}>✅ Completions vs Target ({daysSinceStart}d)</Text>
-          <Text style={styles.chartSubtitle}>Completed tasks (line) vs daily target (dashed)</Text>
-          <View style={[styles.chartWrapper, { width: screenW }]}> 
+          <Text style={[styles.chartTitle, { color: colors.text }]}>✅ Completions vs Target ({daysSinceStart}d)</Text>
+          <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>Completed tasks (line) vs daily target (dashed)</Text>
+          <View style={[styles.chartWrapper, { width: screenW }]}>
             <LineChart
-              data={{ 
-                labels: labelsSeries, 
+              data={{
+                labels: labelsSeries,
                 datasets: [
-                  { data: completionsSeries, color: (o=1)=>`rgba(74,144,226,${o})` }, 
+                  { data: completionsSeries, color: (o=1)=>`rgba(74,144,226,${o})` },
                   { data: targetSeries, color:(o=1)=>`rgba(156,163,175,${o})` },
                   { data: completionsSeries.map(() => Math.max(...completionsSeries, ...targetSeries, 5)), withDots: false, color: () => 'transparent' }
-                ] 
+                ]
               }}
               width={screenW}
               height={220}
               chartConfig={{
-                backgroundGradientFrom: '#fff',
-                backgroundGradientTo: '#fff',
+                backgroundGradientFrom: colors.surfacePrimary,
+                backgroundGradientTo: colors.surfacePrimary,
                 color: (opacity = 1) => `rgba(74,144,226,${opacity})`,
-                labelColor: () => '#6B7280',
+                labelColor: () => colors.textTertiary,
                 propsForDots: { r: '5', strokeWidth: '2', stroke: '#4A90E2' },
                 decimalPlaces: 0,
               }}
@@ -397,25 +399,25 @@ export default function Stats({ navigation, route }) {
                 return num.toString();
               }}
             />
-            <View style={styles.todayLine} />
+            <View style={[styles.todayLine, { backgroundColor: colors.textTertiary }]} />
           </View>
-          <Text style={styles.todayMarker}>Today: {labelsSeries[labelsSeries.length - 1]}</Text>
+          <Text style={[styles.todayMarker, { color: colors.textSecondary }]}>Today: {labelsSeries[labelsSeries.length - 1]}</Text>
         </View>
 
         {/* Variety Chart */}
         <View style={styles.chartSection}>
-          <Text style={styles.chartTitle}>🔀 Variety ({daysSinceStart}d)</Text>
-          <Text style={styles.chartSubtitle}>Distinct categories coverage %</Text>
-          <View style={[styles.chartWrapper, { width: screenW }]}> 
+          <Text style={[styles.chartTitle, { color: colors.text }]}>🔀 Variety ({daysSinceStart}d)</Text>
+          <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>Distinct categories coverage %</Text>
+          <View style={[styles.chartWrapper, { width: screenW }]}>
             <LineChart
               data={varietyChartData}
               width={screenW}
               height={220}
               chartConfig={{
-                backgroundGradientFrom: '#fff',
-                backgroundGradientTo: '#fff',
+                backgroundGradientFrom: colors.surfacePrimary,
+                backgroundGradientTo: colors.surfacePrimary,
                 color: (opacity = 1) => `rgba(234,179,8,${opacity})`,
-                labelColor: () => '#6B7280',
+                labelColor: () => colors.textTertiary,
                 propsForDots: { r: '5', strokeWidth: '2', stroke: '#FBBF24' },
                 decimalPlaces: 0,
               }}
@@ -425,38 +427,38 @@ export default function Stats({ navigation, route }) {
               segments={5}
               formatYLabel={(val) => Math.round(Number(val)).toString()}
             />
-            <View style={styles.todayLine} />
+            <View style={[styles.todayLine, { backgroundColor: colors.textTertiary }]} />
           </View>
-          <Text style={styles.todayMarker}>Today: {labelsSeries[labelsSeries.length - 1]}</Text>
+          <Text style={[styles.todayMarker, { color: colors.textSecondary }]}>Today: {labelsSeries[labelsSeries.length - 1]}</Text>
         </View>
 
         {/* Insights */}
-        <View style={styles.insightCard}>
-          <Text style={styles.insightTitle}>💡 Insights</Text>
-          <Text style={styles.insightText}>
-            {urges.length === 0 
+        <View style={[styles.insightCard, { backgroundColor: colors.surfaceSecondary, borderLeftColor: colors.accent }]}>
+          <Text style={[styles.insightTitle, { color: colors.text }]}>💡 Insights</Text>
+          <Text style={[styles.insightText, { color: colors.textSecondary }]}>
+            {urges.length === 0
               ? "Start logging urges to see patterns and insights."
               : `You've logged ${urges.length} urge${urges.length > 1 ? 's' : ''} so far. Keep building awareness!`
             }
           </Text>
           {todayMetrics && (
-            <Text style={styles.insightText}>Today: {todayMetrics.completions}/{todayMetrics.target} tasks • Adherence {Math.round(todayMetrics.adherence * 100)}%</Text>
+            <Text style={[styles.insightText, { color: colors.textSecondary }]}>Today: {todayMetrics.completions}/{todayMetrics.target} tasks • Adherence {Math.round(todayMetrics.adherence * 100)}%</Text>
           )}
           {todayMetrics && todayMetrics.categoriesCovered && todayMetrics.categoriesCovered.length > 0 && (
-            <Text style={styles.insightText}>Variety: {todayMetrics.categoriesCovered.join(', ')} ({todayMetrics.categoriesCovered.length}/8)</Text>
+            <Text style={[styles.insightText, { color: colors.textSecondary }]}>Variety: {todayMetrics.categoriesCovered.join(', ')} ({todayMetrics.categoriesCovered.length}/8)</Text>
           )}
           {adherenceSeries.some(v => v > 0) && (
-            <Text style={styles.insightText}>{daysSinceStart}d Avg Adherence: {Math.round(adherenceSeries.reduce((a,b)=>a+b,0)/adherenceSeries.length)}%</Text>
+            <Text style={[styles.insightText, { color: colors.textSecondary }]}>{daysSinceStart}d Avg Adherence: {Math.round(adherenceSeries.reduce((a,b)=>a+b,0)/adherenceSeries.length)}%</Text>
           )}
           {varietySeries.some(v => v > 0) && (
-            <Text style={styles.insightText}>{daysSinceStart}d Avg Variety: {Math.round(varietySeries.reduce((a,b)=>a+b,0)/varietySeries.length)}%</Text>
+            <Text style={[styles.insightText, { color: colors.textSecondary }]}>{daysSinceStart}d Avg Variety: {Math.round(varietySeries.reduce((a,b)=>a+b,0)/varietySeries.length)}%</Text>
           )}
           <View style={{ marginTop: 12 }}>
-            <Text style={{ fontWeight:'700', color:'#1A1A1A' }}>What these mean</Text>
-            <Text style={styles.insightText}>Adherence: % of assigned tasks completed that day.</Text>
-            <Text style={styles.insightText}>Variety: Coverage across task categories (mind, physical, focus, etc.).</Text>
-            <Text style={styles.insightText}>Streak: Consecutive days meeting thresholds (with occasional grace).</Text>
-            <Text style={styles.insightText}>Grace: A saved day when you were close to the threshold.</Text>
+            <Text style={{ fontWeight:'700', color: colors.text }}>What these mean</Text>
+            <Text style={[styles.insightText, { color: colors.textSecondary }]}>Adherence: % of assigned tasks completed that day.</Text>
+            <Text style={[styles.insightText, { color: colors.textSecondary }]}>Variety: Coverage across task categories (mind, physical, focus, etc.).</Text>
+            <Text style={[styles.insightText, { color: colors.textSecondary }]}>Streak: Consecutive days meeting thresholds (with occasional grace).</Text>
+            <Text style={[styles.insightText, { color: colors.textSecondary }]}>Grace: A saved day when you were close to the threshold.</Text>
           </View>
         </View>
       </ScrollView>
@@ -468,7 +470,6 @@ export default function Stats({ navigation, route }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
   },
   day1Blocker: {
     position: 'absolute',
@@ -476,7 +477,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFFFFF',
     zIndex: 998,
   },
   fullscreenLoader: {
@@ -485,7 +485,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
@@ -494,12 +493,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
   },
   loaderQuote: {
     marginTop: 20,
     fontSize: 14,
-    color: '#6B7280',
     fontStyle: 'italic',
     textAlign: 'center',
     paddingHorizontal: 24,
@@ -517,7 +514,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   tiles: {
     flexDirection: 'row',
@@ -526,7 +522,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tile: {
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
     flex: 1,
@@ -539,13 +534,11 @@ const styles = StyleSheet.create({
   },
   tileTitle: {
     fontSize: 12,
-    color: '#6B7280',
     marginBottom: 8,
   },
   tileValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   chartSection: {
     marginBottom: 24,
@@ -553,18 +546,15 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
     marginBottom: 4,
   },
   chartSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
     marginBottom: 16,
   },
   chart: {
     borderRadius: 16,
     padding: 0,
-    backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -581,39 +571,32 @@ const styles = StyleSheet.create({
     top: 16,
     bottom: 32,
     width: 2,
-    backgroundColor: '#9CA3AF',
     borderRadius: 1,
     opacity: 0.8,
   },
   todayMarker: {
     fontSize: 12,
-    color: '#6B7280',
     marginTop: 4,
     textAlign: 'right',
   },
   insightCard: {
-    backgroundColor: '#FFF7ED',
     borderRadius: 16,
     padding: 20,
     marginBottom: 40,
     borderLeftWidth: 4,
-    borderLeftColor: '#EA580C',
   },
   insightTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
     marginBottom: 8,
   },
   insightText: {
     fontSize: 14,
-    color: '#6B7280',
     lineHeight: 20,
     marginBottom: 4,
   },
   demoTag: {
     fontSize: 12,
-    color: '#6B7280',
     marginTop: -8,
     marginBottom: 12,
   },
@@ -633,5 +616,5 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
-  legendLabel: { fontSize: 12, color: '#374151' },
+  legendLabel: { fontSize: 12 },
 });

@@ -3,6 +3,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Animated, Modal, Platform, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 import LawChip from '../components/LawChip';
 import { getLawForRoute } from '../utils/lawLabels';
 import { TASK_METADATA, TASK_POOLS, getCanonicalTask } from '../utils/programData';
@@ -13,6 +14,9 @@ import StreakCalendar from '../components/StreakCalendar';
 import StreakNumber from '../components/StreakNumber';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LawOfTheDay from '../components/LawOfTheDay';
+import ScreenErrorBoundary from '../components/ScreenErrorBoundary';
+import { getCurrentUser } from '../services/auth.service';
+import { updateUserData } from '../services/firestore.service';
 
 const AVATAR_OPTIONS = [
   { id: 1, emoji: '🧘' },
@@ -25,8 +29,9 @@ const AVATAR_OPTIONS = [
   { id: 8, emoji: '🏆' },
 ];
 
-export default function Dashboard({ navigation, route }) {
+function Dashboard({ navigation, route }) {
   const { calmPoints, streak, tasks, urges, getDailyRecommendations, todayPicks, todayCompletions, toggleTodayTaskCompletion, getCurrentDay, getAdherence, adherenceWindowDays, week1SetupDone, setWeek1SetupDone, setTodayPicksForDay, setAllTodayPicks, lastStreakMessage, graceDayDates, setWeek1Anchors, week1Anchors, dailyMood, setDailyMood, dailyQuest, dailyQuestDone, markDailyQuestDone, enableEnhancedFeatures, getGeneratedTasks, devDayOffset, rolloverBannerInfo, dismissRolloverBanner, dailyMetrics, hasAcceptedTerms, loading, acceptanceLoaded } = useContext(AppContext);
+  const { isDarkMode, colors } = useTheme();
   const currentDay = getCurrentDay();
   const picks = (() => {
     const saved = todayPicks[currentDay];
@@ -255,12 +260,10 @@ export default function Dashboard({ navigation, route }) {
     // CRITICAL: Ensure Firestore is updated before navigation to prevent race condition
     // This way, when Program screen renders, it can read the persisted picks
     try {
-      const user = require('../config/firebase').auth.currentUser;
+      const user = getCurrentUser();
       if (user) {
-        const { updateDoc, doc } = require('firebase/firestore');
-        const { db } = require('../config/firebase');
         // Wait for Firestore write to complete before proceeding
-        await updateDoc(doc(db, 'users', user.uid), {
+        await updateUserData(user.uid, {
           todayPicks: batch,
           week1SetupDone: true,
         });
@@ -414,8 +417,8 @@ export default function Dashboard({ navigation, route }) {
   const displayName = username || 'Warrior';
 
   return (
-    <SafeAreaView style={[styles.safeArea, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0 } ]} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0 } ]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       <Animated.View
         style={[
           { flex: 1 },
@@ -425,32 +428,32 @@ export default function Dashboard({ navigation, route }) {
           },
         ]}
       >
-        <ScrollView style={styles.container}>
+        <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Onboarding Modal (only after terms accepted) */}
         <Modal visible={showOnboarding && hasAcceptedTerms && acceptanceLoaded} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
+            <View style={[styles.modalCard, { backgroundColor: colors.surfacePrimary }]}>
               <Image
                 source={require('../../assets/images/ResetDopa_Logo.png')}
                 style={{ width: 64, height: 64, alignSelf: 'center' }}
                 resizeMode="contain"
               />
-              <Text style={styles.modalTitle}>Welcome to ResetDopa™!! 👋</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Welcome to ResetDopa™!! 👋</Text>
               <Text style={[styles.modalSub, { fontStyle: 'italic', color: '#6366F1', marginBottom: 12 }]}>You're not broken. You're just ready to rewire. 🧠</Text>
-              <Text style={styles.modalSub}>A 30-day program built on tiny, consistent actions. Each day builds momentum toward stronger focus and will.</Text>
-              <Text style={[styles.modalSub, { marginTop: 8 }]}>Start by selecting 5 tasks for Week 1. These will be your anchors — the foundation of your practice.</Text>
-              <Text style={[styles.modalSub, { marginTop: 8 }]}>As you build consistency, task count increases to match your momentum. Begin now. 🌱</Text>
+              <Text style={[styles.modalSub, { color: colors.textSecondary }]}>A 30-day program built on tiny, consistent actions. Each day builds momentum toward stronger focus and will.</Text>
+              <Text style={[styles.modalSub, { marginTop: 8, color: colors.textSecondary }]}>Start by selecting 5 tasks for Week 1. These will be your anchors — the foundation of your practice.</Text>
+              <Text style={[styles.modalSub, { marginTop: 8, color: colors.textSecondary }]}>As you build consistency, task count increases to match your momentum. Begin now. 🌱</Text>
               <ScrollView style={{ maxHeight: 280 }} contentContainerStyle={[styles.chipGrid, { paddingBottom: 12 }] }>
                 {candidateTasks.map(ct => (
                   <TouchableOpacity key={ct.title} onPress={() => toggleOnboardingSelection(ct.title)} style={[styles.pickChip, onboardingPicks.includes(ct.title) && styles.pickChipActive]}>
-                    <Text style={[styles.pickChipText, onboardingPicks.includes(ct.title) && styles.pickChipTextActive]}>{ct.title}</Text>
+                    <Text style={[styles.pickChipText, onboardingPicks.includes(ct.title) && styles.pickChipTextActive, { color: colors.text }]}>{ct.title}</Text>
                     {onboardingPicks.includes(ct.title) && (
                       <Ionicons name="checkmark-circle" size={18} color="#10B981" style={{ marginLeft: 6 }} />
                     )}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-              <Text style={styles.selectorHint}>Pick exactly {maxSelections}. These will be your light anchors for Week 1.</Text>
+              <Text style={[styles.selectorHint, { color: colors.textSecondary }]}>Pick exactly {maxSelections}. These will be your light anchors for Week 1.</Text>
               <TouchableOpacity disabled={onboardingPicks.length !== maxSelections} onPress={confirmOnboardingPicks} style={[styles.modalConfirmBtn, { marginTop: 16 }, onboardingPicks.length !== maxSelections && { opacity: 0.5 }]}>
                 <Text style={styles.modalConfirmText}>Start My Journey</Text>
               </TouchableOpacity>
@@ -460,14 +463,14 @@ export default function Dashboard({ navigation, route }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerText}>
-            <Text style={styles.greeting}>ResetDopa™</Text>
+            <Text style={[styles.greeting, { color: colors.text }]}>ResetDopa™</Text>
             <View style={{ marginTop: 6 }}>
               <LawChip law={getLawForRoute(route?.name || 'Dashboard')} />
             </View>
           </View>
           <View style={styles.headerIcons}>
             <View style={{ marginRight: 10 }}>
-              <Ionicons name="help-circle-outline" size={24} color="#C7D2FE" />
+              <Ionicons name="help-circle-outline" size={24} color={colors.textSecondary} />
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('Settings')}
@@ -557,7 +560,7 @@ export default function Dashboard({ navigation, route }) {
                 <Ionicons name={icon} size={20} color={border} style={{ marginRight:8 }} />
                 <View style={{ flex:1 }}>
                   <Text style={[styles.bannerTitle, { color: border }]}>{title}</Text>
-                  <Text style={styles.bannerText}>{info.message}</Text>
+                  <Text style={[styles.bannerText, { color: colors.textSecondary }]}>{info.message}</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={dismissRolloverBanner} style={styles.bannerClose}>
@@ -573,7 +576,7 @@ export default function Dashboard({ navigation, route }) {
         <LawOfTheDay onLearnMore={() => navigation.navigate('LearnLaws')} />
 
       {/* Calm Points Card with Gradient Circle */}
-      <View style={styles.pointsCard}>
+      <View style={[styles.pointsCard, { backgroundColor: colors.surfacePrimary }]}>
         <View style={styles.circleContainer}>
           <View style={styles.outerCircle}>
             <LinearGradient
@@ -582,9 +585,9 @@ export default function Dashboard({ navigation, route }) {
               end={{ x: 1, y: 1 }}
               style={styles.gradientCircle}
             />
-            <View style={styles.innerCircle}>
-              <Text style={styles.pointsNumber}>{calmPoints}</Text>
-              <Text style={styles.pointsLabel}>Calm Points</Text>
+            <View style={[styles.innerCircle, { backgroundColor: colors.background }]}>
+              <Text style={[styles.pointsNumber, { color: colors.text }]}>{calmPoints}</Text>
+              <Text style={[styles.pointsLabel, { color: colors.textSecondary }]}>Calm Points</Text>
               <Text style={styles.pointsToday}>+{todayPoints} Today</Text>
             </View>
           </View>
@@ -593,19 +596,19 @@ export default function Dashboard({ navigation, route }) {
 
       {/* Stats Row */}
       <View style={styles.statsRow}>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: colors.surfacePrimary }]}>
           <Text style={styles.statIcon}>🔥</Text>
-          <Text style={styles.statLabel}>Streak</Text>
-          <StreakNumber style={styles.statValue} suffix=" Days" />
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Streak</Text>
+          <StreakNumber style={[styles.statValue, { color: colors.text }]} suffix=" Days" />
           <View style={styles.statTrend}>
             <Ionicons name={streakTrendUp ? "arrow-up" : (todayStreakValue === yesterdayStreakValue ? "remove" : "arrow-down")} size={12} color="#50E3C2" />
             <Text style={styles.statTrendText}>{streakTrendText}</Text>
           </View>
         </View>
         
-        <View style={[styles.statCard, styles.moodCard, { borderColor: moodColor, backgroundColor: moodBg }]}>
+        <View style={[styles.statCard, styles.moodCard, { borderColor: moodColor, backgroundColor: colors.surfacePrimary }]}>
           <Text style={styles.moodEmoji}>{moodParsed.emoji}</Text>
-          <Text style={styles.statLabel}>Mood</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Mood</Text>
           <Text style={[styles.statValue, { color: moodColor }]}>{moodParsed.label || 'No entry'}</Text>
           {trendText && (
             <View style={[styles.statTrend, { marginTop: 4 }]}>
@@ -614,11 +617,11 @@ export default function Dashboard({ navigation, route }) {
             </View>
           )}
         </View>
-        
-        <View style={styles.statCard}>
+
+        <View style={[styles.statCard, { backgroundColor: colors.surfacePrimary }]}>
           <Text style={styles.statIcon}>📊</Text>
-          <Text style={styles.statLabel}>Urges</Text>
-          <Text style={styles.statValue}>{todayUrges}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Urges</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{todayUrges}</Text>
           <View style={styles.statTrend}>
             <Ionicons name={urgesTrendDown ? "arrow-down" : "arrow-up"} size={12} color="#50E3C2" />
             <Text style={styles.statTrendText}>{urgesTrendDown ? 'Lower' : 'Higher'}</Text>
@@ -628,15 +631,15 @@ export default function Dashboard({ navigation, route }) {
 
       {/* Adherence Card (hidden until after Day 3) */}
       {currentDay > 3 && (
-        <View style={styles.adherenceCard}>
+        <View style={[styles.adherenceCard, { backgroundColor: colors.surfacePrimary }]}>
           <View style={styles.adherenceHeaderRow}>
-            <Text style={styles.adherenceTitle}>Consistency (3d)</Text>
+            <Text style={[styles.adherenceTitle, { color: colors.text }]}>Consistency (3d)</Text>
             <Text style={styles.adherencePct}>{adherencePct}%</Text>
           </View>
           <View style={styles.adherenceBarOuter}>
           <View style={[styles.adherenceBarInner,{ width: `${Math.min(100, adherencePct)}%`, backgroundColor: adherenceColor }]} />
           </View>
-          <Text style={styles.adherenceMsg}>{adherenceMsg}</Text>
+          <Text style={[styles.adherenceMsg, { color: colors.textSecondary }]}>{adherenceMsg}</Text>
         </View>
       )}
 
@@ -655,7 +658,7 @@ export default function Dashboard({ navigation, route }) {
           <View>
             <TouchableOpacity onPress={() => setShowQuestModal(true)} style={styles.questCard}>
               <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between' }}>
-                <Text style={styles.questTitle}>Quest of the Day</Text>
+                <Text style={[styles.questTitle, { color: colors.text }]}>Quest of the Day</Text>
                 <View style={{ position:'relative' }}>
                   {!done && (
                     <Animated.View style={[styles.newPulse, { transform:[{ scale: questPulse.interpolate({ inputRange:[0,1], outputRange:[1,1.12] }) }], opacity: questPulse.interpolate({ inputRange:[0,1], outputRange:[0.35, 0] }) }]} />
@@ -665,16 +668,16 @@ export default function Dashboard({ navigation, route }) {
                   </View>
                 </View>
               </View>
-              <Text style={styles.questText}>• {dailyQuest}</Text>
+              <Text style={[styles.questText, { color: colors.text }]}>• {dailyQuest}</Text>
             </TouchableOpacity>
 
             <Modal visible={showQuestModal} animationType="slide" transparent>
               <TouchableOpacity activeOpacity={1} style={styles.modalBackdrop} onPress={() => setShowQuestModal(false)}>
                 <TouchableOpacity activeOpacity={1} style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-                  <Text style={styles.modalTitle}>Quest of the Day</Text>
-                  <Text style={styles.modalSubtitle}>A tiny win that nudges progress today — Reward: +5 Calm Points</Text>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>Quest of the Day</Text>
+                  <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>A tiny win that nudges progress today — Reward: +5 Calm Points</Text>
                   <View style={{ marginTop:12 }}>
-                    <Text style={styles.modalText}>• {dailyQuest}</Text>
+                    <Text style={[styles.modalText, { color: colors.text }]}>• {dailyQuest}</Text>
                   </View>
                   <View style={{ flexDirection:'row', justifyContent:'space-between', marginTop:16 }}>
                     <TouchableOpacity onPress={() => setShowQuestModal(false)} style={[styles.modalBtn, { backgroundColor:'#F3F4F6', borderColor:'#D1D5DB' }] }>
@@ -697,22 +700,22 @@ export default function Dashboard({ navigation, route }) {
       {/* Today's Picks Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today’s Picks</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Picks</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Program')}>
             <Text style={styles.sectionSubtitle}>{picks.length} {picks.length === 1 ? 'task' : 'tasks'} • {todayDoneCount} done</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
-          style={styles.viewProgramButton} 
+        <TouchableOpacity
+          style={[styles.viewProgramButton, { backgroundColor: colors.surfacePrimary }]}
           onPress={() => navigation.navigate('Program')}
         >
           <View style={styles.viewProgramContent}>
             <View style={styles.viewProgramLeft}>
               <Ionicons name="list" size={24} color="#4A90E2" />
               <View style={styles.viewProgramText}>
-                <Text style={styles.viewProgramTitle}>View Today's Program</Text>
-                <Text style={styles.viewProgramSubtitle}>Mark tasks and track your progress</Text>
+                <Text style={[styles.viewProgramTitle, { color: colors.text }]}>View Today's Program</Text>
+                <Text style={[styles.viewProgramSubtitle, { color: colors.textSecondary }]}>Mark tasks and track your progress</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
@@ -727,9 +730,9 @@ export default function Dashboard({ navigation, route }) {
       {/* Mood Prompt Modal */}
       <Modal visible={showMoodPrompt} animationType="fade" transparent onRequestClose={() => setShowMoodPrompt(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalContent, { width: '88%' }]}>
-            <Text style={styles.modalTitle}>How are you feeling today?</Text>
-            <Text style={styles.modalSubtitle}>Pick a mood to keep your trends meaningful.</Text>
+          <View style={[styles.modalContent, { width: '88%', backgroundColor: colors.surfacePrimary }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>How are you feeling today?</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Pick a mood to keep your trends meaningful.</Text>
             <View style={{ flexDirection:'row', justifyContent:'space-between', marginTop:16 }}>
               {['😊 Great','😐 Okay','😞 Low','😡 Stressed'].map(option => (
                 <TouchableOpacity key={option} onPress={() => { setTodayMood(option); setShowMoodPrompt(false); }} style={{ alignItems:'center' }}>
@@ -1282,6 +1285,15 @@ export default function Dashboard({ navigation, route }) {
     color: '#6B7280',
   },
 });
+
+// Wrap Dashboard with ErrorBoundary
+export default function DashboardWithErrorBoundary(props) {
+  return (
+    <ScreenErrorBoundary screenName="Dashboard" navigation={props.navigation}>
+      <Dashboard {...props} />
+    </ScreenErrorBoundary>
+  );
+}
 
 
 

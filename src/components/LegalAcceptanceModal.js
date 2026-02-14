@@ -3,8 +3,10 @@ import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TERMS_OF_SERVICE, PRIVACY_POLICY } from '../constants/legalContent';
+import { useTheme } from '../context/ThemeContext';
 
 export default function LegalAcceptanceModal({ visible, onAccept, onDecline }) {
+  const { isDarkMode, colors } = useTheme();
   const [activeTab, setActiveTab] = useState('terms'); // 'terms' or 'privacy'
   const [termsScrolled, setTermsScrolled] = useState(false);
   const [privacyScrolled, setPrivacyScrolled] = useState(false);
@@ -31,21 +33,21 @@ export default function LegalAcceptanceModal({ visible, onAccept, onDecline }) {
       onRequestClose={onDecline}
     >
       <View style={styles.overlay}>
-        <View style={styles.modal}>
+        <View style={[styles.modal, { backgroundColor: colors.background }]}>
           {/* Header */}
-          <View style={styles.header}>
-            <Ionicons name="shield-checkmark" size={32} color="#4A90E2" />
-            <Text style={styles.title}>Terms & Privacy Policy</Text>
-            <Text style={styles.subtitle}>Please read both documents</Text>
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <Ionicons name="shield-checkmark" size={32} color={colors.accent} />
+            <Text style={[styles.title, { color: colors.text }]}>Terms & Privacy Policy</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Please read both documents</Text>
           </View>
 
           {/* Tabs */}
-          <View style={styles.tabContainer}>
+          <View style={[styles.tabContainer, { borderBottomColor: colors.border, backgroundColor: colors.surfaceSecondary }]}>
             <TouchableOpacity
-              style={[styles.tab, activeTab === 'terms' && styles.tabActive]}
+              style={[styles.tab, activeTab === 'terms' && { borderBottomColor: colors.accent }]}
               onPress={() => setActiveTab('terms')}
             >
-              <Text style={[styles.tabText, activeTab === 'terms' && styles.tabTextActive]}>
+              <Text style={[styles.tabText, { color: colors.textSecondary }, activeTab === 'terms' && { color: colors.accent }]}>
                 Terms of Service
               </Text>
               {termsScrolled && (
@@ -54,10 +56,10 @@ export default function LegalAcceptanceModal({ visible, onAccept, onDecline }) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.tab, activeTab === 'privacy' && styles.tabActive]}
+              style={[styles.tab, activeTab === 'privacy' && { borderBottomColor: colors.accent }]}
               onPress={() => setActiveTab('privacy')}
             >
-              <Text style={[styles.tabText, activeTab === 'privacy' && styles.tabTextActive]}>
+              <Text style={[styles.tabText, { color: colors.textSecondary }, activeTab === 'privacy' && { color: colors.accent }]}>
                 Privacy Policy
               </Text>
               {privacyScrolled && (
@@ -72,31 +74,31 @@ export default function LegalAcceptanceModal({ visible, onAccept, onDecline }) {
             onScroll={activeTab === 'terms' ? handleTermsScroll : handlePrivacyScroll}
             scrollEventThrottle={400}
           >
-            <Text style={styles.contentText}>
+            <Text style={[styles.contentText, { color: colors.textSecondary }]}>
               {activeTab === 'terms' ? TERMS_OF_SERVICE : PRIVACY_POLICY}
             </Text>
             <View style={styles.spacer} />
           </ScrollView>
 
           {/* Progress indicator */}
-          <View style={styles.progressContainer}>
+          <View style={[styles.progressContainer, { backgroundColor: colors.surfaceSecondary, borderTopColor: colors.border }]}>
             <View style={styles.progressItem}>
-              <Ionicons 
-                name={termsScrolled ? "checkmark-circle" : "ellipse-outline"} 
-                size={20} 
-                color={termsScrolled ? "#10B981" : "#D1D5DB"} 
+              <Ionicons
+                name={termsScrolled ? "checkmark-circle" : "ellipse-outline"}
+                size={20}
+                color={termsScrolled ? "#10B981" : colors.textTertiary}
               />
-              <Text style={[styles.progressText, termsScrolled && styles.progressTextDone]}>
+              <Text style={[styles.progressText, { color: colors.textSecondary }, termsScrolled && styles.progressTextDone]}>
                 Terms of Service
               </Text>
             </View>
             <View style={styles.progressItem}>
-              <Ionicons 
-                name={privacyScrolled ? "checkmark-circle" : "ellipse-outline"} 
-                size={20} 
-                color={privacyScrolled ? "#10B981" : "#D1D5DB"} 
+              <Ionicons
+                name={privacyScrolled ? "checkmark-circle" : "ellipse-outline"}
+                size={20}
+                color={privacyScrolled ? "#10B981" : colors.textTertiary}
               />
-              <Text style={[styles.progressText, privacyScrolled && styles.progressTextDone]}>
+              <Text style={[styles.progressText, { color: colors.textSecondary }, privacyScrolled && styles.progressTextDone]}>
                 Privacy Policy
               </Text>
             </View>
@@ -104,9 +106,9 @@ export default function LegalAcceptanceModal({ visible, onAccept, onDecline }) {
 
           {/* Instructions */}
           {!bothScrolled && (
-            <View style={styles.instructionBanner}>
-              <Ionicons name="information-circle" size={18} color="#4A90E2" />
-              <Text style={styles.instructionText}>
+            <View style={[styles.instructionBanner, { backgroundColor: colors.surfaceSecondary }]}>
+              <Ionicons name="information-circle" size={18} color={colors.accent} />
+              <Text style={[styles.instructionText, { color: colors.accent }]}>
                 Please read the documents to continue
               </Text>
             </View>
@@ -151,7 +153,6 @@ const styles = StyleSheet.create({
   modal: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
@@ -164,24 +165,19 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1A1A1A',
     marginTop: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
     marginTop: 4,
   },
   tabContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
   },
   tab: {
     flex: 1,
@@ -193,17 +189,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  tabActive: {
-    borderBottomColor: '#4A90E2',
-  },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
     textAlign: 'center',
-  },
-  tabTextActive: {
-    color: '#4A90E2',
   },
   tabCheck: {
     marginLeft: 6,
@@ -216,7 +205,6 @@ const styles = StyleSheet.create({
   contentText: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#374151',
   },
   spacer: {
     height: 20,
@@ -224,9 +212,7 @@ const styles = StyleSheet.create({
   progressContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#F0F4FF',
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
   },
   progressItem: {
     flexDirection: 'row',
@@ -236,7 +222,6 @@ const styles = StyleSheet.create({
   progressText: {
     marginLeft: 10,
     fontSize: 13,
-    color: '#6B7280',
   },
   progressTextDone: {
     color: '#10B981',
@@ -246,7 +231,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     marginHorizontal: 16,
     marginBottom: 12,
@@ -255,7 +239,6 @@ const styles = StyleSheet.create({
   instructionText: {
     marginLeft: 10,
     fontSize: 13,
-    color: '#1E40AF',
     fontWeight: '500',
   },
   footer: {

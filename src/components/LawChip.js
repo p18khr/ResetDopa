@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
-export default function LawChip({ label, description, law, style }) {
+function LawChip({ label, description, law, style }) {
+  const { isDarkMode, colors } = useTheme();
   const lawData = law || { label, description };
   const hasLabel = !!lawData?.label;
   const [open, setOpen] = useState(false);
@@ -32,34 +34,34 @@ export default function LawChip({ label, description, law, style }) {
   return (
     <>
       <View style={[styles.wrap, style]}>
-        <TouchableOpacity onPress={() => setOpen(true)} activeOpacity={0.85} style={styles.chip}>
-          <Text style={styles.text}>{lawData.label}</Text>
+        <TouchableOpacity onPress={() => setOpen(true)} activeOpacity={0.85} style={[styles.chip, { backgroundColor: colors.surfaceSecondary, borderColor: colors.accent }]}>
+          <Text style={[styles.text, { color: colors.accent }]}>{lawData.label}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={`What is ${lawData.label}?`} style={styles.infoBtn}>
-          <Ionicons name="information-circle" size={18} color="#1A56DB" />
+        <TouchableOpacity onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={`What is ${lawData.label}?`} style={[styles.infoBtn, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+          <Ionicons name="information-circle" size={18} color={colors.accent} />
         </TouchableOpacity>
       </View>
       <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
         <View style={styles.overlay}>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{lawData.label}</Text>
+          <View style={[styles.card, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>{lawData.label}</Text>
             {!!lawData.description && (
-              <Text style={styles.cardDesc}>{lawData.description}</Text>
+              <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>{lawData.description}</Text>
             )}
             {!!applyText && (
               <View style={{ marginTop: 10 }}>
-                <Text style={styles.cardSubTitle}>How to apply</Text>
-                <Text style={styles.cardDesc}>{applyText}</Text>
+                <Text style={[styles.cardSubTitle, { color: colors.text }]}>How to apply</Text>
+                <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>{applyText}</Text>
                 {!!EXAMPLES[lawData.label] && (
-                  <Text style={[styles.cardDesc, { marginTop: 6, color:'#374151' }]}>{EXAMPLES[lawData.label]}</Text>
+                  <Text style={[styles.cardDesc, { marginTop: 6, color: colors.textSecondary }]}>{EXAMPLES[lawData.label]}</Text>
                 )}
                 {!!QUOTES[lawData.label] && (
-                  <Text style={[styles.cardDesc, { marginTop: 6, fontStyle:'italic', color:'#6B7280' }]}>{QUOTES[lawData.label]}</Text>
+                  <Text style={[styles.cardDesc, { marginTop: 6, fontStyle:'italic', color: colors.textTertiary }]}>{QUOTES[lawData.label]}</Text>
                 )}
               </View>
             )}
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setOpen(false)}>
-              <Text style={styles.closeText}>Got it</Text>
+            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.surfaceSecondary }]} onPress={() => setOpen(false)}>
+              <Text style={[styles.closeText, { color: colors.accent }]}>Got it</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -70,8 +72,6 @@ export default function LawChip({ label, description, law, style }) {
 
 const styles = StyleSheet.create({
   chip: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#1E3A8A',
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -83,7 +83,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   text: {
-    color: '#1A56DB',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -93,12 +92,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   infoBtn: {
-    backgroundColor: '#E5F0FF',
     borderRadius: 999,
     paddingHorizontal: 6,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
   },
   overlay: {
     flex: 1,
@@ -108,7 +105,6 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     maxWidth: 420,
@@ -118,10 +114,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
-  cardDesc: { fontSize: 14, color: '#374151' },
-  cardSubTitle: { fontSize: 13, color: '#1A1A1A', fontWeight: '700' },
-  closeBtn: { marginTop: 12, alignSelf: 'flex-end', paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#E5F0FF', borderRadius: 8 },
-  closeText: { color: '#1A56DB', fontWeight: '600' },
+  cardTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
+  cardDesc: { fontSize: 14 },
+  cardSubTitle: { fontSize: 13, fontWeight: '700' },
+  closeBtn: { marginTop: 12, alignSelf: 'flex-end', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  closeText: { fontWeight: '600' },
 });
+
+// Memoize to prevent unnecessary re-renders when props haven't changed
+export default React.memo(LawChip);
