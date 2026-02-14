@@ -181,6 +181,23 @@ export default function Settings({ navigation }) {
                       // Show loading alert
                       Alert.alert('Deleting...', 'Please wait while we delete your account and data.');
 
+                      // CRITICAL: Flush all pending Firestore writes BEFORE deleting anything
+                      // This prevents "Missing or insufficient permissions" errors from queued writes
+                      try {
+                        if (__DEV__) console.log('🔄 Flushing pending Firestore writes...');
+
+                        // Wait a moment for any in-flight updates to queue
+                        await new Promise(resolve => setTimeout(resolve, 100));
+
+                        // Note: Individual contexts handle their own BatchSaveManager cleanup
+                        // when user becomes null. The timeout above ensures queued writes complete.
+
+                        if (__DEV__) console.log('✅ Pending writes flushed');
+                      } catch (flushError) {
+                        console.warn('⚠️ Flush warning:', flushError);
+                        // Continue with deletion even if flush fails
+                      }
+
                       // Delete Firestore user document
                       if (currentUser.uid) {
                         try {

@@ -198,10 +198,10 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
   },
   progressDotActive: {
     width: 24,
-    backgroundColor: colors.primary
+    backgroundColor: colors.accent
   },
   progressDotCompleted: {
-    backgroundColor: colors.primary
+    backgroundColor: colors.accent
   },
   stepText: {
     fontSize: 14,
@@ -225,14 +225,14 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     gap: 16
   },
   optionCard: {
-    backgroundColor: colors.card,
+    backgroundColor: isDarkMode ? colors.surfacePrimary : '#FFFFFF',
     borderRadius: 16,
     padding: 20,
     borderWidth: 2,
     borderColor: colors.border
   },
   optionCardSelected: {
-    borderColor: colors.primary,
+    borderColor: colors.accent,
     backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
   },
   optionHeader: {
@@ -251,7 +251,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     flex: 1
   },
   optionLabelSelected: {
-    color: colors.primary
+    color: colors.accent
   },
   optionDescription: {
     fontSize: 14,
@@ -269,7 +269,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -304,7 +304,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     flex: 2,
     height: 56,
     borderRadius: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center'
   },

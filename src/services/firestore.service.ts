@@ -197,6 +197,7 @@ export class BatchSaveManager {
   private saveBatchTimeout: NodeJS.Timeout | null = null;
   private options: BatchSaveOptions;
   private uid: string;
+  private isDestroyed: boolean = false;
 
   constructor(uid: string, options: Partial<BatchSaveOptions> = {}) {
     this.uid = uid;
@@ -207,9 +208,9 @@ export class BatchSaveManager {
    * Queue updates for batched save
    */
   queueUpdates(updates: Record<string, any>): void {
-    // Prevent queuing if no user ID (safety check)
-    if (!this.uid) {
-      if (__DEV__) console.warn('[BatchSaveManager] Attempted to queue updates without user ID');
+    // Prevent queuing if destroyed or no user ID (safety check)
+    if (this.isDestroyed || !this.uid) {
+      if (__DEV__ && !this.isDestroyed) console.warn('[BatchSaveManager] Attempted to queue updates without user ID');
       return;
     }
 
@@ -228,7 +229,7 @@ export class BatchSaveManager {
    * Flush pending updates immediately
    */
   async flush(): Promise<void> {
-    if (Object.keys(this.pendingUpdates).length === 0) {
+    if (Object.keys(this.pendingUpdates).length === 0 || this.isDestroyed) {
       return;
     }
 
@@ -244,14 +245,27 @@ export class BatchSaveManager {
 
     this.saveQueue = this.saveQueue.then(async () => {
       try {
+        // Skip write if manager was destroyed (account deletion in progress)
+        if (this.isDestroyed) {
+          if (__DEV__) console.log('[BatchSaveManager] Skipping write - manager destroyed');
+          return;
+        }
+
         // Use mergeUserData (setDoc with merge) instead of updateUserData (updateDoc)
         // This creates the document if it doesn't exist, preventing permission errors
         const result = await mergeUserData(this.uid, batchedUpdates);
 
-        // Retry on failure if enabled
-        if (!result.success && this.options.retryOnFailure) {
+        // Retry on failure if enabled and not destroyed
+        if (!result.success && this.options.retryOnFailure && !this.isDestroyed) {
           if (__DEV__) console.warn('[BatchSaveManager] Retrying after', this.options.retryDelayMs, 'ms');
           await new Promise(resolve => setTimeout(resolve, this.options.retryDelayMs));
+
+          // Check again if destroyed after delay
+          if (this.isDestroyed) {
+            if (__DEV__) console.log('[BatchSaveManager] Skipping retry - manager destroyed');
+            return;
+          }
+
           const retryResult = await mergeUserData(this.uid, batchedUpdates);
           if (!retryResult.success && __DEV__) {
             console.error('[BatchSaveManager] Retry failed:', retryResult.error);
@@ -272,6 +286,7 @@ export class BatchSaveManager {
    * Call this when the user logs out to prevent orphaned writes
    */
   destroy(): void {
+    this.isDestroyed = true;
     this.clear();
     this.saveQueue = Promise.resolve();
   }

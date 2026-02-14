@@ -271,10 +271,10 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,
     borderRadius: CIRCLE_SIZE / 2,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -318,7 +318,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
   celebrationSubtitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.accent,
     marginBottom: 16,
     textAlign: 'center'
   },

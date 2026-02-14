@@ -17,7 +17,22 @@ export default function DailyMoodCheck({ visible, onMoodSelect, onSkip }) {
   const { isDarkMode, colors } = useTheme();
   const { logMood } = useContext(AppContext);
 
+  // Debug logging
+  if (__DEV__ && visible) {
+    console.log('[DailyMoodCheck] Modal visible');
+    console.log('[DailyMoodCheck] MOOD_OPTIONS length:', MOOD_OPTIONS?.length);
+    console.log('[DailyMoodCheck] colors:', colors);
+    console.log('[DailyMoodCheck] isDarkMode:', isDarkMode);
+  }
+
+  // Safety check: Ensure colors has required properties
+  if (!colors || !colors.background || !colors.text) {
+    console.error('[DailyMoodCheck] Invalid colors object:', colors);
+    return null;
+  }
+
   const handleSelectMood = async (moodId) => {
+    if (__DEV__) console.log('[DailyMoodCheck] Selected mood:', moodId);
     // Log mood with context
     await logMood(moodId);
 
@@ -28,12 +43,18 @@ export default function DailyMoodCheck({ visible, onMoodSelect, onSkip }) {
   };
 
   const handleSkip = () => {
+    if (__DEV__) console.log('[DailyMoodCheck] Skipped');
     if (onSkip) {
       onSkip();
     }
   };
 
   const styles = getStyles(isDarkMode, colors);
+
+  if (!MOOD_OPTIONS || MOOD_OPTIONS.length === 0) {
+    console.error('[DailyMoodCheck] MOOD_OPTIONS is empty or undefined!');
+    return null;
+  }
 
   return (
     <Modal
@@ -98,16 +119,22 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-end',
+    alignItems: 'center'
   },
   safeArea: {
-    maxHeight: '85%'
+    width: '100%',
+    maxHeight: '85%',
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24
   },
   content: {
     backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    flex: 1
+    flex: 1,
+    width: '100%'
   },
   header: {
     paddingHorizontal: 24,
@@ -143,7 +170,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
   },
   moodCard: {
     width: '48%',
-    backgroundColor: colors.card,
+    backgroundColor: isDarkMode ? colors.surfacePrimary : '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',

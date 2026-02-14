@@ -225,7 +225,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
   badge: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.accent,
     marginBottom: 8
   },
   title: {
@@ -240,12 +240,12 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     lineHeight: 22
   },
   bundleCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.surfacePrimary,
     borderRadius: 16,
     padding: 24,
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: colors.primary
+    borderColor: colors.accent
   },
   bundleHeader: {
     marginBottom: 20
@@ -273,7 +273,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2
@@ -332,7 +332,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
   },
   whyBullet: {
     fontSize: 16,
-    color: colors.primary,
+    color: colors.accent,
     fontWeight: '700'
   },
   whyText: {
@@ -364,7 +364,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
   acceptButton: {
     height: 56,
     borderRadius: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -414,7 +414,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     paddingBottom: 40
   },
   modalBundleItem: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.surfacePrimary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -422,7 +422,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     borderColor: colors.border
   },
   modalBundleItemSelected: {
-    borderColor: colors.primary,
+    borderColor: colors.accent,
     backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
   },
   modalBundleHeader: {
@@ -435,7 +435,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     marginBottom: 4
   },
   modalBundleNameSelected: {
-    color: colors.primary
+    color: colors.accent
   },
   modalBundleDescription: {
     fontSize: 14,
