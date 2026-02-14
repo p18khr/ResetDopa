@@ -3,6 +3,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Alert, Switch, ScrollView, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import * as WebBrowser from 'expo-web-browser';
 import { signOut as authSignOut, deleteAccount, getCurrentUser, reauthenticate } from '../services/auth.service';
 import { deleteUserDocument } from '../services/firestore.service';
 import { AppContext } from '../context/AppContext';
