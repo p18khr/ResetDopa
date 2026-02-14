@@ -17,6 +17,8 @@ import LawOfTheDay from '../components/LawOfTheDay';
 import ScreenErrorBoundary from '../components/ScreenErrorBoundary';
 import { getCurrentUser } from '../services/auth.service';
 import { updateUserData } from '../services/firestore.service';
+import DailyMoodCheck from '../components/DailyMoodCheck';
+import { generateDailyTasks, shouldShowMoodCheck, getTaskCategory } from '../utils/taskGenerator';
 
 const AVATAR_OPTIONS = [
   { id: 1, emoji: '🧘' },
@@ -30,12 +32,20 @@ const AVATAR_OPTIONS = [
 ];
 
 function Dashboard({ navigation, route }) {
-  const { calmPoints, streak, tasks, urges, getDailyRecommendations, todayPicks, todayCompletions, toggleTodayTaskCompletion, getCurrentDay, getAdherence, adherenceWindowDays, week1SetupDone, setWeek1SetupDone, setTodayPicksForDay, setAllTodayPicks, lastStreakMessage, graceDayDates, setWeek1Anchors, week1Anchors, dailyMood, setDailyMood, dailyQuest, dailyQuestDone, markDailyQuestDone, enableEnhancedFeatures, getGeneratedTasks, devDayOffset, rolloverBannerInfo, dismissRolloverBanner, dailyMetrics, hasAcceptedTerms, loading, acceptanceLoaded } = useContext(AppContext);
+  const { calmPoints, streak, tasks, urges, getDailyRecommendations, todayPicks, todayCompletions, toggleTodayTaskCompletion, getCurrentDay, getAdherence, adherenceWindowDays, week1SetupDone, setWeek1SetupDone, setTodayPicksForDay, setAllTodayPicks, lastStreakMessage, graceDayDates, setWeek1Anchors, week1Anchors, dailyMood, setDailyMood, dailyQuest, dailyQuestDone, markDailyQuestDone, enableEnhancedFeatures, getGeneratedTasks, devDayOffset, rolloverBannerInfo, dismissRolloverBanner, dailyMetrics, hasAcceptedTerms, loading, acceptanceLoaded, userProfile, currentMood, lastMoodCheckTime } = useContext(AppContext);
   const { isDarkMode, colors } = useTheme();
   const currentDay = getCurrentDay();
   const picks = (() => {
     const saved = todayPicks[currentDay];
     if (Array.isArray(saved) && saved.length > 0) return saved;
+
+    // If user completed new onboarding, use mood-based system
+    if (userProfile?.onboardingCompleted && userProfile?.coreHabits?.length > 0) {
+      const { allTasks } = generateDailyTasks(currentDay, userProfile, currentMood);
+      return allTasks;
+    }
+
+    // Fallback to old system for users who haven't completed new onboarding
     if (currentDay > 7) {
       const gen = getGeneratedTasks(currentDay).map(t => t.task);
       return gen.slice(0, 6);
@@ -164,16 +174,20 @@ function Dashboard({ navigation, route }) {
 
       // Product tour is shown globally (App.js) and unskippable; removed local trigger
 
-      // Always prompt for mood only if not already captured for virtual today
+      // Show mood check based on cooldown and onboarding completion
       try {
-        const virtualToday = new Date();
-        if (devDayOffset && Number.isFinite(devDayOffset)) virtualToday.setDate(virtualToday.getDate() + devDayOffset);
-        const dateKey = virtualToday.toISOString().slice(0,10);
-        const alreadySet = !!(dailyMood && dailyMood[dateKey]);
         const onboardingActive = (day === 1 && !week1SetupDone);
-        setShowMoodPrompt(!alreadySet && !onboardingActive);
+        const onboardingDone = userProfile?.onboardingCompleted || false;
+
+        // Only show mood check if new onboarding is completed and cooldown allows
+        if (onboardingDone && !onboardingActive) {
+          const shouldShow = shouldShowMoodCheck(lastMoodCheckTime, 4); // 4-hour cooldown
+          setShowMoodPrompt(shouldShow);
+        } else {
+          setShowMoodPrompt(false);
+        }
       } catch {
-        setShowMoodPrompt(!(day === 1 && !week1SetupDone));
+        setShowMoodPrompt(false);
       }
 
       // Persist generated picks for current day post-Week 1 if missing, with recency avoidance
@@ -213,7 +227,7 @@ function Dashboard({ navigation, route }) {
       onFocus();
       onBlur();
     };
-  }, [navigation, week1SetupDone, getCurrentDay, JSON.stringify(dailyMood), hasAcceptedTerms, loading, acceptanceLoaded]);
+  }, [navigation, week1SetupDone, getCurrentDay, JSON.stringify(dailyMood), hasAcceptedTerms, loading, acceptanceLoaded, userProfile, lastMoodCheckTime]);
 
   // Set up a daily mood prompt notification using persisted settings
   useEffect(() => {
@@ -285,6 +299,24 @@ function Dashboard({ navigation, route }) {
     
     // Navigate after brief pause (state updates are now safe)
     setTimeout(() => { try { navigation.navigate('Program'); } catch {} }, 400);
+  };
+
+  const handleMoodSelect = async (moodId) => {
+    // Generate tasks based on selected mood
+    const { allTasks } = generateDailyTasks(currentDay, userProfile, moodId);
+
+    // Update todayPicks for current day
+    setTodayPicksForDay(currentDay, allTasks);
+
+    // Close mood modal
+    setShowMoodPrompt(false);
+  };
+
+  const handleMoodSkip = () => {
+    // Use default mood if skipped
+    const { allTasks } = generateDailyTasks(currentDay, userProfile, 'good');
+    setTodayPicksForDay(currentDay, allTasks);
+    setShowMoodPrompt(false);
   };
 
   const loadProfile = async () => {
@@ -727,26 +759,12 @@ function Dashboard({ navigation, route }) {
         </ScrollView>
       </Animated.View>
 
-      {/* Mood Prompt Modal */}
-      <Modal visible={showMoodPrompt} animationType="fade" transparent onRequestClose={() => setShowMoodPrompt(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalContent, { width: '88%', backgroundColor: colors.surfacePrimary }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>How are you feeling today?</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Pick a mood to keep your trends meaningful.</Text>
-            <View style={{ flexDirection:'row', justifyContent:'space-between', marginTop:16 }}>
-              {['😊 Great','😐 Okay','😞 Low','😡 Stressed'].map(option => (
-                <TouchableOpacity key={option} onPress={() => { setTodayMood(option); setShowMoodPrompt(false); }} style={{ alignItems:'center' }}>
-                  <Text style={{ fontSize:28 }}>{option.split(' ')[0]}</Text>
-                  <Text style={{ fontSize:12, color:'#374151', marginTop:4 }}>{option.split(' ').slice(1).join(' ')}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity onPress={() => setShowMoodPrompt(false)} style={[styles.modalBtn, { backgroundColor:'#F3F4F6', borderColor:'#D1D5DB', marginTop:16, alignSelf:'center' }]}>
-              <Text style={[styles.modalBtnText, { color:'#111827' }]}>Maybe Later</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* New Mood Check Modal */}
+      <DailyMoodCheck
+        visible={showMoodPrompt}
+        onMoodSelect={handleMoodSelect}
+        onSkip={handleMoodSkip}
+      />
     </SafeAreaView>
   );
 }const styles = StyleSheet.create({

@@ -12,12 +12,13 @@ import FireworksOverlay from '../components/FireworksOverlay';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FirstVisitOverlay from '../components/FirstVisitOverlay';
 import ScreenErrorBoundary from '../components/ScreenErrorBoundary';
+import { generateDailyTasks, getTaskCategory } from '../utils/taskGenerator';
 // Removed Week1 modal onboarding (handled now in Dashboard)
 // Daily quote now provided by context (persisted & adherence-informed)
 
 
 function Program({ navigation, route }) {
-  const { todayPicks, todayCompletions, toggleTodayTaskCompletion, getCurrentDay, getAdherence, getGeneratedTasks, PROGRAM_DAY_TITLES, dailyQuote, dailyQuoteSource, urges, startDate, setStartDate, week1SetupDone, week1Anchors, enableEnhancedFeatures, week1Completed, backfillDisabledBeforeDay, advanceProgramDay, completeDaySilently, completedWeeksWithFireworks, markWeekFireworksFired, getDynamicTaskCount } = useContext(AppContext);
+  const { todayPicks, todayCompletions, toggleTodayTaskCompletion, getCurrentDay, getAdherence, getGeneratedTasks, PROGRAM_DAY_TITLES, dailyQuote, dailyQuoteSource, urges, startDate, setStartDate, week1SetupDone, week1Anchors, enableEnhancedFeatures, week1Completed, backfillDisabledBeforeDay, advanceProgramDay, completeDaySilently, completedWeeksWithFireworks, markWeekFireworksFired, getDynamicTaskCount, userProfile, currentMood } = useContext(AppContext);
   const { isDarkMode, colors } = useTheme();
   const currentDay = getCurrentDay();
   const [infoTask, setInfoTask] = useState(null);
@@ -773,9 +774,139 @@ function Program({ navigation, route }) {
             
             // Hide task list if showing weekly summary
             if (isInLastTwoDaysOfWeek && isWeekComplete && !isLocked) return null;
-            
+
+            // Check if user completed new onboarding (mood-based system)
+            const hasNewOnboarding = userProfile?.onboardingCompleted && userProfile?.coreHabits?.length > 0;
+            let fixedTasks = [];
+            let dynamicTasks = [];
+
+            if (hasNewOnboarding && dayData.day === currentDay) {
+              // Separate into fixed and dynamic
+              const coreHabits = userProfile.coreHabits || [];
+              fixedTasks = tasksToShow.filter(t => coreHabits.includes(t.task));
+              dynamicTasks = tasksToShow.filter(t => !coreHabits.includes(t.task));
+            }
+
             return (
-              !isLocked && tasksToShow.length > 0 && tasksToShow.map((task, taskIndex) => {
+              !isLocked && tasksToShow.length > 0 && (
+                <>
+                  {/* Info banner for mood-based system */}
+                  {hasNewOnboarding && dayData.day === currentDay && (
+                    <View style={{ backgroundColor: isDarkMode ? '#1E293B' : '#EFF6FF', borderColor: isDarkMode ? '#334155' : '#DBEAFE', borderWidth: 1, marginTop: 12, marginBottom: 12, borderRadius: 12, padding: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                        <Ionicons name="layers-outline" size={16} color="#3B82F6" style={{ marginRight: 6 }} />
+                        <Text style={{ fontWeight: '700', fontSize: 14, color: colors.text }}>Your Adaptive Program</Text>
+                      </View>
+                      <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>
+                        <Text style={{ fontWeight: '600' }}>{fixedTasks.length} Core Habits</Text> (build consistency) + <Text style={{ fontWeight: '600' }}>{dynamicTasks.length} Adaptive Tasks</Text> (match your mood)
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Fixed Tasks Section */}
+                  {hasNewOnboarding && dayData.day === currentDay && fixedTasks.length > 0 && (
+                    <>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, marginBottom: 8 }}>
+                        <Ionicons name="shield-checkmark" size={18} color="#10B981" style={{ marginRight: 6 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>Core Habits (Always)</Text>
+                      </View>
+                      {fixedTasks.map((task, taskIndex) => {
+                        const explanation = getTaskExplanation(task.task) || getTaskBenefit(task.task);
+                        const isDone = (todayCompletions[dayData.day] || {})[task.task] || false;
+                        const category = getTaskCategory(task.task);
+                        return (
+                          <View key={`fixed-${taskIndex}`} style={[styles.taskRow, { borderBottomColor: colors.border }]}>
+                            <View style={styles.taskInfo}>
+                              <Text style={[styles.taskText, { color: isDone ? colors.textTertiary : colors.text }]}>{task.task}</Text>
+                              <Text style={[styles.taskExplanation, { color: colors.textSecondary }]}>💡 {explanation || 'Helps build routine and reduce friction.'}</Text>
+                              <View style={{ flexDirection:'row', alignItems:'center', marginTop: 6 }}>
+                                <Text style={{ fontSize: 12, color: '#10B981', fontWeight: '600', marginRight: 8 }}>{category}</Text>
+                                <Text style={styles.taskPoints}>{(task.points || 0)} pts</Text>
+                              </View>
+                            </View>
+                            <TouchableOpacity
+                              onPress={() => {
+                                if (!canMark) return;
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                toggleTodayTaskCompletion(dayData.day, task.task, task.points || 0);
+                              }}
+                              style={[
+                                styles.checkPill,
+                                { borderColor: isDone ? '#10B981' : colors.border, backgroundColor: isDone ? '#10B981' : (isDarkMode ? '#1F2937' : '#FFFFFF') },
+                                isDone && { opacity: 0.9 },
+                                !canMark && styles.checkPillLocked
+                              ]}
+                            >
+                              {isDone ? (
+                                <Ionicons name="checkmark" size={16} color="#fff" />
+                              ) : (
+                                <View style={{ flexDirection:'row', alignItems:'center' }}>
+                                  {!canMark && (
+                                    <Ionicons name="lock-closed" size={14} color="#9CA3AF" style={{ marginRight: 4 }} />
+                                  )}
+                                  <Text style={[styles.checkPillText, { color: !canMark ? '#9CA3AF' : colors.textSecondary }]}>Mark</Text>
+                                </View>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Dynamic Tasks Section */}
+                  {hasNewOnboarding && dayData.day === currentDay && dynamicTasks.length > 0 && (
+                    <>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+                        <Ionicons name="color-wand" size={18} color="#F59E0B" style={{ marginRight: 6 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>Today's Adaptive Tasks</Text>
+                      </View>
+                      {dynamicTasks.map((task, taskIndex) => {
+                        const explanation = getTaskExplanation(task.task) || getTaskBenefit(task.task);
+                        const isDone = (todayCompletions[dayData.day] || {})[task.task] || false;
+                        const category = getTaskCategory(task.task);
+                        return (
+                          <View key={`dynamic-${taskIndex}`} style={[styles.taskRow, { borderBottomColor: colors.border }]}>
+                            <View style={styles.taskInfo}>
+                              <Text style={[styles.taskText, { color: isDone ? colors.textTertiary : colors.text }]}>{task.task}</Text>
+                              <Text style={[styles.taskExplanation, { color: colors.textSecondary }]}>💡 {explanation || 'Helps build routine and reduce friction.'}</Text>
+                              <View style={{ flexDirection:'row', alignItems:'center', marginTop: 6 }}>
+                                <Text style={{ fontSize: 12, color: '#F59E0B', fontWeight: '600', marginRight: 8 }}>{category}</Text>
+                                <Text style={styles.taskPoints}>{(task.points || 0)} pts</Text>
+                              </View>
+                            </View>
+                            <TouchableOpacity
+                              onPress={() => {
+                                if (!canMark) return;
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                toggleTodayTaskCompletion(dayData.day, task.task, task.points || 0);
+                              }}
+                              style={[
+                                styles.checkPill,
+                                { borderColor: isDone ? '#10B981' : colors.border, backgroundColor: isDone ? '#10B981' : (isDarkMode ? '#1F2937' : '#FFFFFF') },
+                                isDone && { opacity: 0.9 },
+                                !canMark && styles.checkPillLocked
+                              ]}
+                            >
+                              {isDone ? (
+                                <Ionicons name="checkmark" size={16} color="#fff" />
+                              ) : (
+                                <View style={{ flexDirection:'row', alignItems:'center' }}>
+                                  {!canMark && (
+                                    <Ionicons name="lock-closed" size={14} color="#9CA3AF" style={{ marginRight: 4 }} />
+                                  )}
+                                  <Text style={[styles.checkPillText, { color: !canMark ? '#9CA3AF' : colors.textSecondary }]}>Mark</Text>
+                                </View>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Fallback: Old system rendering (for users without new onboarding) */}
+                  {(!hasNewOnboarding || dayData.day !== currentDay) && tasksToShow.map((task, taskIndex) => {
                   const explanation = getTaskExplanation(task.task) || getTaskBenefit(task.task);
                   const isAnchor = isWeekOne && ((todayPicks[1] || []).includes(task.task));
                   const rationale = `${isAnchor ? 'Your Week 1 anchor. ' : ''}Variety: ${task.category}. ${adherence >= 0.8 ? 'Slight level-up based on strong consistency.' : adherence >= 0.5 ? 'Steady: keep building routine.' : 'Gentle: focus on one small win.'}`;
@@ -820,7 +951,9 @@ function Program({ navigation, route }) {
                       </TouchableOpacity>
                     </View>
                   );
-              })
+              })}
+                </>
+              )
             );
           })()}
 
