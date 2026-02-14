@@ -1,6 +1,6 @@
 // src/screens/Settings.js
 import React, { useContext, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Alert, Switch, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Alert, Switch, ScrollView, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { signOut as authSignOut, deleteAccount, getCurrentUser, reauthenticate } from '../services/auth.service';
@@ -22,6 +22,9 @@ export default function Settings({ navigation }) {
   const [moodEnabled, setMoodEnabled] = useState(true);
   const [moodHour, setMoodHour] = useState(20);
   const [moodMinute, setMoodMinute] = useState(0);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleToggleTheme = () => {
     toggleTheme();
@@ -147,6 +150,119 @@ export default function Settings({ navigation }) {
     );
   };
 
+  const performDeletion = async () => {
+    if (!password || password.trim() === '') {
+      Alert.alert('Error', 'Password is required to delete your account.');
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const currentUser = getCurrentUser();
+      if (!currentUser || !currentUser.email) {
+        Alert.alert('Error', 'User not found. Please logout and try again.');
+        setIsDeleting(false);
+        return;
+      }
+
+      // Step 1: Re-authenticate user
+      if (__DEV__) console.log('🔐 Re-authenticating user...');
+      const reauthResult = await reauthenticate(currentUser.email, password);
+
+      if (!reauthResult.success) {
+        let errorMessage = 'Failed to verify your identity. Please try again.';
+
+        if (reauthResult.code === 'auth/wrong-password') {
+          errorMessage = 'Incorrect password. Please try again.';
+        } else if (reauthResult.code === 'auth/invalid-credential') {
+          errorMessage = 'Invalid credentials. Please check your password and try again.';
+        } else if (reauthResult.code === 'auth/network-request-failed') {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        }
+
+        Alert.alert('Authentication Failed', errorMessage);
+        setIsDeleting(false);
+        setShowPasswordModal(false);
+        setPassword('');
+        return;
+      }
+
+      if (__DEV__) console.log('✅ Re-authentication successful');
+
+      // Close modal before deletion process
+      setShowPasswordModal(false);
+      setPassword('');
+
+      // Step 2: Flush all pending Firestore writes BEFORE deleting anything
+      try {
+        if (__DEV__) console.log('🔄 Flushing pending Firestore writes...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (__DEV__) console.log('✅ Pending writes flushed');
+      } catch (flushError) {
+        console.warn('⚠️ Flush warning:', flushError);
+      }
+
+      // Step 3: Delete Firestore user document
+      if (currentUser.uid) {
+        try {
+          await deleteUserDocument(currentUser.uid);
+          if (__DEV__) console.log('✅ Firestore user document deleted');
+        } catch (firestoreError) {
+          console.warn('⚠️ Firestore deletion warning:', firestoreError);
+        }
+      }
+
+      // Step 4: Clear local storage
+      try {
+        await AsyncStorage.clear();
+        if (__DEV__) console.log('✅ AsyncStorage cleared');
+      } catch (storageError) {
+        console.warn('⚠️ AsyncStorage clear warning:', storageError);
+      }
+
+      // Step 5: Delete Firebase Auth user (must be last)
+      const deleteResult = await deleteAccount(currentUser);
+
+      if (!deleteResult.success) {
+        throw new Error(deleteResult.error || 'Failed to delete account');
+      }
+
+      if (__DEV__) console.log('✅ Firebase Auth user deleted');
+
+      // Step 6: Show success and navigate to login
+      setIsDeleting(false);
+      Alert.alert(
+        'Account Deleted',
+        'Your account and all associated data have been permanently deleted.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.replace('Login');
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    } catch (error) {
+      console.error('❌ Account deletion error:', error);
+      setIsDeleting(false);
+
+      let errorMessage = 'Failed to delete account. Please try again later.';
+
+      if (error.code === 'auth/requires-recent-login') {
+        errorMessage = 'Session expired. Please try again.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert('Deletion Failed', errorMessage);
+    }
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       '⚠️ Delete Account',
@@ -161,126 +277,9 @@ export default function Settings({ navigation }) {
           text: 'Delete Everything',
           style: 'destructive',
           onPress: () => {
-            // Final confirmation - prompt for password re-authentication
-            Alert.prompt(
-              'Confirm Your Identity',
-              'For security, please enter your password to confirm account deletion:',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete',
-                  style: 'destructive',
-                  onPress: async (password) => {
-                    if (!password || password.trim() === '') {
-                      Alert.alert('Error', 'Password is required to delete your account.');
-                      return;
-                    }
-
-                    try {
-                      const currentUser = getCurrentUser();
-                      if (!currentUser || !currentUser.email) {
-                        Alert.alert('Error', 'User not found. Please logout and try again.');
-                        return;
-                      }
-
-                      // Show loading alert
-                      Alert.alert('Verifying...', 'Please wait while we verify your identity.');
-
-                      // Step 1: Re-authenticate user
-                      if (__DEV__) console.log('🔐 Re-authenticating user...');
-                      const reauthResult = await reauthenticate(currentUser.email, password);
-
-                      if (!reauthResult.success) {
-                        let errorMessage = 'Failed to verify your identity. Please try again.';
-
-                        if (reauthResult.code === 'auth/wrong-password') {
-                          errorMessage = 'Incorrect password. Please try again.';
-                        } else if (reauthResult.code === 'auth/invalid-credential') {
-                          errorMessage = 'Invalid credentials. Please check your password and try again.';
-                        } else if (reauthResult.code === 'auth/network-request-failed') {
-                          errorMessage = 'Network error. Please check your connection and try again.';
-                        }
-
-                        Alert.alert('Authentication Failed', errorMessage);
-                        return;
-                      }
-
-                      if (__DEV__) console.log('✅ Re-authentication successful');
-
-                      // Show deletion in progress alert
-                      Alert.alert('Deleting...', 'Please wait while we delete your account and data.');
-
-                      // Step 2: Flush all pending Firestore writes BEFORE deleting anything
-                      try {
-                        if (__DEV__) console.log('🔄 Flushing pending Firestore writes...');
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        if (__DEV__) console.log('✅ Pending writes flushed');
-                      } catch (flushError) {
-                        console.warn('⚠️ Flush warning:', flushError);
-                      }
-
-                      // Step 3: Delete Firestore user document
-                      if (currentUser.uid) {
-                        try {
-                          await deleteUserDocument(currentUser.uid);
-                          if (__DEV__) console.log('✅ Firestore user document deleted');
-                        } catch (firestoreError) {
-                          console.warn('⚠️ Firestore deletion warning:', firestoreError);
-                        }
-                      }
-
-                      // Step 4: Clear local storage
-                      try {
-                        await AsyncStorage.clear();
-                        if (__DEV__) console.log('✅ AsyncStorage cleared');
-                      } catch (storageError) {
-                        console.warn('⚠️ AsyncStorage clear warning:', storageError);
-                      }
-
-                      // Step 5: Delete Firebase Auth user (must be last)
-                      const deleteResult = await deleteAccount(currentUser);
-
-                      if (!deleteResult.success) {
-                        throw new Error(deleteResult.error || 'Failed to delete account');
-                      }
-
-                      if (__DEV__) console.log('✅ Firebase Auth user deleted');
-
-                      // Step 6: Show success and navigate to login
-                      Alert.alert(
-                        'Account Deleted',
-                        'Your account and all associated data have been permanently deleted.',
-                        [
-                          {
-                            text: 'OK',
-                            onPress: () => {
-                              // Use replace instead of reset for better navigation handling
-                              navigation.replace('Login');
-                            },
-                          },
-                        ],
-                        { cancelable: false }
-                      );
-                    } catch (error) {
-                      console.error('❌ Account deletion error:', error);
-
-                      let errorMessage = 'Failed to delete account. Please try again later.';
-
-                      if (error.code === 'auth/requires-recent-login') {
-                        errorMessage = 'Session expired. Please try again.';
-                      } else if (error.code === 'auth/network-request-failed') {
-                        errorMessage = 'Network error. Please check your connection and try again.';
-                      } else if (error.message) {
-                        errorMessage = error.message;
-                      }
-
-                      Alert.alert('Deletion Failed', errorMessage);
-                    }
-                  },
-                },
-              ],
-              'secure-text'
-            );
+            // Show password modal
+            setPassword('');
+            setShowPasswordModal(true);
           },
         },
       ]
@@ -501,6 +500,80 @@ export default function Settings({ navigation }) {
           <Text style={[styles.footerSubtext, { color: colors.textSecondary }]}>Your journey to brain rewiring</Text>
         </View>
       </ScrollView>
+
+      {/* Password Confirmation Modal */}
+      <Modal
+        visible={showPasswordModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setShowPasswordModal(false);
+          setPassword('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Confirm Your Identity</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  setPassword('');
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
+                For security, please enter your password to confirm account deletion:
+              </Text>
+
+              <TextInput
+                style={[styles.passwordInput, {
+                  backgroundColor: colors.surfacePrimary,
+                  color: colors.text,
+                  borderColor: colors.border
+                }]}
+                placeholder="Enter your password"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoFocus
+                editable={!isDeleting}
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalCancelButton, { borderColor: colors.border }]}
+                  onPress={() => {
+                    setShowPasswordModal(false);
+                    setPassword('');
+                  }}
+                  disabled={isDeleting}
+                >
+                  <Text style={[styles.modalCancelButtonText, { color: colors.text }]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalDeleteButton, isDeleting && styles.modalDeleteButtonDisabled]}
+                  onPress={performDeletion}
+                  disabled={isDeleting}
+                >
+                  <Text style={styles.modalDeleteButtonText}>
+                    {isDeleting ? 'Deleting...' : 'Delete Account'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -693,6 +766,86 @@ const styles = StyleSheet.create({
   footerSubtext: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalDescription: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  passwordInput: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalDeleteButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalDeleteButtonDisabled: {
+    backgroundColor: '#F87171',
+    opacity: 0.7,
+  },
+  modalDeleteButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
 
