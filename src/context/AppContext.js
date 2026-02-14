@@ -174,8 +174,8 @@ export function AppProvider({ children }) {
           setDailyQuoteSource('local');
           // also backfill cloud for this day
           if (user) {
-            try { 
-              await updateDoc(doc(db, 'users', user.uid), { [`dailyQuotes.${dateKey}`]: JSON.parse(stored) }); 
+            try {
+              await mergeUserData(user.uid, { [`dailyQuotes.${dateKey}`]: JSON.parse(stored) });
             } catch (e) {
               if (__DEV__) console.warn('Failed to sync quote to cloud:', e?.message);
             }
@@ -195,8 +195,8 @@ export function AppProvider({ children }) {
           if (__DEV__) console.warn('Failed to cache generated quote:', e?.message);
         }
         if (user) {
-          try { 
-            await updateDoc(doc(db, 'users', user.uid), { [`dailyQuotes.${dateKey}`]: quote }); 
+          try {
+            await mergeUserData(user.uid, { [`dailyQuotes.${dateKey}`]: quote });
           } catch (e) {
             if (__DEV__) console.warn('Failed to save quote to cloud:', e?.message);
             // Still functional - quote is in memory and local cache
@@ -256,7 +256,7 @@ export function AppProvider({ children }) {
       setDailyQuest(quest);
       // Persist best-effort
       if (user) {
-        try { await updateDoc(doc(db, 'users', user.uid), { [`dailyQuest.${dateKey}`]: quest }); } catch {}
+        try { await mergeUserData(user.uid, { [`dailyQuest.${dateKey}`]: quest }); } catch {}
       }
     };
     computeQuest();
@@ -368,7 +368,7 @@ export function AppProvider({ children }) {
 
           // Save migrated data to Firestore
           try {
-            await updateDoc(doc(db, 'users', uid), {
+            await mergeUserData(uid, {
               graceUsages,
               graceDayDates: null // Remove old field
             });
@@ -398,7 +398,7 @@ export function AppProvider({ children }) {
 
         if (!data.startDate) {
           try {
-            await updateDoc(doc(db, 'users', uid), { startDate: new Date().toISOString() });
+            await mergeUserData(uid, { startDate: new Date().toISOString() });
           } catch (e) {
             if (__DEV__) console.error('Failed to set startDate:', e?.message);
           }
@@ -481,7 +481,7 @@ export function AppProvider({ children }) {
       // Chain this write to the queue to ensure sequential writes
       saveQueueRef.current = saveQueueRef.current.then(async () => {
         try {
-          await updateDoc(doc(db, 'users', user.uid), batchedUpdates);
+          await mergeUserData(user.uid, batchedUpdates);
           if (__DEV__) console.log('[SaveQueue] Batch write succeeded');
         } catch (error) {
           if (__DEV__) console.error('Error saving data:', error?.message || error);
@@ -489,7 +489,7 @@ export function AppProvider({ children }) {
           return new Promise((resolve) => {
             setTimeout(async () => {
               try {
-                await updateDoc(doc(db, 'users', user.uid), batchedUpdates);
+                await mergeUserData(user.uid, batchedUpdates);
                 if (__DEV__) console.log('[SaveQueue] Batch write retry succeeded');
               } catch (retryError) {
                 if (__DEV__) console.error('Retry failed:', retryError?.message);
@@ -525,7 +525,7 @@ export function AppProvider({ children }) {
     const used = startDateResets + 1;
     setStartDateResets(used);
     try {
-      await updateDoc(doc(db, 'users', user.uid), { startDate: iso, startDateResets: used });
+      await mergeUserData(user.uid, { startDate: iso, startDateResets: used });
     } catch (e) {
       if (__DEV__) console.error('Failed to save program reset:', e?.message);
       Alert.alert('Save Warning', 'Reset applied locally. Will sync when connection is restored.');
@@ -605,8 +605,8 @@ export function AppProvider({ children }) {
       }
       setProgramState({ dailyMetrics: updated });
       if (user) {
-        try { 
-          await updateDoc(doc(db, 'users', user.uid), { dailyMetrics: updated }); 
+        try {
+          await mergeUserData(user.uid, { dailyMetrics: updated });
         } catch (e) {
           if (__DEV__) console.warn('Failed to sync metrics to cloud:', e?.message);
           // Still functional - metrics are in local state
@@ -625,7 +625,7 @@ export function AppProvider({ children }) {
     const newStartISO = start.toISOString();
     setStartDate(newStartISO);
     if (user) {
-      try { await updateDoc(doc(db, 'users', user.uid), { startDate: newStartISO }); } catch {}
+      try { await mergeUserData(user.uid, { startDate: newStartISO }); } catch {}
     }
 
     // 2) Seed 180 days of urges with varying counts for calendar richness
@@ -671,8 +671,8 @@ export function AppProvider({ children }) {
     setTodayCompletions(newComps);
     generatedDayTasksRef.current = {}; // invalidate
     if (user) {
-      try { 
-        await updateDoc(doc(db, 'users', user.uid), { urges: newUrges, todayPicks: newPicks, todayCompletions: newComps }); 
+      try {
+        await mergeUserData(user.uid, { urges: newUrges, todayPicks: newPicks, todayCompletions: newComps });
       } catch (e) {
         if (__DEV__) console.error('Failed to sync test data to cloud:', e?.message);
         Alert.alert('Partial Success', 'Test data seeded locally but failed to sync to cloud. You may need to re-seed after reconnecting.');
@@ -703,7 +703,7 @@ export function AppProvider({ children }) {
     } catch {}
     if (user) {
       try {
-        await updateDoc(doc(db, 'users', user.uid), {
+        await mergeUserData(user.uid, {
           startDate: iso,
           urges: [],
           todayPicks: {},
@@ -782,7 +782,7 @@ export function AppProvider({ children }) {
     }
     if (user) {
       try {
-        await updateDoc(doc(db, 'users', user.uid), {
+        await mergeUserData(user.uid, {
           startDate: midnightIso,
           startDateResets: 0,
           calmPoints: 0,
@@ -1545,7 +1545,7 @@ export function AppProvider({ children }) {
     // Save to Firestore
     if (user) {
       try {
-        await updateDoc(doc(db, 'users', user.uid), {
+        await mergeUserData(user.uid, {
           [`dailyMood.${dateKey}`]: updated[dateKey],
           'userProfile.lastMood': moodType,
           'userProfile.lastMoodCheckTime': timestamp
@@ -1599,12 +1599,12 @@ export function AppProvider({ children }) {
         let cleanedMood = mood;
         if (typeof mood === 'object' && mood !== null) {
           cleanedMood = Object.fromEntries(
-            Object.entries(mood).filter(([k, v]) => 
+            Object.entries(mood).filter(([k, v]) =>
               v !== undefined && v !== null && (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
             )
           );
         }
-        await updateDoc(doc(db, 'users', user.uid), { [`dailyMood.${dateKey}`]: cleanedMood });
+        await mergeUserData(user.uid, { [`dailyMood.${dateKey}`]: cleanedMood });
       } catch (e) {
         if (__DEV__) console.warn('Error saving mood:', e?.message || e);
       }
@@ -1713,7 +1713,7 @@ export function AppProvider({ children }) {
           setDailyQuoteSource('generated');
           await AsyncStorage.setItem(`dailyQuote_${dateKey}`, JSON.stringify(quote));
           if (user) {
-            try { await updateDoc(doc(db, 'users', user.uid), { [`dailyQuotes.${dateKey}`]: quote }); } catch {}
+            try { await mergeUserData(user.uid, { [`dailyQuotes.${dateKey}`]: quote }); } catch {}
           }
         } catch {}
       }
@@ -1744,7 +1744,7 @@ export function AppProvider({ children }) {
 
         // Persist best-effort
         if (user) {
-          try { await updateDoc(doc(db, 'users', user.uid), { [`dailyQuestDone.${dateKey}`]: true, calmPoints: newPoints }); } catch {}
+          try { await mergeUserData(user.uid, { [`dailyQuestDone.${dateKey}`]: true, calmPoints: newPoints }); } catch {}
         }
       }
       , graceUsages
