@@ -181,6 +181,14 @@ export default function Login({ navigation }) {
               <Text style={[styles.forgotPasswordText, { color: colors.accent }]}>Forgot Password?</Text>
             </TouchableOpacity>
 
+            {/* Inline Legal Acceptance */}
+            <Text style={[styles.legalText, { color: colors.textSecondary }]}>
+              By continuing, you agree to our{' '}
+              <Text style={[styles.legalLink, { color: colors.accent }]}>Terms of Service</Text>
+              {' '}and{' '}
+              <Text style={[styles.legalLink, { color: colors.accent }]}>Privacy Policy</Text>
+            </Text>
+
             <TouchableOpacity
               style={[styles.button, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
               onPress={handleLogin}
@@ -317,5 +325,15 @@ const styles = StyleSheet.create({
   },
   linkTextBold: {
     fontWeight: '600',
+  },
+  legalText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  legalLink: {
+    textDecorationLine: 'underline',
   },
 });

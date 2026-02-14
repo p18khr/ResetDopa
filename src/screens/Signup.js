@@ -99,7 +99,8 @@ export default function Signup({ navigation }) {
         email: user.email,
         createdAt: new Date().toISOString(),
         startDate: new Date().toISOString(),
-        hasAcceptedTerms: false,
+        hasAcceptedTerms: true,  // Auto-accept with inline legal text
+        termsAcceptedAt: new Date().toISOString(),
         calmPoints: 0,
         streak: 0,
         streakEvaluatedForDay: 0,
@@ -246,6 +247,14 @@ export default function Signup({ navigation }) {
                 placeholderTextColor={colors.textTertiary}
               />
 
+              {/* Inline Legal Acceptance */}
+              <Text style={[styles.legalText, { color: colors.textSecondary }]}>
+                By continuing, you agree to our{' '}
+                <Text style={[styles.legalLink, { color: colors.accent }]}>Terms of Service</Text>
+                {' '}and{' '}
+                <Text style={[styles.legalLink, { color: colors.accent }]}>Privacy Policy</Text>
+              </Text>
+
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
                 onPress={handleSignup}
@@ -353,5 +362,15 @@ const styles = StyleSheet.create({
   },
   linkTextBold: {
     fontWeight: '600',
+  },
+  legalText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  legalLink: {
+    textDecorationLine: 'underline',
   },
 });

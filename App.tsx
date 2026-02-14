@@ -29,6 +29,9 @@ import Settings from './src/screens/Settings';
 import Profile from './src/screens/Profile';
 import LearnLaws from './src/screens/LearnLaws';
 import LegalAcceptanceScreen from './src/screens/LegalAcceptanceScreen';
+import DiagnosticScreen from './src/screens/DiagnosticScreen';
+import BundleRecommendationScreen from './src/screens/BundleRecommendationScreen';
+import ImmediateWinScreen from './src/screens/ImmediateWinScreen';
 
 const navigationRef = React.createRef<any>();
 
@@ -116,7 +119,7 @@ function TabNavigator(): React.ReactElement {
 // Root stack with a gentle fade between screens for smoother tour hops
 function AppNavigator(): React.ReactElement {
   const context = useContext(AppContext) as AppContextValue;
-  const { user, loading, hasAcceptedTerms, acceptanceLoaded } = context;
+  const { user, loading, hasAcceptedTerms, acceptanceLoaded, userProfile } = context;
 
   // Show a loader while global state or acceptance state is still resolving
   if (loading || (user && !acceptanceLoaded)) {
@@ -127,13 +130,16 @@ function AppNavigator(): React.ReactElement {
     );
   }
 
+  // Check if user has completed onboarding
+  const onboardingCompleted = userProfile?.onboardingCompleted || false;
+
   return (
     // 'animation: fade' softens Settings → Dashboard and other quick transitions
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
       {user && acceptanceLoaded ? (
         // User is logged in
-        hasAcceptedTerms ? (
-          // User accepted terms - show main app
+        onboardingCompleted ? (
+          // User completed onboarding - show main app
           <>
             <Stack.Screen name="Main" component={TabNavigator} />
             <Stack.Screen name="Tasks" component={Tasks} />
@@ -144,8 +150,12 @@ function AppNavigator(): React.ReactElement {
             <Stack.Screen name="LearnLaws" component={LearnLaws} />
           </>
         ) : (
-          // User not accepted terms yet - show legal screen
-          <Stack.Screen name="LegalAcceptance" component={LegalAcceptanceScreen} />
+          // User hasn't completed onboarding - show onboarding flow
+          <>
+            <Stack.Screen name="Diagnostic" component={DiagnosticScreen} />
+            <Stack.Screen name="BundleRecommendation" component={BundleRecommendationScreen} />
+            <Stack.Screen name="ImmediateWin" component={ImmediateWinScreen} />
+          </>
         )
       ) : !user ? (
         // Not authenticated - show login/signup
