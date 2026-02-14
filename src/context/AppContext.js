@@ -89,8 +89,25 @@ export function AppProvider({ children }) {
   // Daily quest (micro-challenge)
   const [dailyQuest, setDailyQuest] = useState(null);
   const [dailyQuestDone, setDailyQuestDone] = useState({}); // { 'YYYY-MM-DD': true }
-  // Daily mood capture (YYYY-MM-DD -> 'Better' | 'Neutral' | 'Worse')
+  // Daily mood capture (YYYY-MM-DD -> array of { timestamp, mood, context })
+  // Enhanced for LLM integration: Multi-entry per day with rich context
   const [dailyMood, setDailyMoodState] = useState({});
+
+  // User profile for personalized experience
+  const [userProfile, setUserProfile] = useState({
+    coreHabits: [],          // 3 fixed tasks from onboarding
+    diagnosticAnswers: {},   // Q1, Q2 answers from onboarding
+    onboardingCompleted: false,
+    onboardingVersion: 1     // For future migrations
+  });
+
+  // Mood-based task system state
+  const [currentMood, setCurrentMood] = useState(null);
+  const [lastMoodCheckTime, setLastMoodCheckTime] = useState(null);
+  const [moodBasedTasksRefreshedAt, setMoodBasedTasksRefreshedAt] = useState(null);
+
+  // App open tracking for mood context
+  const [appOpenCounts, setAppOpenCounts] = useState({}); // { 'YYYY-MM-DD': count }
 
   // Curated rotating daily quotes with tags
   const QUOTES = [
@@ -305,7 +322,27 @@ export function AppProvider({ children }) {
         setUrgesFromData(data.urges || []);
         setBadgesFromData(data.badges || []);
         setTasks(data.tasks || []);
-        setDailyMoodState(data.dailyMood || {});
+
+        // Load and migrate mood data
+        const rawMood = data.dailyMood || {};
+        const migratedMood = migrateMoodData(rawMood);
+        setDailyMoodState(migratedMood);
+
+        // Load user profile (for onboarding and mood-based tasks)
+        setUserProfile(data.userProfile || {
+          coreHabits: [],
+          diagnosticAnswers: {},
+          onboardingCompleted: false,
+          onboardingVersion: 1
+        });
+
+        // Load mood state
+        setCurrentMood(data.userProfile?.lastMood || null);
+        setLastMoodCheckTime(data.userProfile?.lastMoodCheckTime || null);
+
+        // Load app open counts
+        setAppOpenCounts(data.appOpenCounts || {});
+
         setCompletedWeeksFromData(data.completedWeeksWithFireworks || []);
         if (typeof data.hasAcceptedTerms === 'boolean') setHasAcceptedTerms(data.hasAcceptedTerms);
 
@@ -1435,7 +1472,122 @@ export function AppProvider({ children }) {
     }
   };
 
-  // Set today's mood with cloud/local persistence
+  // Helper: Get time of day from timestamp
+  const getTimeOfDay = (timestamp = null) => {
+    const date = timestamp ? new Date(timestamp) : new Date();
+    const hour = date.getHours();
+    if (hour >= 5 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 21) return 'evening';
+    return 'night';
+  };
+
+  // Helper: Increment and get daily app open count
+  const incrementAppOpenCount = () => {
+    const dateKey = getVirtualDateKey();
+    const count = (appOpenCounts[dateKey] || 0) + 1;
+    setAppOpenCounts({ ...appOpenCounts, [dateKey]: count });
+    return count;
+  };
+
+  // Helper: Count completed fixed tasks (from userProfile.coreHabits)
+  const countCompletedFixed = () => {
+    const { coreHabits = [] } = userProfile;
+    return coreHabits.filter(task => todayCompletions[task] === true).length;
+  };
+
+  // Helper: Count completed dynamic tasks (non-core tasks)
+  const countCompletedDynamic = () => {
+    const { coreHabits = [] } = userProfile;
+    return Object.entries(todayCompletions)
+      .filter(([task, done]) => done && !coreHabits.includes(task))
+      .length;
+  };
+
+  // Enhanced mood logging with rich context for LLM integration
+  const logMood = async (moodType, additionalContext = {}) => {
+    const dateKey = getVirtualDateKey();
+    const timestamp = new Date().toISOString();
+
+    // Build context snapshot
+    const context = {
+      tasksCompleted: Object.values(todayCompletions).filter(Boolean).length,
+      tasksRemaining: Object.keys(todayPicks).length - Object.values(todayCompletions).filter(Boolean).length,
+      currentStreak: streak,
+      timeOfDay: getTimeOfDay(timestamp),
+      appOpenCount: incrementAppOpenCount(),
+      fixedTasksCompleted: countCompletedFixed(),
+      dynamicTasksCompleted: countCompletedDynamic(),
+      graceUsageCount: graceUsages.length,
+      adherenceToday: getAdherence(getCurrentDay(), getCurrentDay()),
+      ...additionalContext
+    };
+
+    const entry = {
+      timestamp,
+      mood: moodType,
+      context,
+      version: 1  // For future schema changes
+    };
+
+    // Append to today's array
+    const todayEntries = dailyMood[dateKey] || [];
+    const updated = {
+      ...dailyMood,
+      [dateKey]: [...todayEntries, entry]
+    };
+
+    setDailyMoodState(updated);
+    setCurrentMood(moodType);
+    setLastMoodCheckTime(timestamp);
+
+    // Save to Firestore
+    if (user) {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), {
+          [`dailyMood.${dateKey}`]: updated[dateKey],
+          'userProfile.lastMood': moodType,
+          'userProfile.lastMoodCheckTime': timestamp
+        });
+      } catch (e) {
+        if (__DEV__) console.warn('Error logging mood:', e?.message || e);
+      }
+    }
+
+    return entry;
+  };
+
+  // Migration function: Convert old single-value mood to array format
+  const migrateMoodData = (oldMood) => {
+    const migrated = {};
+    Object.entries(oldMood || {}).forEach(([dateKey, mood]) => {
+      if (typeof mood === 'string') {
+        // Old format - create single entry at noon
+        migrated[dateKey] = [{
+          timestamp: `${dateKey}T12:00:00.000Z`,
+          mood: mood.toLowerCase(),
+          context: {
+            tasksCompleted: 0,
+            tasksRemaining: 0,
+            currentStreak: 0,
+            timeOfDay: 'afternoon',
+            appOpenCount: 1,
+            fixedTasksCompleted: 0,
+            dynamicTasksCompleted: 0,
+            graceUsageCount: 0,
+            adherenceToday: 0
+          },
+          version: 1
+        }];
+      } else if (Array.isArray(mood)) {
+        // Already migrated
+        migrated[dateKey] = mood;
+      }
+    });
+    return migrated;
+  };
+
+  // Set today's mood with cloud/local persistence (DEPRECATED: Use logMood() instead)
   const setDailyMood = async (mood) => {
     const dateKey = getVirtualDateKey();
     const updated = { ...dailyMood, [dateKey]: mood };
@@ -1599,6 +1751,7 @@ export function AppProvider({ children }) {
       , lastStreakMessage
       , evaluateStreakProgress
       , dailyMood
+      , logMood  // Enhanced mood logging with context
       , setDailyMood: (updated) => {
         try {
           // Sanitize: remove undefined/null/array values to satisfy Firestore updateDoc
@@ -1622,6 +1775,25 @@ export function AppProvider({ children }) {
           setDailyMoodState(updated || {});
         }
       }
+      , userProfile  // User profile for personalized experience
+      , setUserProfile: async (profile) => {
+        setUserProfile(profile);
+        if (user) {
+          try {
+            await updateDoc(doc(db, 'users', user.uid), { userProfile: profile });
+          } catch (e) {
+            if (__DEV__) console.warn('Error saving user profile:', e?.message || e);
+          }
+        }
+      }
+      , currentMood
+      , setCurrentMood
+      , lastMoodCheckTime
+      , setLastMoodCheckTime
+      , moodBasedTasksRefreshedAt
+      , setMoodBasedTasksRefreshedAt
+      , appOpenCounts
+      , getTimeOfDay  // Helper exposed for components
       , week1Anchors
       , setWeek1Anchors
       , week1RotationApplied

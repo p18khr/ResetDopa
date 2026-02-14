@@ -132,6 +132,15 @@ export default function Signup({ navigation }) {
         week1SetupDone: false,
         week1Completed: false,
         dailyMood: {},
+        userProfile: {
+          coreHabits: [],
+          diagnosticAnswers: {},
+          onboardingCompleted: false,
+          onboardingVersion: 1,
+          lastMood: null,
+          lastMoodCheckTime: null
+        },
+        appOpenCounts: {},
         dailyMetrics: {},
         completedWeeksWithFireworks: [],
         graceDayDates: [],
