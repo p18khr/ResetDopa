@@ -27,22 +27,24 @@
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
-        ]
+        ],
+        "NSMotionUsageDescription": "DopaReset uses your step count to track daily activity and encourage healthy movement habits."
       }
     },
     "android": {
       "package": "com.dopareset.app",
-      "versionCode": 8,
+      "versionCode": 9,
       "jsEngine": "hermes",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4A90E2"
+        "backgroundColor": "#000000"
       },
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "SCHEDULE_EXACT_ALARM",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "ACTIVITY_RECOGNITION"
       ]
     },
     "web": {

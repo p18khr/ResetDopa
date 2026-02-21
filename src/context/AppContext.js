@@ -1,6 +1,6 @@
 // src/context/AppContext.js
 import React, { createContext, useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import uuid from 'react-native-uuid';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -15,6 +15,7 @@ import { useProgram } from './ProgramContext';
 import { useUrges } from './UrgesContext';
 import { useBadges } from './BadgesContext';
 import { useSettings } from './SettingsContext';
+import { getTimeOfDay, WEEK_DAYS, MOOD_VALUES } from '../constants/eventSchema';
 
 export const AppContext = createContext({
   week1Completed: false,
@@ -307,6 +308,18 @@ export function AppProvider({ children }) {
     initDevOffset();
   }, []);
 
+  // Flush pending saves when app backgrounds (to prevent data loss)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        if (__DEV__) console.log('[AppState] App backgrounding, flushing pending saves...');
+        flushPendingSaves();
+      }
+    });
+
+    return () => subscription?.remove();
+  }, [user]);
+
   // Check and claim badges on app load and when metrics change
   useEffect(() => {
     if (!user || loading) return;
@@ -388,6 +401,7 @@ export function AppProvider({ children }) {
           graceUsages,
           lastStreakDayCounted: typeof data.lastStreakDayCounted === 'number' ? data.lastStreakDayCounted : 0,
           streakEvaluatedForDay: typeof data.streakEvaluatedForDay === 'number' ? data.streakEvaluatedForDay : 0,
+          thresholdMetToday: typeof data.thresholdMetToday === 'number' ? data.thresholdMetToday : 0,
           lastStreakMessage: typeof data.lastStreakMessage === 'string' ? data.lastStreakMessage : '',
           lastRolloverPrevDayEvaluated: typeof data.lastRolloverPrevDayEvaluated === 'number' ? data.lastRolloverPrevDayEvaluated : 0,
           rolloverBannerDismissedDay: typeof data.rolloverBannerDismissedDay === 'number' ? data.rolloverBannerDismissedDay : 0,
@@ -503,6 +517,27 @@ export function AppProvider({ children }) {
         if (__DEV__) console.error('Queue write error:', err?.message);
       });
     }, 50);
+  };
+
+  // Flush pending saves immediately (used when app backgrounds)
+  const flushPendingSaves = async () => {
+    // Cancel debounce timeout
+    if (saveBatchTimeoutRef.current) {
+      clearTimeout(saveBatchTimeoutRef.current);
+      saveBatchTimeoutRef.current = null;
+    }
+
+    // Immediately save any pending updates
+    const batchedUpdates = { ...pendingUpdatesRef.current };
+    if (Object.keys(batchedUpdates).length > 0 && user) {
+      pendingUpdatesRef.current = {};
+      try {
+        await mergeUserData(user.uid, batchedUpdates);
+        if (__DEV__) console.log('[Flush] Saved pending data before background');
+      } catch (error) {
+        if (__DEV__) console.error('[Flush] Failed:', error?.message);
+      }
+    }
   };
 
   // For backward compatibility, keep original saveUserData but delegate to batched version
@@ -847,8 +882,19 @@ export function AppProvider({ children }) {
     let ts = Date.now();
     try { if (devDayOffset && Number.isFinite(devDayOffset)) ts += devDayOffset * msPerDay; } catch {}
 
-    // Use addUrge from UrgesContext (intensity, triggerText, momentNotes, emotion)
-    const item = addUrge(intensity, trigger || '', note || '', emotion);
+    // Build rich metadata for AI analytics
+    const now = new Date(ts);
+    const metadata = {
+      dayNumber:   getCurrentDay(),
+      timeOfDay:   getTimeOfDay(now),
+      weekDay:     WEEK_DAYS[now.getDay()],
+      weekNumber:  Math.ceil(getCurrentDay() / 7),
+      moodAtTime:  currentMood || null,
+      moodScore:   MOOD_VALUES[currentMood] || null,
+    };
+
+    // Use addUrge from UrgesContext (intensity, triggerText, momentNotes, emotion, metadata)
+    const item = addUrge(intensity, trigger || '', note || '', emotion, metadata);
 
     // Award calm points
     const newPoints = calmPoints + 2;

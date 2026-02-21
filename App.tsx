@@ -111,7 +111,7 @@ function TabNavigator(): React.ReactElement {
       />
       <Tab.Screen name="Badges" component={Badges} />
       <Tab.Screen name="Stats" component={Stats} />
-      {false && <Tab.Screen name="Chat" component={CompanionChat} />}
+      <Tab.Screen name="Chat" component={CompanionChat} options={{ tabBarLabel: 'DopaGuide' }} />
     </Tab.Navigator>
   );
 }

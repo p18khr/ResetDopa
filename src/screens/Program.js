@@ -762,7 +762,7 @@ function Program({ navigation, route }) {
 
           {!isLocked && !isLoadingTasks && tasksToShow.length === 0 && (
             <View style={{ paddingVertical: 12 }}>
-              <Text style={{ fontSize:13, color: colors.textSecondary, fontStyle:'italic' }}>No tasks yet. Pick 5 anchors on Dashboard to begin.</Text>
+              <Text style={{ fontSize:13, color: colors.textSecondary, fontStyle:'italic' }}>No tasks yet. Complete the onboarding flow to get your personalized tasks.</Text>
             </View>
           )}
 

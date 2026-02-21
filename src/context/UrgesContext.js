@@ -40,7 +40,7 @@ export function UrgesProvider({ children }) {
   };
 
   // Add a new urge entry
-  const addUrge = (intensity, triggerText = '', momentNotes = '', emotion = null) => {
+  const addUrge = (intensity, triggerText = '', momentNotes = '', emotion = null, metadata = {}) => {
     const newUrge = {
       id: uuid.v4(),
       timestamp: Date.now(), // Use milliseconds timestamp to match existing data
@@ -49,6 +49,8 @@ export function UrgesProvider({ children }) {
       note: momentNotes || '',
       emotion: emotion || null,
       outcome: null, // Will be set later via updateUrgeOutcome
+      // Rich metadata for AI analytics (schema-driven, backward compatible)
+      ...metadata,
     };
 
     const updated = [...urges, newUrge];

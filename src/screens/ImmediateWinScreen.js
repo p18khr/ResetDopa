@@ -17,7 +17,7 @@ const CIRCLE_SIZE = width * 0.6;
 
 export default function ImmediateWinScreen({ navigation }) {
   const { isDarkMode, colors } = useTheme();
-  const { calmPoints, setCalmPoints, userProfile, setUserProfile } = useContext(AppContext);
+  const { calmPoints, setCalmPoints, userProfile, setUserProfile, setWeek1SetupDone } = useContext(AppContext);
 
   const [breathCount, setBreathCount] = useState(0);
   const [isBreathing, setIsBreathing] = useState(false);
@@ -81,9 +81,10 @@ export default function ImmediateWinScreen({ navigation }) {
     setShowCelebration(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Award calm points
-    const BREATHING_POINTS = 10;
-    setCalmPoints(calmPoints + BREATHING_POINTS);
+    // Don't award calm points for initial onboarding breathing exercise
+    // New users should start at 0 calm points
+    // const BREATHING_POINTS = 10;
+    // setCalmPoints(calmPoints + BREATHING_POINTS);
 
     // Animate confetti
     Animated.sequence([
@@ -106,6 +107,9 @@ export default function ImmediateWinScreen({ navigation }) {
       onboardingCompleted: true
     };
     await setUserProfile(updatedProfile);
+
+    // Also mark week1 setup as done
+    await setWeek1SetupDone(true);
 
     // Navigate to main app after celebration
     setTimeout(() => {
@@ -204,7 +208,7 @@ export default function ImmediateWinScreen({ navigation }) {
 
           <Text style={styles.celebrationTitle}>Perfect Start!</Text>
           <Text style={styles.celebrationSubtitle}>
-            You earned {10} Calm Points
+            You're all set!
           </Text>
           <Text style={styles.celebrationMessage}>
             You're ready to begin your journey

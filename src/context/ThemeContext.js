@@ -64,37 +64,37 @@ export const ThemeProvider = ({ children }) => {
     }
   };
 
-  // Color palette
+  // Color palette — based on the app icon's deep navy/violet/indigo space theme
   const colors = {
-    // Light mode
+    // Light mode — airy, lavender-tinted, navy text
     light: {
       background: '#FFFFFF',
-      surfacePrimary: '#F9FAFB',
-      surfaceSecondary: '#F3F4F6',
-      border: '#E5E7EB',
-      text: '#1F2937',
-      textSecondary: '#6B7280',
-      textTertiary: '#9CA3AF',
-      accent: '#6366F1',
+      surfacePrimary: '#F5F5FF',    // Subtle lavender tint
+      surfaceSecondary: '#EDEDFF',  // Soft lavender surface
+      border: '#D4D4F2',            // Lavender border
+      text: '#12124A',              // Deep navy (icon dark tone)
+      textSecondary: '#4A4A80',     // Mid navy-purple
+      textTertiary: '#8888B0',      // Muted purple-gray
+      accent: '#6366F1',            // Indigo — matches icon glow
       success: '#10B981',
       warning: '#F59E0B',
       danger: '#EF4444',
       info: '#3B82F6',
     },
-    // Dark mode
+    // Dark mode — deep space navy/violet, matches icon gradient
     dark: {
-      background: '#0F172A',      // Very dark blue-black
-      surfacePrimary: '#1E293B',  // Dark slate
-      surfaceSecondary: '#334155', // Medium dark slate
-      border: '#475569',          // Medium slate
-      text: '#F1F5F9',            // Near white
-      textSecondary: '#CBD5E1',   // Light gray
-      textTertiary: '#94A3B8',    // Medium gray
-      accent: '#818CF8',          // Lighter indigo for dark mode
-      success: '#34D399',         // Brighter green
-      warning: '#FBBF24',         // Brighter amber
-      danger: '#F87171',          // Brighter red
-      info: '#60A5FA',            // Brighter blue
+      background: '#0D0D2B',        // Deep navy (icon top-left)
+      surfacePrimary: '#17173A',    // Slightly lighter navy
+      surfaceSecondary: '#22224E',  // Card/surface navy
+      border: '#35357A',            // Subtle navy-purple border
+      text: '#FFFFFF',              // Pure white
+      textSecondary: '#A8B0D8',     // Blue-tinted secondary (dim glow)
+      textTertiary: '#6B74A0',      // Muted indigo-gray
+      accent: '#7C7FFF',            // Bright indigo-violet (icon glow)
+      success: '#30D158',           // iOS green
+      warning: '#FF9F0A',           // iOS orange
+      danger: '#FF453A',            // iOS red
+      info: '#7C7FFF',              // Same as accent
     },
   };
 

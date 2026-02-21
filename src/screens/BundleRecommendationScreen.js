@@ -16,7 +16,7 @@ import { TASK_METADATA } from '../utils/programData';
 
 export default function BundleRecommendationScreen({ route, navigation }) {
   const { isDarkMode, colors } = useTheme();
-  const { userProfile, setUserProfile } = useContext(AppContext);
+  const { userProfile, setUserProfile, setTodayPicksForDay } = useContext(AppContext);
 
   const { bundle: initialBundle, answers } = route.params;
   const [selectedBundle, setSelectedBundle] = useState(initialBundle);
@@ -34,6 +34,9 @@ export default function BundleRecommendationScreen({ route, navigation }) {
     };
 
     await setUserProfile(updatedProfile);
+
+    // Also save to todayPicks[1] so tasks appear in Program screen
+    setTodayPicksForDay(1, selectedBundle.tasks);
 
     // Navigate to immediate win screen
     navigation.navigate('ImmediateWin');

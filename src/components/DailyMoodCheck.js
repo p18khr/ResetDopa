@@ -18,11 +18,15 @@ export default function DailyMoodCheck({ visible, onMoodSelect, onSkip }) {
   const { logMood } = useContext(AppContext);
 
   // Debug logging
+  if (__DEV__) {
+    console.log('[DailyMoodCheck] Component function called with visible=', visible);
+  }
   if (__DEV__ && visible) {
     console.log('[DailyMoodCheck] Modal visible');
     console.log('[DailyMoodCheck] MOOD_OPTIONS length:', MOOD_OPTIONS?.length);
     console.log('[DailyMoodCheck] colors:', colors);
     console.log('[DailyMoodCheck] isDarkMode:', isDarkMode);
+    console.log('[DailyMoodCheck] Rendering modal component now');
   }
 
   // Safety check: Ensure colors has required properties
@@ -64,52 +68,50 @@ export default function DailyMoodCheck({ visible, onMoodSelect, onSkip }) {
       onRequestClose={handleSkip}
     >
       <View style={styles.overlay}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.content}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.title}>How are you feeling?</Text>
-              <Text style={styles.subtitle}>
-                We'll adapt your tasks to match your current state
-              </Text>
-            </View>
-
-            {/* Mood Options */}
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.moodGrid}>
-                {MOOD_OPTIONS.map((mood) => (
-                  <TouchableOpacity
-                    key={mood.id}
-                    style={[
-                      styles.moodCard,
-                      { borderColor: mood.color }
-                    ]}
-                    onPress={() => handleSelectMood(mood.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-                    <Text style={styles.moodLabel}>{mood.label}</Text>
-                    <Text style={styles.moodDescription}>{mood.description}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            {/* Skip Button */}
-            <View style={styles.skipContainer}>
-              <TouchableOpacity
-                style={styles.skipButton}
-                onPress={handleSkip}
-              >
-                <Text style={styles.skipButtonText}>Skip for now</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.modalContainer}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>How are you feeling?</Text>
+            <Text style={styles.subtitle}>
+              We'll adapt your tasks to match your current state
+            </Text>
           </View>
-        </SafeAreaView>
+
+          {/* Mood Options */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.moodGrid}>
+              {MOOD_OPTIONS.map((mood) => (
+                <TouchableOpacity
+                  key={mood.id}
+                  style={[
+                    styles.moodCard,
+                    { borderColor: mood.color }
+                  ]}
+                  onPress={() => handleSelectMood(mood.id)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+                  <Text style={styles.moodLabel}>{mood.label}</Text>
+                  <Text style={styles.moodDescription}>{mood.description}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+
+          {/* Skip Button */}
+          <View style={styles.skipContainer}>
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={handleSkip}
+            >
+              <Text style={styles.skipButtonText}>Skip for now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </Modal>
   );
@@ -118,23 +120,16 @@ export default function DailyMoodCheck({ visible, onMoodSelect, onSkip }) {
 const getStyles = (isDarkMode, colors) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
-    alignItems: 'center'
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end'
   },
-  safeArea: {
+  modalContainer: {
     width: '100%',
-    maxHeight: '85%',
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24
-  },
-  content: {
     backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    flex: 1,
-    width: '100%'
+    maxHeight: '85%',
+    paddingBottom: 20
   },
   header: {
     paddingHorizontal: 24,
@@ -157,7 +152,7 @@ const getStyles = (isDarkMode, colors) => StyleSheet.create({
     lineHeight: 20
   },
   scrollView: {
-    flex: 1
+    maxHeight: 500
   },
   scrollContent: {
     padding: 20,

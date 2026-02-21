@@ -151,6 +151,28 @@ export default function Settings({ navigation }) {
     );
   };
 
+  const handleClearChat = () => {
+    Alert.alert(
+      'Clear Chat History',
+      'This will permanently delete your conversation with DopaGuide. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('@dopaguide_chat_history');
+              Alert.alert('Done', 'Chat history has been cleared.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear chat history.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const performDeletion = async () => {
     if (!password || password.trim() === '') {
       Alert.alert('Error', 'Password is required to delete your account.');
@@ -332,16 +354,16 @@ export default function Settings({ navigation }) {
           </View>
           
           {__DEV__ && (
-            <TouchableOpacity style={[styles.testButton, { backgroundColor: colors.surfacePrimary, borderColor: '#6366F1' }]} onPress={testNotification}>
-              <Ionicons name="notifications" size={20} color="#6366F1" />
-              <Text style={[styles.testButtonText, { color: '#6366F1' }]}>Send Test Notification</Text>
+            <TouchableOpacity style={[styles.testButton, { backgroundColor: colors.surfacePrimary, borderColor: colors.accent }]} onPress={testNotification}>
+              <Ionicons name="notifications" size={20} color={colors.accent} />
+              <Text style={[styles.testButtonText, { color: colors.accent }]}>Send Test Notification</Text>
             </TouchableOpacity>
           )}
 
           <View style={[styles.card, { marginTop: 12, backgroundColor: colors.surfacePrimary }]}>
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Ionicons name="happy-outline" size={20} color="#6366F1" />
+                <Ionicons name="happy-outline" size={20} color={colors.accent} />
                 <View style={styles.settingTextContainer}>
                   <Text style={[styles.settingTitle, { color: colors.text }]}>Daily Mood Prompt</Text>
                   <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>Ask for mood at {formatTime(moodHour, moodMinute)}</Text>
@@ -350,7 +372,7 @@ export default function Settings({ navigation }) {
               <Switch
                 value={moodEnabled}
                 onValueChange={toggleMoodReminders}
-                trackColor={{ false: '#ccc', true: '#6366F1' }}
+                trackColor={{ false: '#ccc', true: colors.accent }}
                 thumbColor={moodEnabled ? '#fff' : '#f5f5f5'}
               />
             </View>
@@ -453,6 +475,11 @@ export default function Settings({ navigation }) {
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color="#EF4444" />
             <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.clearChatButton, { backgroundColor: isDarkMode ? colors.surfacePrimary : '#EEF2FF' }]} onPress={handleClearChat}>
+            <Ionicons name="chatbubbles-outline" size={20} color={colors.accent} />
+            <Text style={[styles.clearChatText, { color: colors.accent }]}>Clear Chat History</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
@@ -692,6 +719,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
+  },
+  clearChatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+  },
+  clearChatText: {
+    fontWeight: '600',
+    fontSize: 16,
   },
   seedButton: {
     flexDirection: 'row',

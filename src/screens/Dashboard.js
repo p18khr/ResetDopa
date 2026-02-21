@@ -19,6 +19,7 @@ import { getCurrentUser } from '../services/auth.service';
 import { updateUserData } from '../services/firestore.service';
 import DailyMoodCheck from '../components/DailyMoodCheck';
 import { generateDailyTasks, shouldShowMoodCheck, getTaskCategory } from '../utils/taskGenerator';
+import { getTodaySteps, getCachedSteps, getStepGoalProgress, isStepGoalMet, formatSteps, STEPS_GOAL } from '../services/steps.service';
 
 const AVATAR_OPTIONS = [
   { id: 1, emoji: '🧘' },
@@ -32,7 +33,7 @@ const AVATAR_OPTIONS = [
 ];
 
 function Dashboard({ navigation, route }) {
-  const { calmPoints, streak, tasks, urges, getDailyRecommendations, todayPicks, todayCompletions, toggleTodayTaskCompletion, getCurrentDay, getAdherence, adherenceWindowDays, week1SetupDone, setWeek1SetupDone, setTodayPicksForDay, setAllTodayPicks, lastStreakMessage, graceDayDates, setWeek1Anchors, week1Anchors, dailyMood, setDailyMood, dailyQuest, dailyQuestDone, markDailyQuestDone, enableEnhancedFeatures, getGeneratedTasks, devDayOffset, rolloverBannerInfo, dismissRolloverBanner, dailyMetrics, hasAcceptedTerms, loading, acceptanceLoaded, userProfile, currentMood, lastMoodCheckTime } = useContext(AppContext);
+  const { calmPoints, streak, tasks, urges, getDailyRecommendations, todayPicks, todayCompletions, toggleTodayTaskCompletion, getCurrentDay, getAdherence, adherenceWindowDays, week1SetupDone, setWeek1SetupDone, setTodayPicksForDay, setAllTodayPicks, lastStreakMessage, graceDayDates, setWeek1Anchors, week1Anchors, dailyMood, setDailyMood, dailyQuest, dailyQuestDone, markDailyQuestDone, enableEnhancedFeatures, getGeneratedTasks, devDayOffset, rolloverBannerInfo, dismissRolloverBanner, dailyMetrics, hasAcceptedTerms, loading, acceptanceLoaded, userProfile, setUserProfile, currentMood, lastMoodCheckTime, setLastMoodCheckTime } = useContext(AppContext);
   const { isDarkMode, colors } = useTheme();
   const currentDay = getCurrentDay();
   const picks = (() => {
@@ -62,11 +63,11 @@ function Dashboard({ navigation, route }) {
   };
   const [username, setUsername] = useState('');
   const [avatar, setAvatar] = useState(1);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   // Global product tour is hoisted to App.js; no local guide state
-  const [onboardingPicks, setOnboardingPicks] = useState([]);
   const [showQuestModal, setShowQuestModal] = useState(false);
   const [showMoodPrompt, setShowMoodPrompt] = useState(false);
+  const [steps, setSteps] = useState(0);
+  const [stepsAvailable, setStepsAvailable] = useState(false);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(100)).current;
@@ -142,35 +143,16 @@ function Dashboard({ navigation, route }) {
     return () => { try { loop.stop(); } catch {} };
   }, [dailyQuest, JSON.stringify(dailyQuestDone)]);
 
-  // Show onboarding only when Dashboard gains focus (prevents showing over other screens)
-  // Control when the Week 1 picks modal appears (delay after 'Beginner' launch)
+  // Show mood check when Dashboard gains focus
   useEffect(() => {
     const onFocus = navigation.addListener('focus', async () => {
-      // Block onboarding modal until terms are accepted
+      // Block mood modal until terms are accepted
       if (!hasAcceptedTerms || loading || !acceptanceLoaded) {
-        setShowOnboarding(false);
+        setShowMoodPrompt(false);
         return;
       }
+
       const day = getCurrentDay();
-      if (day === 1 && !week1SetupDone) {
-        // If coming from the Beginner button, delay the modal a bit to let Dashboard settle
-        let delayMs = 0;
-        try {
-          const flagged = await AsyncStorage.getItem('beginnerLaunch_v1');
-          if (flagged === 'true') {
-            delayMs = 700;
-            await AsyncStorage.removeItem('beginnerLaunch_v1');
-          }
-        } catch {}
-        if (delayMs > 0) {
-          setShowOnboarding(false);
-          setTimeout(() => setShowOnboarding(true), delayMs);
-        } else {
-          setShowOnboarding(true);
-        }
-      } else {
-        setShowOnboarding(false);
-      }
 
       // Product tour is shown globally (App.js) and unskippable; removed local trigger
 
@@ -179,11 +161,27 @@ function Dashboard({ navigation, route }) {
         const onboardingActive = (day === 1 && !week1SetupDone);
         const onboardingDone = userProfile?.onboardingCompleted || false;
 
+        if (__DEV__) {
+          console.log('[Dashboard] Mood check logic:', {
+            day,
+            onboardingActive,
+            onboardingDone,
+            week1SetupDone,
+            userProfile: userProfile?.onboardingCompleted,
+            lastMoodCheckTime,
+            hasAcceptedTerms,
+            loading,
+            acceptanceLoaded
+          });
+        }
+
         // Only show mood check if new onboarding is completed and cooldown allows
         if (onboardingDone && !onboardingActive) {
-          const shouldShow = shouldShowMoodCheck(lastMoodCheckTime, 4); // 4-hour cooldown
+          const shouldShow = shouldShowMoodCheck(lastMoodCheckTime, 2); // 2-hour cooldown
+          if (__DEV__) console.log('[Dashboard] shouldShowMoodCheck result:', shouldShow);
           setShowMoodPrompt(shouldShow);
         } else {
+          if (__DEV__) console.log('[Dashboard] Mood check blocked - onboarding not done or still active');
           setShowMoodPrompt(false);
         }
       } catch {
@@ -220,7 +218,6 @@ function Dashboard({ navigation, route }) {
       } catch {}
     });
     const onBlur = navigation.addListener('blur', () => {
-      setShowOnboarding(false);
       setShowMoodPrompt(false);
     });
     return () => {
@@ -250,56 +247,6 @@ function Dashboard({ navigation, route }) {
     })();
   }, []);
 
-  const candidateTasks = getDailyRecommendations(12);
-  const maxSelections = 5;
-  const toggleOnboardingSelection = (title) => {
-    let next = [...onboardingPicks];
-    if (next.includes(title)) {
-      next = next.filter(t => t !== title);
-    } else if (next.length < maxSelections) {
-      next.push(title);
-    }
-    setOnboardingPicks(next);
-  };
-
-  const confirmOnboardingPicks = async () => {
-    if (onboardingPicks.length !== maxSelections) return;
-    const canonicalAnchors = onboardingPicks.map(getCanonicalTask);
-    setWeek1Anchors(canonicalAnchors);
-    
-    // Build batch of picks for days 1-7
-    const batch = {};
-    for (let d = 1; d <= 7; d++) batch[d] = canonicalAnchors;
-    
-    // CRITICAL: Ensure Firestore is updated before navigation to prevent race condition
-    // This way, when Program screen renders, it can read the persisted picks
-    try {
-      const user = getCurrentUser();
-      if (user) {
-        // Wait for Firestore write to complete before proceeding
-        await updateUserData(user.uid, {
-          todayPicks: batch,
-          week1SetupDone: true,
-        });
-      }
-    } catch (err) {
-      if (__DEV__) console.error('Failed to save picks to Firestore:', err?.message);
-      Alert.alert('Sync Issue', 'Tasks were selected but may not be saved. Please check your connection.');
-      // Continue anyway - local state will have the data
-    }
-    
-    // Now update local state (safe because Firestore is synced or user was warned)
-    setAllTodayPicks(batch);
-    setWeek1SetupDone(true);
-    setShowOnboarding(false);
-    
-    try { await AsyncStorage.setItem('program_intro_pending','true'); } catch {}
-    // Ensure Program shows loader on first arrival post-anchors selection
-    try { await AsyncStorage.setItem('program_force_loader_once','true'); } catch {}
-    
-    // Navigate after brief pause (state updates are now safe)
-    setTimeout(() => { try { navigation.navigate('Program'); } catch {} }, 400);
-  };
 
   const handleMoodSelect = async (moodId) => {
     // Generate tasks based on selected mood
@@ -308,14 +255,37 @@ function Dashboard({ navigation, route }) {
     // Update todayPicks for current day
     setTodayPicksForDay(currentDay, allTasks);
 
+    // Update last mood check time and save to Firebase
+    const timestamp = new Date().toISOString();
+    setLastMoodCheckTime(timestamp);
+
+    // Save to userProfile in Firebase to persist across app reopens
+    await setUserProfile({
+      ...userProfile,
+      lastMood: moodId,
+      lastMoodCheckTime: timestamp
+    });
+
     // Close mood modal
     setShowMoodPrompt(false);
   };
 
-  const handleMoodSkip = () => {
+  const handleMoodSkip = async () => {
     // Use default mood if skipped
     const { allTasks } = generateDailyTasks(currentDay, userProfile, 'good');
     setTodayPicksForDay(currentDay, allTasks);
+
+    // Update last mood check time and save to Firebase
+    const timestamp = new Date().toISOString();
+    setLastMoodCheckTime(timestamp);
+
+    // Save to userProfile in Firebase to persist across app reopens
+    await setUserProfile({
+      ...userProfile,
+      lastMood: 'good',
+      lastMoodCheckTime: timestamp
+    });
+
     setShowMoodPrompt(false);
   };
 
@@ -335,6 +305,25 @@ function Dashboard({ navigation, route }) {
     const unsubscribe = navigation.addListener('focus', () => {
       loadProfile();
     });
+    return unsubscribe;
+  }, [navigation]);
+
+  // Load step count on mount and on focus
+  useEffect(() => {
+    const loadSteps = async () => {
+      // Show cached steps instantly, then refresh in background
+      const cached = await getCachedSteps();
+      if (cached > 0) {
+        setSteps(cached);
+        setStepsAvailable(true);
+      }
+      const result = await getTodaySteps();
+      setStepsAvailable(result.available && result.permissionGranted);
+      if (result.steps >= 0) setSteps(result.steps);
+    };
+
+    loadSteps();
+    const unsubscribe = navigation.addListener('focus', loadSteps);
     return unsubscribe;
   }, [navigation]);
   
@@ -461,37 +450,6 @@ function Dashboard({ navigation, route }) {
         ]}
       >
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Onboarding Modal (only after terms accepted) */}
-        <Modal visible={showOnboarding && hasAcceptedTerms && acceptanceLoaded} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalCard, { backgroundColor: colors.surfacePrimary }]}>
-              <Image
-                source={require('../../assets/images/ResetDopa_Logo.png')}
-                style={{ width: 64, height: 64, alignSelf: 'center' }}
-                resizeMode="contain"
-              />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Welcome to ResetDopa™!! 👋</Text>
-              <Text style={[styles.modalSub, { fontStyle: 'italic', color: '#6366F1', marginBottom: 12 }]}>You're not broken. You're just ready to rewire. 🧠</Text>
-              <Text style={[styles.modalSub, { color: colors.textSecondary }]}>A 30-day program built on tiny, consistent actions. Each day builds momentum toward stronger focus and will.</Text>
-              <Text style={[styles.modalSub, { marginTop: 8, color: colors.textSecondary }]}>Start by selecting 5 tasks for Week 1. These will be your anchors — the foundation of your practice.</Text>
-              <Text style={[styles.modalSub, { marginTop: 8, color: colors.textSecondary }]}>As you build consistency, task count increases to match your momentum. Begin now. 🌱</Text>
-              <ScrollView style={{ maxHeight: 280 }} contentContainerStyle={[styles.chipGrid, { paddingBottom: 12 }] }>
-                {candidateTasks.map(ct => (
-                  <TouchableOpacity key={ct.title} onPress={() => toggleOnboardingSelection(ct.title)} style={[styles.pickChip, onboardingPicks.includes(ct.title) && styles.pickChipActive]}>
-                    <Text style={[styles.pickChipText, onboardingPicks.includes(ct.title) && styles.pickChipTextActive, { color: colors.text }]}>{ct.title}</Text>
-                    {onboardingPicks.includes(ct.title) && (
-                      <Ionicons name="checkmark-circle" size={18} color="#10B981" style={{ marginLeft: 6 }} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <Text style={[styles.selectorHint, { color: colors.textSecondary }]}>Pick exactly {maxSelections}. These will be your light anchors for Week 1.</Text>
-              <TouchableOpacity disabled={onboardingPicks.length !== maxSelections} onPress={confirmOnboardingPicks} style={[styles.modalConfirmBtn, { marginTop: 16 }, onboardingPicks.length !== maxSelections && { opacity: 0.5 }]}>
-                <Text style={styles.modalConfirmText}>Start My Journey</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerText}>
@@ -510,7 +468,9 @@ function Dashboard({ navigation, route }) {
                 // DEV-only helper: open mood modal and schedule a test notification in 5s
                 if (__DEV__) {
                   try {
+                    console.log('[Dashboard] Long press detected, setting showMoodPrompt to true');
                     setShowMoodPrompt(true);
+                    console.log('[Dashboard] showMoodPrompt state updated');
                     await registerForPushNotifications();
                     const hasPerm = await ensureNotificationPermissions();
                     if (!hasPerm) {
@@ -661,6 +621,41 @@ function Dashboard({ navigation, route }) {
         </View>
       </View>
 
+      {/* Steps Widget - only shown if pedometer is available */}
+      {stepsAvailable && (
+        <View style={[styles.stepsCard, { backgroundColor: colors.surfacePrimary }]}>
+          <View style={styles.stepsHeader}>
+            <View style={styles.stepsLeft}>
+              <Text style={styles.stepsIcon}>👟</Text>
+              <View>
+                <Text style={[styles.stepsLabel, { color: colors.textSecondary }]}>Daily Steps</Text>
+                <Text style={[styles.stepsCount, { color: colors.text }]}>
+                  {formatSteps(steps)}
+                  <Text style={[styles.stepsGoalText, { color: colors.textSecondary }]}> / {formatSteps(STEPS_GOAL)}</Text>
+                </Text>
+              </View>
+            </View>
+            <View style={styles.stepsRight}>
+              {isStepGoalMet(steps) ? (
+                <View style={styles.stepsGoalBadge}>
+                  <Text style={styles.stepsGoalBadgeText}>Goal Met! 🎉</Text>
+                </View>
+              ) : (
+                <Text style={[styles.stepsPctText, { color: colors.accent }]}>
+                  {getStepGoalProgress(steps)}%
+                </Text>
+              )}
+            </View>
+          </View>
+          <View style={[styles.stepsTrack, { backgroundColor: colors.border }]}>
+            <View style={[styles.stepsFill, {
+              width: `${getStepGoalProgress(steps)}%`,
+              backgroundColor: isStepGoalMet(steps) ? '#10B981' : colors.accent
+            }]} />
+          </View>
+        </View>
+      )}
+
       {/* Adherence Card (hidden until after Day 3) */}
       {currentDay > 3 && (
         <View style={[styles.adherenceCard, { backgroundColor: colors.surfacePrimary }]}>
@@ -760,6 +755,7 @@ function Dashboard({ navigation, route }) {
       </Animated.View>
 
       {/* New Mood Check Modal */}
+      {__DEV__ && console.log('[Dashboard] Rendering DailyMoodCheck with visible=', showMoodPrompt)}
       <DailyMoodCheck
         visible={showMoodPrompt}
         onMoodSelect={handleMoodSelect}
@@ -1039,6 +1035,66 @@ function Dashboard({ navigation, route }) {
     fontSize: 14,
     fontWeight: '600',
     color: '#6B7280',
+  },
+  stepsCard: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 16,
+  },
+  stepsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  stepsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  stepsIcon: {
+    fontSize: 24,
+  },
+  stepsLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  stepsCount: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  stepsGoalText: {
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  stepsRight: {
+    alignItems: 'flex-end',
+  },
+  stepsPctText: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  stepsGoalBadge: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  stepsGoalBadgeText: {
+    color: '#10B981',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  stepsTrack: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  stepsFill: {
+    height: '100%',
+    borderRadius: 4,
   },
   adherenceCard: {
     marginHorizontal: 20,

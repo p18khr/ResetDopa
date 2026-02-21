@@ -58,21 +58,21 @@ export default function Login({ navigation }) {
     } catch (error) {
       console.error('❌ Login error:', error?.code, error?.message);
       let message = 'Login failed. Please try again.';
-      
+
       // Show actual error code for debugging
       const errorCode = error?.code || 'UNKNOWN';
       const debugInfo = __DEV__ ? `\n\nError Code: ${errorCode}\n${error?.message || 'No message'}` : '';
-      
+
       if (error.code === 'auth/invalid-email') {
         message = 'Invalid email address format';
       } else if (error.code === 'auth/user-not-found') {
-        message = 'No account found with this email';
+        message = 'No account found with this email. Please sign up first to create an account.';
       } else if (error.code === 'auth/wrong-password') {
         message = 'Incorrect password';
       } else if (error.code === 'auth/too-many-requests') {
         message = 'Too many failed attempts. Try again later or reset your password.';
       } else if (error.code === 'auth/invalid-credential') {
-        message = 'Invalid email or password';
+        message = 'No account found or incorrect password. Please sign up if you don\'t have an account.';
       } else if (error.code === 'auth/network-request-failed') {
         message = 'Network error. Please check your internet connection.';
       } else if (error.code === 'auth/user-disabled') {
@@ -136,7 +136,7 @@ export default function Login({ navigation }) {
               resizeMode="contain"
             />
             <Text style={[styles.title, { color: colors.text }]}>ResetDopa™</Text>
-            <Text style={[styles.tagline, { color: colors.text }]}>Regain will. Rewire habits. Enjoy life again.</Text>
+            <Text style={[styles.tagline, { color: colors.text }]}>Regain will. Rewire habits.</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Welcome back! Ready to continue your journey?</Text>
             <View style={[styles.infoBanner, { backgroundColor: colors.surfaceSecondary }]}>
               <Text style={[styles.infoText, { color: colors.text }]}>Cloud sync resumes after login. Your progress will sync across devices.</Text>
