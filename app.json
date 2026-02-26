@@ -33,7 +33,7 @@
     },
     "android": {
       "package": "com.dopareset.app",
-      "versionCode": 9,
+      "versionCode": 12,
       "jsEngine": "hermes",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -44,7 +44,8 @@
         "VIBRATE",
         "SCHEDULE_EXACT_ALARM",
         "POST_NOTIFICATIONS",
-        "ACTIVITY_RECOGNITION"
+        "ACTIVITY_RECOGNITION",
+        "BODY_SENSORS"
       ]
     },
     "web": {

@@ -16,6 +16,7 @@ import { useUrges } from './UrgesContext';
 import { useBadges } from './BadgesContext';
 import { useSettings } from './SettingsContext';
 import { getTimeOfDay, WEEK_DAYS, MOOD_VALUES } from '../constants/eventSchema';
+import { selectAdaptiveTasksWithAI } from '../services/ollama.service';
 
 export const AppContext = createContext({
   week1Completed: false,
@@ -214,7 +215,7 @@ export function AppProvider({ children }) {
     // Re-run when user changes to ensure cloud sync usage
   }, [user, observedDayKey]);  
 
-  // Generate a simple Quest of the Day based on adherence and recent triggers
+  // Generate AI-powered Quest of the Day with fallback to rule-based
   useEffect(() => {
     if (!enableEnhancedFeatures) return;
     const computeQuest = async () => {
@@ -234,7 +235,8 @@ export function AppProvider({ children }) {
           }
         }
       } catch {}
-      // Compute locally
+
+      // Compute locally - first try AI, then fallback to rule-based
       const adherence = getAdherence(adherenceWindowDays);
       const sevenDaysAgo = Date.now() - 7*24*60*60*1000;
       const recentUrges = (urges || []).filter(u => u.timestamp >= sevenDaysAgo);
@@ -244,16 +246,43 @@ export function AppProvider({ children }) {
         const sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]);
         return sorted[0]?.[0] || null;
       })();
-      // Friendly, concrete suggestions from catalog
-      const EASY = ['Make bed','Drink water first thing','10 min sunlight'];
-      const MEDIUM = ['25-min Pomodoro','10-15 min walk','Meditation 5 min'];
-      const HARDER = ['Two 25-min Pomodoros','Read 10 pages','Device-free meal'];
-      let quest = EASY[0];
-      if (adherence >= 0.8) quest = HARDER[0];
-      else if (adherence >= 0.5) quest = MEDIUM[0];
-      else quest = EASY[1];
-      if (topEmotion === 'lonely') quest = 'Call friend/family 10 min';
-      if (topEmotion === 'stress') quest = 'Breathwork 5 min';
+
+      let quest = null;
+
+      // Try AI-powered quest generation
+      try {
+        const adherenceLabel = adherence >= 0.8 ? 'high' : adherence >= 0.5 ? 'medium' : 'low';
+        const emotionContext = topEmotion ? `User has been feeling ${topEmotion} recently.` : '';
+
+        const prompt = `You are a wellness coach. Generate ONE short, actionable daily quest (under 30 words) for someone with ${adherenceLabel} adherence to habit recovery. ${emotionContext} The quest should be:
+- Concrete and time-bound (include duration like "5 min", "10 min")
+- Achievable within a day
+- Focused on recovery, mindfulness, or healthy habits
+- Friendly and encouraging in tone
+Return ONLY the quest text, nothing else.`;
+
+        const aiQuests = await selectAdaptiveTasksWithAI(prompt, null, 1, { context: 'quest_generation' });
+        if (aiQuests && aiQuests.length > 0) {
+          quest = aiQuests[0]?.trim();
+        }
+      } catch (aiError) {
+        // Silently fail and use fallback
+        console.log('AI quest generation unavailable, using rule-based fallback');
+      }
+
+      // Fallback: Use rule-based system if AI fails
+      if (!quest) {
+        const EASY = ['Make bed','Drink water first thing','10 min sunlight'];
+        const MEDIUM = ['25-min Pomodoro','10-15 min walk','Meditation 5 min'];
+        const HARDER = ['Two 25-min Pomodoros','Read 10 pages','Device-free meal'];
+        quest = EASY[0];
+        if (adherence >= 0.8) quest = HARDER[0];
+        else if (adherence >= 0.5) quest = MEDIUM[0];
+        else quest = EASY[1];
+        if (topEmotion === 'lonely') quest = 'Call friend/family 10 min';
+        if (topEmotion === 'stress') quest = 'Breathwork 5 min';
+      }
+
       setDailyQuest(quest);
       // Persist best-effort
       if (user) {
