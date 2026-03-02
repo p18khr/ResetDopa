@@ -9,6 +9,7 @@ import {
   getStepGoalProgress,
   isStepGoalMet,
   formatSteps,
+  resetStepPermissionCache,
   STEPS_GOAL,
 } from '../steps.service';
 import { Pedometer } from 'expo-sensors';
@@ -37,6 +38,7 @@ const STEPS_STORAGE_KEY = '@dopaguide_daily_steps';
 describe('Steps Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetStepPermissionCache();
   });
 
   // ─── isStepCountingAvailable ──────────────────────────────────────────────

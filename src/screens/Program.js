@@ -13,6 +13,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import FirstVisitOverlay from '../components/FirstVisitOverlay';
 import ScreenErrorBoundary from '../components/ScreenErrorBoundary';
 import { generateDailyTasks, getTaskCategory } from '../utils/taskGenerator';
+import { getMoodOption } from '../constants/moodTaskPools';
+import TimerModal from '../components/TimerModal';
+import { parseTaskDuration } from '../utils/timerUtils';
+import ConfettiAnimation from '../components/ConfettiAnimation';
+import TaskGuideModal from '../components/TaskGuideModal';
+import StretchingCarousel from '../components/StretchingCarousel';
+import { getGuideForTask } from '../utils/taskGuideDetector';
+import { playSuccessSound } from '../utils/audioUtils';
 // Removed Week1 modal onboarding (handled now in Dashboard)
 // Daily quote now provided by context (persisted & adherence-informed)
 
@@ -38,6 +46,67 @@ function Program({ navigation, route }) {
   const loaderOverlayOpacity = useRef(new Animated.Value(1)).current;
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const modalFadeOpacity = useRef(new Animated.Value(0)).current; // Modal fade-in animation
+
+  // Timer modal state
+  const [timerVisible, setTimerVisible] = useState(false);
+  const [timerTaskName, setTimerTaskName] = useState('');
+  const [timerDuration, setTimerDuration] = useState(10);
+  const [timerTaskDay, setTimerTaskDay] = useState(null);
+  const [timerTaskPoints, setTimerTaskPoints] = useState(0);
+
+  // Guide modal state (independent of completion logic)
+  const [showGuideModal, setShowGuideModal] = useState(false);
+  const [currentGuide, setCurrentGuide] = useState(null); // { type, duration }
+  const [showStretchingGuide, setShowStretchingGuide] = useState(false);
+
+  // Confetti animation state (triggered AFTER task complete)
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  // Handle task completion with optional timer
+  const handleTaskPress = (day, taskName, points = 0) => {
+    const durationData = parseTaskDuration(taskName);
+
+    // Check if task has a guide
+    const guide = getGuideForTask(taskName);
+    if (guide && guide.type === 'stretching') {
+      setShowStretchingGuide(true);
+      return;
+    }
+    if (guide && (guide.type === 'breathwork' || guide.type === 'meditation')) {
+      setCurrentGuide(guide);
+      setShowGuideModal(true);
+      return;
+    }
+
+    if (durationData) {
+      // Task has a timer - show the TimerModal
+      setTimerTaskName(taskName);
+      setTimerDuration(durationData.duration);
+      setTimerTaskDay(day);
+      setTimerTaskPoints(points);
+      setTimerVisible(true);
+    } else {
+      // No timer - mark complete directly and show celebration
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      toggleTodayTaskCompletion(day, taskName, points);
+      playSuccessSound();
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 2500);
+    }
+  };
+
+  const handleTimerComplete = () => {
+    // Timer finished - mark task as complete and celebrate
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    toggleTodayTaskCompletion(timerTaskDay, timerTaskName, timerTaskPoints);
+    playSuccessSound();
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 2500);
+  };
+
+  const handleTimerSkip = () => {
+    // Skip without marking complete - modal will close automatically
+  };
 
   useEffect(() => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -664,9 +733,9 @@ function Program({ navigation, route }) {
               style={[
                 styles.dayCard,
                 { backgroundColor: colors.surfacePrimary, borderColor: colors.border },
-                isWeekEnd && styles.dayCardHighlight,
-                isCurrentDay && styles.dayCardCurrent,
-                isLocked && styles.dayCardLocked
+                isWeekEnd && { backgroundColor: isDarkMode ? colors.surfaceSecondary : colors.moodBgOkay, borderColor: isDarkMode ? '#60A5FA' : colors.accent, borderWidth: 2 },
+                isCurrentDay && { borderWidth: 3, borderColor: isDarkMode ? '#10B981' : '#10B981' },
+                isLocked && { opacity: 0.5, backgroundColor: isDarkMode ? colors.surfaceSecondary : '#F9FAFB' }
               ]}
             >
               <View style={[styles.dayHeader, { borderBottomColor: colors.border }]}>
@@ -827,8 +896,7 @@ function Program({ navigation, route }) {
                             <TouchableOpacity
                               onPress={() => {
                                 if (!canMark) return;
-                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                toggleTodayTaskCompletion(dayData.day, task.task, task.points || 0);
+                                handleTaskPress(dayData.day, task.task, task.points || 0);
                               }}
                               style={[
                                 styles.checkPill,
@@ -861,47 +929,75 @@ function Program({ navigation, route }) {
                         <Ionicons name="color-wand" size={18} color="#F59E0B" style={{ marginRight: 6 }} />
                         <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>Today's Adaptive Tasks</Text>
                       </View>
-                      {dynamicTasks.map((task, taskIndex) => {
-                        const explanation = getTaskExplanation(task.task) || getTaskBenefit(task.task);
-                        const isDone = (todayCompletions[dayData.day] || {})[task.task] || false;
-                        const category = getTaskCategory(task.task);
-                        return (
-                          <View key={`dynamic-${taskIndex}`} style={[styles.taskRow, { borderBottomColor: colors.border }]}>
-                            <View style={styles.taskInfo}>
-                              <Text style={[styles.taskText, { color: isDone ? colors.textTertiary : colors.text }]}>{task.task}</Text>
-                              <Text style={[styles.taskExplanation, { color: colors.textSecondary }]}>💡 {explanation || 'Helps build routine and reduce friction.'}</Text>
-                              <View style={{ flexDirection:'row', alignItems:'center', marginTop: 6 }}>
-                                <Text style={{ fontSize: 12, color: '#F59E0B', fontWeight: '600', marginRight: 8 }}>{category}</Text>
-                                <Text style={styles.taskPoints}>{(task.points || 0)} pts</Text>
-                              </View>
-                            </View>
-                            <TouchableOpacity
-                              onPress={() => {
-                                if (!canMark) return;
-                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                toggleTodayTaskCompletion(dayData.day, task.task, task.points || 0);
-                              }}
+                      {(() => {
+                        const isAiPicked = userProfile?.aiPickDate === new Date().toDateString();
+                        const moodOpt = getMoodOption(userProfile?.lastMood || currentMood);
+                        const moodLabel = moodOpt ? `${moodOpt.emoji} ${moodOpt.label}` : null;
+                        return dynamicTasks.map((task, taskIndex) => {
+                          const explanation = getTaskExplanation(task.task) || getTaskBenefit(task.task);
+                          const isDone = (todayCompletions[dayData.day] || {})[task.task] || false;
+                          const category = getTaskCategory(task.task);
+                          return (
+                            <View
+                              key={`dynamic-${taskIndex}`}
                               style={[
-                                styles.checkPill,
-                                { borderColor: isDone ? '#10B981' : colors.border, backgroundColor: isDone ? '#10B981' : (isDarkMode ? '#1F2937' : '#FFFFFF') },
-                                isDone && { opacity: 0.9 },
-                                !canMark && styles.checkPillLocked
+                                styles.taskRow,
+                                {
+                                  borderBottomColor: colors.border,
+                                  borderLeftWidth: 3,
+                                  borderLeftColor: isDone ? colors.border : '#F59E0B',
+                                  paddingLeft: 10,
+                                }
                               ]}
                             >
-                              {isDone ? (
-                                <Ionicons name="checkmark" size={16} color="#fff" />
-                              ) : (
-                                <View style={{ flexDirection:'row', alignItems:'center' }}>
-                                  {!canMark && (
-                                    <Ionicons name="lock-closed" size={14} color="#9CA3AF" style={{ marginRight: 4 }} />
+                              <View style={styles.taskInfo}>
+                                <Text style={[styles.taskText, { color: isDone ? colors.textTertiary : colors.text }]}>{task.task}</Text>
+                                {/* Mood chip + AI badge row */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 4, gap: 6, maxWidth: '100%', minWidth: 0 }}>
+                                  {moodLabel && (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? '#2D2000' : '#FEF3C7', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 }}>
+                                      <Text style={{ fontSize: 11, color: '#D97706', fontWeight: '600' }}>✨ {moodLabel}</Text>
+                                    </View>
                                   )}
-                                  <Text style={[styles.checkPillText, { color: !canMark ? '#9CA3AF' : colors.textSecondary }]}>Mark</Text>
+                                  {isAiPicked && (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? '#1A1040' : '#EDE9FE', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 }}>
+                                      <Text style={{ fontSize: 11, color: colors.accent, fontWeight: '600' }} numberOfLines={1}>🤖 AI Pick</Text>
+                                    </View>
+                                  )}
                                 </View>
-                              )}
-                            </TouchableOpacity>
-                          </View>
-                        );
-                      })}
+                                <Text style={[styles.taskExplanation, { color: colors.textSecondary }]}>💡 {explanation || 'Helps build routine and reduce friction.'}</Text>
+                                <View style={{ flexDirection:'row', alignItems:'center', marginTop: 6 }}>
+                                  <Text style={{ fontSize: 12, color: '#F59E0B', fontWeight: '600', marginRight: 8 }}>{category}</Text>
+                                  <Text style={styles.taskPoints}>{(task.points || 0)} pts</Text>
+                                </View>
+                              </View>
+                              <TouchableOpacity
+                                onPress={() => {
+                                  if (!canMark) return;
+                                  handleTaskPress(dayData.day, task.task, task.points || 0);
+                                }}
+                                style={[
+                                  styles.checkPill,
+                                  { borderColor: isDone ? '#10B981' : colors.border, backgroundColor: isDone ? '#10B981' : (isDarkMode ? '#1F2937' : '#FFFFFF') },
+                                  isDone && { opacity: 0.9 },
+                                  !canMark && styles.checkPillLocked
+                                ]}
+                              >
+                                {isDone ? (
+                                  <Ionicons name="checkmark" size={16} color="#fff" />
+                                ) : (
+                                  <View style={{ flexDirection:'row', alignItems:'center' }}>
+                                    {!canMark && (
+                                      <Ionicons name="lock-closed" size={14} color="#9CA3AF" style={{ marginRight: 4 }} />
+                                    )}
+                                    <Text style={[styles.checkPillText, { color: !canMark ? '#9CA3AF' : colors.textSecondary }]}>Mark</Text>
+                                  </View>
+                                )}
+                              </TouchableOpacity>
+                            </View>
+                          );
+                        });
+                      })()}
                     </>
                   )}
 
@@ -928,8 +1024,7 @@ function Program({ navigation, route }) {
                       <TouchableOpacity
                         onPress={() => {
                           if (!canMark) return;
-                          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                          toggleTodayTaskCompletion(dayData.day, task.task, task.points || 0);
+                          handleTaskPress(dayData.day, task.task, task.points || 0);
                         }}
                         style={[
                           styles.checkPill,
@@ -984,7 +1079,7 @@ function Program({ navigation, route }) {
 
               {isLocked && (
                 <View style={styles.lockedMessage}>
-                  <Ionicons name="time-outline" size={32} color="#9CA3AF" />
+                  <Ionicons name="time-outline" size={32} color={colors.textTertiary} />
                   <Text style={[styles.lockedText, { color: colors.textSecondary }]}>
                     Complete previous days to unlock
                   </Text>
@@ -1003,8 +1098,8 @@ function Program({ navigation, route }) {
               })() && (() => {
                 const weekNumber = Math.ceil(dayData.day / 7);
                 return (
-                  <View style={[styles.milestoneTag, { backgroundColor: '#FBBF24' }]}>
-                    <Text style={[styles.milestoneText, { color: colors.text }]}>🎉 Week {weekNumber} Complete!</Text>
+                  <View style={[styles.milestoneTag, { backgroundColor: isDarkMode ? '#422006' : '#FBBF24' }]}>
+                    <Text style={[styles.milestoneText, { color: isDarkMode ? '#FCD34D' : '#1A1A1A' }]}>🎉 Week {weekNumber} Complete!</Text>
                   </View>
                 );
               })()}
@@ -1018,9 +1113,9 @@ function Program({ navigation, route }) {
                 const isShowingSummary = isInLastTwoDaysOfWeek && isWeekComplete && !isLocked;
                 // Only show banner if viewing tasks, not summary
                 return (dayData.day === currentDay && !isShowingSummary) && (
-                  <View style={[styles.currentDayBanner, { backgroundColor: '#2563EB' }]}>
-                    <Ionicons name="flash" size={16} color="#fff" />
-                    <Text style={styles.currentDayText}>TODAY'S FOCUS</Text>
+                  <View style={[styles.currentDayBanner, { backgroundColor: isDarkMode ? '#1E40AF' : '#2563EB' }]}>
+                    <Ionicons name="flash" size={16} color={isDarkMode ? '#BFDBFE' : '#fff'} />
+                    <Text style={[styles.currentDayText, { color: isDarkMode ? '#BFDBFE' : '#fff' }]}>TODAY'S FOCUS</Text>
                   </View>
                 );
               })()}
@@ -1048,7 +1143,7 @@ function Program({ navigation, route }) {
                   {isPomodoroTask && (
                     <Text style={[styles.selectorSub, { marginTop: 6, color: colors.text }]}>Pomodoro = 25 minutes of focused work followed by a 5-minute break. Finish the deep-work block, take the short break, then repeat; "x2/x3" means stack rounds with breaks.</Text>
                   )}
-                  <Text style={[styles.selectorSub, { marginTop: 6, fontWeight:'700', color:'#065F46' }]}>Points: {(infoTask.task.points || 0)} CP</Text>
+                  <Text style={[styles.selectorSub, { marginTop: 6, fontWeight:'700', color: isDarkMode ? '#A7F3D0' : '#065F46' }]}>Points: {(infoTask.task.points || 0)} CP</Text>
                 </View>
               </View>
             )}
@@ -1058,6 +1153,37 @@ function Program({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Timer Modal */}
+      <TimerModal
+        visible={timerVisible}
+        taskName={timerTaskName}
+        durationMinutes={timerDuration}
+        onComplete={handleTimerComplete}
+        onSkip={handleTimerSkip}
+        onClose={() => setTimerVisible(false)}
+      />
+
+      {/* Task Guide Modals (Breathwork/Meditation) */}
+      <TaskGuideModal
+        isVisible={showGuideModal}
+        onClose={() => {
+          setShowGuideModal(false);
+          setCurrentGuide(null);
+        }}
+        taskName={currentGuide?.type}
+        guideType={currentGuide?.type}
+        duration={currentGuide?.duration || 5}
+      />
+
+      {/* Stretching Guide Carousel */}
+      <StretchingCarousel
+        isVisible={showStretchingGuide}
+        onClose={() => setShowStretchingGuide(false)}
+      />
+
+      {/* Confetti Celebration Animation (pure UI) */}
+      <ConfettiAnimation isVisible={showConfetti} duration={2500} />
     </SafeAreaView>
   );
 }
@@ -1125,19 +1251,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
-  },
-  dayCardHighlight: {
-    backgroundColor: '#EFF6FF',
-    borderWidth: 2,
-    borderColor: '#4A90E2',
-  },
-  dayCardCurrent: {
-    borderWidth: 3,
-    borderColor: '#10B981',
-  },
-  dayCardLocked: {
-    opacity: 0.5,
-    backgroundColor: '#F9FAFB',
   },
   policyBanner: {
     flexDirection: 'row',
@@ -1282,7 +1395,19 @@ const styles = StyleSheet.create({
   milestoneText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+  },
+  currentDayBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  currentDayText: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   overlayBanner: {
     flexDirection: 'row',
@@ -1305,7 +1430,6 @@ const styles = StyleSheet.create({
   overlayBannerText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1F2937',
     flex: 1,
     flexWrap: 'wrap',
   },

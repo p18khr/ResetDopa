@@ -69,6 +69,7 @@ export const ThemeProvider = ({ children }) => {
     // Light mode — airy, lavender-tinted, navy text
     light: {
       background: '#FFFFFF',
+      backgroundSecondary: '#F8FAFC',
       surfacePrimary: '#F5F5FF',    // Subtle lavender tint
       surfaceSecondary: '#EDEDFF',  // Soft lavender surface
       border: '#D4D4F2',            // Lavender border
@@ -80,10 +81,24 @@ export const ThemeProvider = ({ children }) => {
       warning: '#F59E0B',
       danger: '#EF4444',
       info: '#3B82F6',
+      // Card/Container backgrounds
+      cardBackground: '#FFFFFF',
+      cardBorder: '#E5E7EB',
+      // Input backgrounds
+      inputBackground: '#F3F4F6',
+      inputBorder: '#D1D5DB',
+      // Shadow color (adapts with opacity in styles)
+      shadowColor: '#000000',
+      // Mood backgrounds
+      moodBgGood: '#ECFDF5',
+      moodBgOkay: '#EFF6FF',
+      moodBgLow: '#FFFBEB',
+      moodBgStressed: '#FEE2E2',
     },
     // Dark mode — deep space navy/violet, matches icon gradient
     dark: {
       background: '#0D0D2B',        // Deep navy (icon top-left)
+      backgroundSecondary: '#1E293B',
       surfacePrimary: '#17173A',    // Slightly lighter navy
       surfaceSecondary: '#22224E',  // Card/surface navy
       border: '#35357A',            // Subtle navy-purple border
@@ -95,6 +110,19 @@ export const ThemeProvider = ({ children }) => {
       warning: '#FF9F0A',           // iOS orange
       danger: '#FF453A',            // iOS red
       info: '#7C7FFF',              // Same as accent
+      // Card/Container backgrounds
+      cardBackground: '#17173A',
+      cardBorder: '#334155',
+      // Input backgrounds
+      inputBackground: '#0F172A',
+      inputBorder: '#475569',
+      // Shadow color (adapts with opacity in styles)
+      shadowColor: '#000000',
+      // Mood backgrounds
+      moodBgGood: '#064E3B',
+      moodBgOkay: '#0C4A6E',
+      moodBgLow: '#422006',
+      moodBgStressed: '#7F1D1D',
     },
   };
 

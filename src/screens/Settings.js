@@ -373,12 +373,12 @@ export default function Settings({ navigation }) {
                 value={moodEnabled}
                 onValueChange={toggleMoodReminders}
                 trackColor={{ false: '#ccc', true: colors.accent }}
-                thumbColor={moodEnabled ? '#fff' : '#f5f5f5'}
+                thumbColor={moodEnabled ? colors.success : colors.textSecondary}
               />
             </View>
             <View style={{ flexDirection:'row', gap: 8, marginTop: 12 }}>
               {[20, 21, 22].map(h => (
-                <TouchableOpacity key={h} style={[styles.seedButton, { backgroundColor: '#f5f5f5', borderColor: '#e0e0e0' }]} onPress={() => setMoodTime(h, 0)}>
+                <TouchableOpacity key={h} style={[styles.seedButton, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]} onPress={() => setMoodTime(h, 0)}>
                   <Text style={styles.seedButtonText}>{formatTime(h, 0)}</Text>
                 </TouchableOpacity>
               ))}

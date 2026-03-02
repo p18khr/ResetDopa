@@ -1,33 +1,48 @@
 // src/utils/taskGenerator.js
 // Dynamic task generation based on mood and user profile
 
-import { selectRandomTasksForMood } from '../constants/moodTaskPools';
+import { selectRandomTasksForMood, getTasksForMood } from '../constants/moodTaskPools';
+import { selectAdaptiveTasksWithAI } from '../services/ollama.service';
 
 /**
- * Generate daily tasks: fixed core habits + dynamic mood-based tasks
+ * Generate daily tasks: fixed core habits + AI-selected (or random fallback) dynamic tasks
  * @param {number} currentDay - Current program day
  * @param {object} userProfile - User profile with coreHabits
  * @param {string} currentMood - Current mood identifier
- * @returns {object} - { fixedTasks, dynamicTasks, allTasks }
+ * @param {object} userContext - Extra context for AI (streak, recentTasks, urgeEmotions)
+ * @returns {Promise<{fixedTasks, dynamicTasks, allTasks, aiSelected}>}
  */
-export const generateDailyTasks = (currentDay, userProfile, currentMood) => {
-  // Get fixed core habits from user profile (set during onboarding)
+export const generateDailyTasks = async (currentDay, userProfile, currentMood, userContext = {}) => {
   const fixedTasks = userProfile?.coreHabits || [];
+  const dynamicCount = currentDay <= 7 ? 2 : 3;
+  const mood = currentMood || 'good';
 
-  // Determine how many dynamic tasks to add based on week
-  const dynamicCount = currentDay <= 7 ? 2 : 3; // Week 1: 5 tasks total, Week 2+: 6 tasks total
+  // Get pool for mood, excluding core habits to avoid overlap
+  const pool = getTasksForMood(mood);
+  const availableTasks = pool.filter(task => !fixedTasks.includes(task));
 
-  // Get dynamic tasks from mood pool, excluding fixed tasks
-  const dynamicTasks = selectRandomTasksForMood(currentMood || 'good', dynamicCount, fixedTasks);
+  // Try AI selection first; fall back to random if it fails or Groq is unavailable
+  let dynamicTasks;
+  let aiSelected = false;
 
-  // Combine for total task list
+  // Add time-of-day context for AI
+  const aiContext = {
+    ...userContext,
+    timeOfDay: getTimeOfDayPeriod()
+  };
+
+  const aiPicks = await selectAdaptiveTasksWithAI(mood, availableTasks, dynamicCount, aiContext);
+  if (aiPicks && aiPicks.length === dynamicCount) {
+    dynamicTasks = aiPicks;
+    aiSelected = true;
+  } else {
+    dynamicTasks = selectRandomTasksForMood(mood, dynamicCount, fixedTasks);
+    aiSelected = false;
+  }
+
   const allTasks = [...fixedTasks, ...dynamicTasks];
 
-  return {
-    fixedTasks,
-    dynamicTasks,
-    allTasks
-  };
+  return { fixedTasks, dynamicTasks, allTasks, aiSelected };
 };
 
 /**
@@ -136,4 +151,17 @@ export const getDefaultMoodByTime = () => {
   if (hour >= 12 && hour < 17) return 'scattered'; // Afternoon: energy dip
   if (hour >= 17 && hour < 21) return 'tired';     // Evening: fatigue
   return 'calm';                                    // Night: winding down
+};
+
+/**
+ * Get time-of-day period for AI context
+ * @returns {string} - "morning", "afternoon", "evening", or "night"
+ */
+export const getTimeOfDayPeriod = () => {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 17) return 'afternoon';
+  if (hour >= 17 && hour < 21) return 'evening';
+  return 'night';
 };

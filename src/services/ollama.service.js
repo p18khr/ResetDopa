@@ -208,6 +208,101 @@ function formatUserContext(context) {
 }
 
 /**
+ * Use AI to select the best adaptive tasks from a mood pool
+ * @param {string} mood - Current mood identifier
+ * @param {Array<string>} availableTasks - Task names from the mood pool
+ * @param {number} count - How many tasks to select
+ * @param {Object} userContext - User context (streak, completions, mood)
+ * @returns {Promise<Array<string>|null>} - Selected task names, or null to trigger random fallback
+ */
+export async function selectAdaptiveTasksWithAI(mood, availableTasks, count, userContext = {}) {
+  // Read API key at call time via dynamic access — defeats Babel compile-time inlining of EXPO_PUBLIC_*
+  const apiKey = process.env['EXPO_PUBLIC_GROQ_API_KEY'];
+  if (!apiKey || !availableTasks.length) return null;
+
+  try {
+    const contextParts = [];
+    if (userContext.streak !== undefined) contextParts.push(`${userContext.streak}-day streak`);
+    if (userContext.recentTasks?.length) contextParts.push(`recently did: ${userContext.recentTasks.slice(0, 4).join(', ')}`);
+    if (userContext.recentUrgeEmotions?.length) contextParts.push(`recent urge emotions: ${userContext.recentUrgeEmotions.join(', ')}`);
+    const contextStr = contextParts.length ? contextParts.join('; ') : 'just starting out';
+
+    const timeOfDay = userContext.timeOfDay || 'morning';
+    const timeGuidance = {
+      morning: 'morning hours (5am-12pm). Prioritize tasks like "no phone first X min", hydration, sunlight, and intention-setting.',
+      afternoon: 'afternoon hours (12pm-5pm). Prioritize energizing and focus-based tasks to combat afternoon energy dips.',
+      evening: 'evening hours (5pm-9pm). Prioritize calming or moderate-intensity tasks. Avoid morning-specific tasks like "first X min of the day".',
+      night: 'late night hours (9pm-5am). Prioritize wind-down and relaxation tasks.'
+    };
+
+    const prompt = `You are a habit coach. Select exactly ${count} tasks from this list for a user feeling "${mood}" during ${timeGuidance[timeOfDay]}.
+
+User context: ${contextStr}
+
+Available tasks:
+${availableTasks.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+Rules:
+- Pick tasks that best match the "${mood}" mood AND are appropriate for ${timeOfDay}
+- Avoid tasks they recently did (if listed above)
+- Consider time-of-day context: morning tasks with "first X min" should only appear in morning hours
+- Return ONLY a valid JSON array of exactly ${count} task names copied exactly from the list
+- No explanation, no extra text
+
+Example format: ["Task A", "Task B"]`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 120,
+      })
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) throw new Error(`Groq ${response.status}`);
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+
+    // Extract JSON array from response
+    const jsonMatch = content.match(/\[[\s\S]*?\]/);
+    if (!jsonMatch) throw new Error('No JSON array found');
+
+    const selected = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(selected)) throw new Error('Not an array');
+
+    // Validate: only accept names that exist in the available pool
+    const validated = selected.filter(t =>
+      typeof t === 'string' && availableTasks.includes(t)
+    ).slice(0, count);
+
+    if (validated.length < count) {
+      if (__DEV__) console.log('[AI] Task selection: not enough valid picks, falling back to random');
+      return null;
+    }
+
+    if (__DEV__) console.log('[AI] AI-selected adaptive tasks:', validated);
+    return validated;
+
+  } catch (error) {
+    if (__DEV__) console.log('[AI] Adaptive task selection failed, using random fallback:', error.message);
+    return null;
+  }
+}
+
+/**
  * Check if AI service is available
  */
 export async function checkOllamaStatus() {
