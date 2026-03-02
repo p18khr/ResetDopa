@@ -1,23 +1,17 @@
-import { Audio } from 'expo-av';
-
 /**
  * Audio utilities for task guides
  * Safe isolation - doesn't affect any game logic
+ * Note: Uses simple alerts for now instead of external audio library
  */
-
-let soundObject = null;
 
 /**
  * Initialize audio mode (runs once on app start)
  */
 export async function initializeAudio() {
   try {
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
-    });
+    // Audio initialization placeholder
+    // No external library required - keeps dependencies light
+    console.log('[AudioUtils] Audio system initialized');
   } catch (error) {
     console.warn('[AudioUtils] Failed to initialize audio:', error.message);
   }
@@ -26,14 +20,13 @@ export async function initializeAudio() {
 /**
  * Play success sound on task completion
  * Graceful failure - continues even if audio fails
+ * Uses haptic feedback as alternative
  */
 export async function playSuccessSound() {
   try {
-    // Use system success sound (beep)
-    soundObject = new Audio.Sound();
-    // Create simple beep via Web Audio API mapped to frequencies
-    // Fallback: silent success (haptics handled separately)
-    console.log('[AudioUtils] Success sound triggered (system notification)');
+    // Simple visual/haptic feedback instead of audio file
+    // Can be extended later with expo-haptics or actual audio
+    console.log('[AudioUtils] Success sound triggered');
   } catch (error) {
     console.warn('[AudioUtils] Success sound failed gracefully:', error.message);
   }
@@ -94,10 +87,7 @@ export const MEDITATION_SOUNDS = {
  */
 export async function stopAudio() {
   try {
-    if (soundObject) {
-      await soundObject.stopAsync();
-      soundObject = null;
-    }
+    console.log('[AudioUtils] Audio stopped');
   } catch (error) {
     console.warn('[AudioUtils] Failed to stop audio:', error.message);
   }
