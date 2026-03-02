@@ -404,9 +404,25 @@ function Dashboard({ navigation, route }) {
   const yesterdayStreakValue = yesterdayMetrics.streak || 0;
   const streakTrendUp = todayStreakValue > yesterdayStreakValue;
   const streakTrendText = todayStreakValue === yesterdayStreakValue ? 'Hold' : (streakTrendUp ? 'Uptrend' : 'Lower');
-  
+
   const todayDoneCount = Object.values(todayCompMap).filter(Boolean).length;
-  const todayMood = dailyMood[dateKey] || null;
+
+  // Get latest mood from array or fall back to old format
+  const getMoodFromStorage = () => {
+    const moodData = dailyMood[dateKey];
+    if (!moodData) return null;
+    // If it's an array (new format from logMood), get the latest entry
+    if (Array.isArray(moodData) && moodData.length > 0) {
+      return moodData[moodData.length - 1]?.mood || null;
+    }
+    // If it's a string/object (old format), return it directly
+    if (typeof moodData === 'string' || (typeof moodData === 'object' && moodData.emoji)) {
+      return moodData;
+    }
+    return null;
+  };
+
+  const todayMood = getMoodFromStorage();
   const parseMood = (m) => {
     if (!m) return { emoji: '😊', label: null };
     if (typeof m === 'string') {
