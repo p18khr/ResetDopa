@@ -4,7 +4,7 @@
  * Uses native Expo libraries: expo-speech (TTS) and expo-haptics (vibration)
  */
 
-import * as Speech from 'expo-tts';
+import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
 
 /**
