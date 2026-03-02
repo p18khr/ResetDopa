@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { generateBreathworkGuide, MEDITATION_SOUNDS, playSuccessSound } from '../utils/audioUtils';
+import BreathingBall from './BreathingBall';
 
 /**
  * TaskGuideModal - Display breathwork/meditation guides
@@ -18,6 +19,14 @@ export default function TaskGuideModal({
   const [selectedSound, setSelectedSound] = useState('silence');
   const [isStarted, setIsStarted] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(duration * 60); // seconds
+
+  // Reset timer when modal opens
+  useEffect(() => {
+    if (isVisible) {
+      setIsStarted(false);
+      setTimeRemaining(duration * 60);
+    }
+  }, [isVisible, duration]);
 
   // Timer effect - independent of task completion
   useEffect(() => {
@@ -42,76 +51,87 @@ export default function TaskGuideModal({
   const seconds = timeRemaining % 60;
 
   const renderBreathworkContent = () => (
-    <ScrollView style={styles.contentScroll}>
-      <Text style={[styles.intro, { color: colors.text }]}>
-        {breathworkGuide.intro}
-      </Text>
+    <View style={styles.contentScroll}>
+      <BreathingBall isActive={isStarted} color={colors.accent} />
 
-      <View style={[styles.timerBox, { backgroundColor: colors.surfacePrimary }]}>
-        <Text style={[styles.timerText, { color: colors.text }]}>
-          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-        </Text>
-      </View>
-
-      {isStarted ? (
-        <View>
-          {breathworkGuide.cycles.map((cycle, idx) => (
-            <View key={idx} style={[styles.cycleBox, { backgroundColor: colors.surfaceSecondary }]}>
-              <Text style={[styles.cycleNumber, { color: colors.text }]}>
-                Cycle {cycle.number}
-              </Text>
-              <Text style={[styles.cycleStep, { color: colors.textSecondary }]}>
-                {cycle.inhale}
-              </Text>
-              <Text style={[styles.cycleStep, { color: colors.textSecondary }]}>
-                {cycle.hold}
-              </Text>
-              <Text style={[styles.cycleStep, { color: colors.textSecondary }]}>
-                {cycle.exhale}
-              </Text>
-            </View>
-          ))}
+      {isStarted && (
+        <View style={[styles.timerBox, { backgroundColor: colors.surfacePrimary }]}>
+          <Text style={[styles.timerText, { color: colors.text }]}>
+            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          </Text>
+          <Text style={[styles.timerLabel, { color: colors.textSecondary }]}>
+            Time remaining
+          </Text>
         </View>
-      ) : (
-        <Text style={[styles.outro, { color: colors.textSecondary }]}>
-          {breathworkGuide.outro}
-        </Text>
       )}
-    </ScrollView>
+
+      {!isStarted && (
+        <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
+          <Text style={[styles.guideText, { color: colors.text }]}>
+            Follow the expanding and contracting circle. Breathe naturally with the rhythm:
+          </Text>
+          <Text style={[styles.breathPattern, { color: colors.textSecondary }]}>
+            • Inhale for 4 counts (circle expands)
+            {'\n'}• Hold for 2 counts (circle pauses)
+            {'\n'}• Exhale for 4 counts (circle contracts)
+            {'\n'}• Pause for 2 counts
+          </Text>
+        </View>
+      )}
+    </View>
   );
 
   const renderMeditationContent = () => (
     <ScrollView style={styles.contentScroll}>
-      <Text style={[styles.intro, { color: colors.text }]}>
-        Choose your meditation background sound and press Start
-      </Text>
+      {!isStarted ? (
+        <>
+          <Text style={[styles.intro, { color: colors.text }]}>
+            Select a background sound and then press Start
+          </Text>
 
-      <Text style={[styles.soundTitle, { color: colors.text }]}>Background Sound</Text>
-      {Object.entries(MEDITATION_SOUNDS).map(([key, sound]) => (
-        <TouchableOpacity
-          key={key}
-          style={[
-            styles.soundOption,
-            { backgroundColor: colors.surfacePrimary, borderColor: colors.border },
-            selectedSound === key && { backgroundColor: colors.accent },
-          ]}
-          onPress={() => setSelectedSound(key)}
-        >
-          <Text style={[styles.soundEmoji]}>{sound.emoji}</Text>
-          <View>
-            <Text style={[styles.soundName, { color: colors.text }]}>{sound.name}</Text>
-            <Text style={[styles.soundDesc, { color: colors.textSecondary }]}>
-              {sound.description}
+          <Text style={[styles.soundTitle, { color: colors.text }]}>Background Sound</Text>
+          {Object.entries(MEDITATION_SOUNDS).map(([key, sound]) => (
+            <TouchableOpacity
+              key={key}
+              style={[
+                styles.soundOption,
+                { backgroundColor: colors.surfacePrimary, borderColor: colors.border },
+                selectedSound === key && { backgroundColor: colors.accent },
+              ]}
+              onPress={() => setSelectedSound(key)}
+            >
+              <Text style={[styles.soundEmoji]}>{sound.emoji}</Text>
+              <View>
+                <Text style={[styles.soundName, { color: colors.text }]}>{sound.name}</Text>
+                <Text style={[styles.soundDesc, { color: colors.textSecondary }]}>
+                  {sound.description}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </>
+      ) : (
+        <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+          <Text style={[styles.meditationStatusText, { color: colors.accent }]}>
+            {MEDITATION_SOUNDS[selectedSound].emoji}
+          </Text>
+          <Text style={[styles.meditationStatusLabel, { color: colors.text }]}>
+            {MEDITATION_SOUNDS[selectedSound].name}
+          </Text>
+          <Text style={[styles.meditationStatusDesc, { color: colors.textSecondary }]}>
+            Meditating...
+          </Text>
+
+          <View style={[styles.timerBox, { backgroundColor: colors.surfacePrimary, marginTop: 30 }]}>
+            <Text style={[styles.timerText, { color: colors.text }]}>
+              {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+            </Text>
+            <Text style={[styles.timerLabel, { color: colors.textSecondary }]}>
+              Time remaining
             </Text>
           </View>
-        </TouchableOpacity>
-      ))}
-
-      <View style={[styles.timerBox, { backgroundColor: colors.surfacePrimary }]}>
-        <Text style={[styles.timerText, { color: colors.text }]}>
-          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-        </Text>
-      </View>
+        </View>
+      )}
     </ScrollView>
   );
 
@@ -210,6 +230,34 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: 'bold',
     fontFamily: 'Menlo',
+  },
+  timerLabel: {
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  guideText: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+  breathPattern: {
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 12,
+  },
+  meditationStatusText: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  meditationStatusLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  meditationStatusDesc: {
+    fontSize: 13,
   },
   cycleBox: {
     borderRadius: 8,
