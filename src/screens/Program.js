@@ -66,18 +66,18 @@ function Program({ navigation, route }) {
   const handleTaskPress = (day, taskName, points = 0) => {
     const durationData = parseTaskDuration(taskName);
 
-    // Check if task has a guide
+    // Check if task has a guide - show as informational, but don't block completion
     const guide = getGuideForTask(taskName);
     if (guide && guide.type === 'stretching') {
       setShowStretchingGuide(true);
-      return;
-    }
-    if (guide && (guide.type === 'breathwork' || guide.type === 'meditation')) {
+      // Don't return - let task completion flow continue below
+    } else if (guide && (guide.type === 'breathwork' || guide.type === 'meditation')) {
       setCurrentGuide(guide);
       setShowGuideModal(true);
-      return;
+      // Don't return - let task completion flow continue below
     }
 
+    // Always proceed with normal completion flow
     if (durationData) {
       // Task has a timer - show the TimerModal
       setTimerTaskName(taskName);
