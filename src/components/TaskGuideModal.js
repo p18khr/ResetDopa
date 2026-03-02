@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { generateBreathworkGuide, MEDITATION_SOUNDS, playSuccessSound } from '../utils/audioUtils';
+import { generateBreathworkGuide, MEDITATION_SOUNDS, playSuccessSound, meditationPulse, stopAudio } from '../utils/audioUtils';
 import BreathingBall from './BreathingBall';
 
 /**
@@ -25,6 +25,9 @@ export default function TaskGuideModal({
     if (isVisible) {
       setIsStarted(false);
       setTimeRemaining(duration * 60);
+    } else {
+      // Stop any audio when modal closes
+      stopAudio();
     }
   }, [isVisible, duration]);
 
@@ -45,6 +48,17 @@ export default function TaskGuideModal({
 
     return () => clearInterval(interval);
   }, [isStarted, isVisible, duration]);
+
+  // Meditation haptic pulse effect (every 5 seconds)
+  useEffect(() => {
+    if (!isStarted || !isVisible || guideType !== 'meditation') return;
+
+    const pulseInterval = setInterval(() => {
+      meditationPulse();
+    }, 5000); // Pulse every 5 seconds
+
+    return () => clearInterval(pulseInterval);
+  }, [isStarted, isVisible, guideType]);
 
   const breathworkGuide = generateBreathworkGuide(duration);
   const minutes = Math.floor(timeRemaining / 60);

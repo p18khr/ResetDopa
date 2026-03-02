@@ -1,13 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, Text } from 'react-native';
+import { speakBreathingPhase } from '../utils/audioUtils';
 
 /**
- * BreathingBall - Animated breathing guide
+ * BreathingBall - Animated breathing guide with TTS
  * Expands/contracts to guide user through breathwork cycles
+ * Also speaks breathing instructions aloud
  */
 export default function BreathingBall({ isActive, color = '#3B82F6' }) {
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
-  const labelAnim = useRef(new Animated.Value(0)).current;
+  const phaseRef = useRef('pause');
 
   useEffect(() => {
     if (!isActive) {
@@ -15,33 +17,29 @@ export default function BreathingBall({ isActive, color = '#3B82F6' }) {
       return;
     }
 
-    // Continuous breathing cycle: Inhale 4s -> Hold 2s -> Exhale 4s -> Pause 2s
-    const cycle = Animated.sequence([
-      // Inhale: expand from 0.5 to 1.5
-      Animated.timing(scaleAnim, {
-        toValue: 1.5,
-        duration: 4000,
-        useNativeDriver: true,
-      }),
-      // Hold at max
-      Animated.timing(scaleAnim, {
-        toValue: 1.5,
-        duration: 2000,
-        useNativeDriver: true,
-      }),
-      // Exhale: contract from 1.5 to 0.5
-      Animated.timing(scaleAnim, {
-        toValue: 0.5,
-        duration: 4000,
-        useNativeDriver: true,
-      }),
-      // Pause at min
-      Animated.timing(scaleAnim, {
-        toValue: 0.5,
-        duration: 2000,
-        useNativeDriver: true,
-      }),
-    ]);
+    // Breathing cycle phases: Inhale (4s) → Hold (2s) → Exhale (4s) → Pause (2s) = 12s total
+    const phases = [
+      { phase: 'inhale', duration: 4000, toValue: 1.5 },
+      { phase: 'hold', duration: 2000, toValue: 1.5 },
+      { phase: 'exhale', duration: 4000, toValue: 0.5 },
+      { phase: 'pause', duration: 2000, toValue: 0.5 },
+    ];
+
+    const cycle = Animated.sequence(
+      phases.map(({ phase, duration, toValue }) => {
+        // Speak the phase at the start
+        if (phaseRef.current !== phase) {
+          phaseRef.current = phase;
+          speakBreathingPhase(phase, Math.round(duration / 1000));
+        }
+
+        return Animated.timing(scaleAnim, {
+          toValue,
+          duration,
+          useNativeDriver: true,
+        });
+      })
+    );
 
     // Loop continuously
     const loop = Animated.loop(cycle);

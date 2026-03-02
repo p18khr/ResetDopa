@@ -1,16 +1,18 @@
 /**
  * Audio utilities for task guides
  * Safe isolation - doesn't affect any game logic
- * Note: Uses simple alerts for now instead of external audio library
+ * Uses native Expo libraries: expo-speech (TTS) and expo-haptics (vibration)
  */
+
+import * as Speech from 'expo-tts';
+import * as Haptics from 'expo-haptics';
 
 /**
  * Initialize audio mode (runs once on app start)
  */
 export async function initializeAudio() {
   try {
-    // Audio initialization placeholder
-    // No external library required - keeps dependencies light
+    await Speech.stop();
     console.log('[AudioUtils] Audio system initialized');
   } catch (error) {
     console.warn('[AudioUtils] Failed to initialize audio:', error.message);
@@ -19,16 +21,53 @@ export async function initializeAudio() {
 
 /**
  * Play success sound on task completion
- * Graceful failure - continues even if audio fails
- * Uses haptic feedback as alternative
+ * Uses haptic feedback + console log
  */
 export async function playSuccessSound() {
   try {
-    // Simple visual/haptic feedback instead of audio file
-    // Can be extended later with expo-haptics or actual audio
+    // Haptic feedback: light tap
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     console.log('[AudioUtils] Success sound triggered');
   } catch (error) {
     console.warn('[AudioUtils] Success sound failed gracefully:', error.message);
+  }
+}
+
+/**
+ * Speak breathing instruction (TTS)
+ * Used during breathwork session
+ */
+export async function speakBreathingPhase(phase, duration) {
+  try {
+    const messages = {
+      inhale: `Inhale for ${duration} counts`,
+      hold: `Hold for ${duration} counts`,
+      exhale: `Exhale for ${duration} counts`,
+      pause: `Pause for ${duration} counts`,
+    };
+
+    const text = messages[phase] || '';
+    if (text) {
+      await Speech.speak(text, {
+        language: 'en',
+        pitch: 1.0,
+        rate: 0.8, // Slower speech for calming effect
+      });
+    }
+  } catch (error) {
+    console.warn('[AudioUtils] TTS failed gracefully:', error.message);
+  }
+}
+
+/**
+ * Haptic pulse for meditation
+ * Called periodically during meditation
+ */
+export async function meditationPulse() {
+  try {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  } catch (error) {
+    console.warn('[AudioUtils] Haptic pulse failed:', error.message);
   }
 }
 
@@ -83,10 +122,11 @@ export const MEDITATION_SOUNDS = {
 };
 
 /**
- * Stop any playing audio
+ * Stop any playing speech
  */
 export async function stopAudio() {
   try {
+    await Speech.stop();
     console.log('[AudioUtils] Audio stopped');
   } catch (error) {
     console.warn('[AudioUtils] Failed to stop audio:', error.message);
