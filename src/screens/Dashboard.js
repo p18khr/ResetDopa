@@ -19,7 +19,7 @@ import { getCurrentUser } from '../services/auth.service';
 import { updateUserData } from '../services/firestore.service';
 import DailyMoodCheck from '../components/DailyMoodCheck';
 import { generateDailyTasks, shouldShowMoodCheck, getTaskCategory } from '../utils/taskGenerator';
-import { selectRandomTasksForMood } from '../constants/moodTaskPools';
+import { selectRandomTasksForMood, getMoodOption } from '../constants/moodTaskPools';
 import { getTodaySteps, getTodayMetrics, getCachedSteps, getStepGoalProgress, isStepGoalMet, formatSteps, STEPS_GOAL, calculateDistance, calculateCalories } from '../services/steps.service';
 
 const AVATAR_OPTIONS = [
@@ -413,7 +413,11 @@ function Dashboard({ navigation, route }) {
     if (!moodData) return null;
     // If it's an array (new format from logMood), get the latest entry
     if (Array.isArray(moodData) && moodData.length > 0) {
-      return moodData[moodData.length - 1]?.mood || null;
+      const moodId = moodData[moodData.length - 1]?.mood || null;
+      if (!moodId) return null;
+      // Map mood ID to MOOD_OPTIONS to get emoji and label
+      const moodOption = getMoodOption(moodId);
+      return moodOption || null;
     }
     // If it's a string/object (old format), return it directly
     if (typeof moodData === 'string' || (typeof moodData === 'object' && moodData.emoji)) {
