@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet, Dimensions, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Modal } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 const STRETCHES = [
@@ -8,24 +8,27 @@ const STRETCHES = [
     name: 'Neck Roll',
     description: 'Slow circular motion of the neck',
     durationText: '30 seconds each direction',
-    durationSeconds: 60, // 30 sec * 2 directions
-    gifUrl: 'https://media.giphy.com/media/LNLlMyhY3tO0UWAqR0/giphy.gif',
+    durationSeconds: 60,
+    emoji: '🔄',
+    instruction: 'Rotate your head in slow circles, one direction for 30 sec, then reverse',
   },
   {
     id: 2,
     name: 'Shoulder Shrug',
     description: 'Lift shoulders to ears, hold 1 sec, release',
     durationText: '10-15 reps',
-    durationSeconds: 45, // Approx 3-4 seconds per rep
-    gifUrl: 'https://media.giphy.com/media/3o85xIO33l7RlmLjIQ/giphy.gif',
+    durationSeconds: 45,
+    emoji: '⬆️',
+    instruction: 'Pull shoulders up towards ears, hold briefly, then relax. Repeat smoothly.',
   },
   {
     id: 3,
     name: 'Arm Circles',
     description: 'Extend arms, make small then large circles',
     durationText: '15 circles each direction',
-    durationSeconds: 60, // 30 seconds per direction
-    gifUrl: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
+    durationSeconds: 60,
+    emoji: '⭕',
+    instruction: 'Extend arms out, make 15 small circles forward, then 15 large circles',
   },
   {
     id: 4,
@@ -33,7 +36,8 @@ const STRETCHES = [
     description: 'Bend forward at hips, let arms hang',
     durationText: 'Hold 30 seconds',
     durationSeconds: 30,
-    gifUrl: 'https://media.giphy.com/media/l0HlNaQ9hWt8sJiIo/giphy.gif',
+    emoji: '🙇',
+    instruction: 'Bend from your hips, let your upper body fold down. Keep legs straight.',
   },
   {
     id: 5,
@@ -41,15 +45,17 @@ const STRETCHES = [
     description: 'Knees wide, bring chest to thighs',
     durationText: 'Hold 1 minute',
     durationSeconds: 60,
-    gifUrl: 'https://media.giphy.com/media/3oh8xyOIvE7sO22idW/giphy.gif',
+    emoji: '🧘',
+    instruction: 'Kneel on ground, sit hips back to heels, stretch arms forward on floor.',
   },
   {
     id: 6,
     name: 'Quad Stretch',
     description: 'Pull foot toward glute, standing or lying',
     durationText: '30 sec per leg',
-    durationSeconds: 60, // 30 sec * 2 legs
-    gifUrl: 'https://media.giphy.com/media/l0HlSY9x8FZo0XO1i/giphy.gif',
+    durationSeconds: 60,
+    emoji: '🦵',
+    instruction: 'Pull one foot toward your glute. Hold 30sec per leg. Stay balanced.',
   },
 ];
 
@@ -117,16 +123,20 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
 
         {/* Content */}
         <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
-          {/* GIF Display */}
-          <Image
-            source={{ uri: currentStretch.gifUrl }}
-            style={styles.gif}
-            resizeMode="contain"
-            onError={() => console.warn(`Failed to load GIF for ${currentStretch.name}`)}
-          />
+          {/* Large Emoji Display */}
+          <View style={[styles.emojiBox, { backgroundColor: colors.surfaceSecondary }]}>
+            <Text style={styles.largeEmoji}>{currentStretch.emoji}</Text>
+          </View>
 
           {/* Stretch Name */}
           <Text style={[styles.stretchName, { color: colors.text }]}>{currentStretch.name}</Text>
+
+          {/* Instruction Box */}
+          <View style={[styles.instructionBox, { backgroundColor: colors.accent, opacity: 0.1 }]}>
+            <Text style={[styles.instruction, { color: colors.text }]}>
+              📝 {currentStretch.instruction}
+            </Text>
+          </View>
 
           {/* Description */}
           <View style={[styles.descBox, { backgroundColor: colors.surfacePrimary }]}>
@@ -245,12 +255,29 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     alignItems: 'center',
   },
-  gif: {
-    width: 200,
-    height: 200,
+  emojiBox: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  largeEmoji: {
+    fontSize: 72,
+  },
+  instructionBox: {
     borderRadius: 12,
-    marginBottom: 20,
-    backgroundColor: '#f0f0f0',
+    padding: 16,
+    marginBottom: 16,
+    width: '100%',
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  instruction: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '500',
   },
   stretchName: {
     fontSize: 24,
