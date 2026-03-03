@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Modal, Animated } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 const STRETCHES = [
@@ -70,6 +70,11 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const screenWidth = Dimensions.get('window').width;
 
+  // Animation refs for stretching visualizations
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const moveAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
   const currentStretch = STRETCHES[currentIndex];
 
   // Reset timer when exercise changes
@@ -78,7 +83,7 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
     setTimeRemaining(currentStretch.durationSeconds);
   }, [currentIndex, currentStretch.durationSeconds]);
 
-  // Timer effect
+  // Timer effect with auto-advance
   useEffect(() => {
     if (!isStarted || !isVisible) return;
 
@@ -86,6 +91,12 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           setIsStarted(false);
+          // Auto-advance to next exercise
+          if (currentIndex < STRETCHES.length - 1) {
+            setCurrentIndex(currentIndex + 1);
+          } else {
+            // Last exercise done - stay on it but pause
+          }
           return currentStretch.durationSeconds;
         }
         return prev - 1;
@@ -93,7 +104,67 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isStarted, isVisible, currentStretch.durationSeconds]);
+  }, [isStarted, isVisible, currentIndex, currentStretch.durationSeconds]);
+
+  // Animate stretching visualizations
+  useEffect(() => {
+    if (!isStarted) {
+      Animated.timing(rotateAnim, { toValue: 0, duration: 0, useNativeDriver: true }).start();
+      Animated.timing(moveAnim, { toValue: 0, duration: 0, useNativeDriver: true }).start();
+      Animated.timing(scaleAnim, { toValue: 1, duration: 0, useNativeDriver: true }).start();
+      return;
+    }
+
+    if (currentIndex === 0) {
+      // Neck Roll - rotation animation
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 360,
+          duration: 4000,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else if (currentIndex === 1) {
+      // Shoulder Shrug - up and down
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(moveAnim, { toValue: -30, duration: 600, useNativeDriver: true }),
+          Animated.timing(moveAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+        ])
+      ).start();
+    } else if (currentIndex === 2) {
+      // Arm Circles - scale animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scaleAnim, { toValue: 1.3, duration: 1000, useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 0.7, duration: 1000, useNativeDriver: true }),
+        ])
+      ).start();
+    } else if (currentIndex === 3) {
+      // Forward Fold - rotation
+      Animated.timing(rotateAnim, {
+        toValue: 90,
+        duration: 2000,
+        useNativeDriver: true,
+      }).start();
+    } else if (currentIndex === 4) {
+      // Child's Pose - scale down
+      Animated.timing(scaleAnim, {
+        toValue: 0.6,
+        duration: 2000,
+        useNativeDriver: true,
+      }).start();
+    } else if (currentIndex === 5) {
+      // Quad Stretch - rotation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(rotateAnim, { toValue: 45, duration: 1500, useNativeDriver: true }),
+          Animated.timing(rotateAnim, { toValue: -45, duration: 1500, useNativeDriver: true }),
+          Animated.timing(rotateAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [isStarted, currentIndex, rotateAnim, moveAnim, scaleAnim]);
 
   const handleNext = () => {
     if (currentIndex < STRETCHES.length - 1) {
@@ -123,9 +194,44 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
 
         {/* Content */}
         <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
-          {/* Large Emoji Display */}
-          <View style={[styles.emojiBox, { backgroundColor: colors.surfaceSecondary }]}>
-            <Text style={styles.largeEmoji}>{currentStretch.emoji}</Text>
+          {/* Animated Stretch Visualization */}
+          <View style={[styles.visualBox, { backgroundColor: colors.surfaceSecondary }]}>
+            {/* Neck Roll */}
+            {currentIndex === 0 && (
+              <Animated.View style={{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }}>
+                <View style={styles.circle} />
+              </Animated.View>
+            )}
+            {/* Shoulder Shrug */}
+            {currentIndex === 1 && (
+              <Animated.View style={{ transform: [{ translateY: moveAnim }] }}>
+                <View style={[styles.rectangle, { width: 80, height: 120 }]} />
+              </Animated.View>
+            )}
+            {/* Arm Circles */}
+            {currentIndex === 2 && (
+              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                <View style={styles.circleGroup} />
+              </Animated.View>
+            )}
+            {/* Forward Fold */}
+            {currentIndex === 3 && (
+              <Animated.View style={{ transform: [{ perspective: 1000 }, { rotateX: rotateAnim.interpolate({ inputRange: [0, 90], outputRange: ['0deg', '90deg'] }) }] }}>
+                <View style={[styles.rectangle, { width: 60, height: 100 }]} />
+              </Animated.View>
+            )}
+            {/* Child's Pose */}
+            {currentIndex === 4 && (
+              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                <View style={[styles.circle, { width: 100, height: 100 }]} />
+              </Animated.View>
+            )}
+            {/* Quad Stretch */}
+            {currentIndex === 5 && (
+              <Animated.View style={{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [-45, 0, 45], outputRange: ['-45deg', '0deg', '45deg'] }) }] }}>
+                <View style={[styles.rectangle, { width: 70, height: 110 }]} />
+              </Animated.View>
+            )}
           </View>
 
           {/* Stretch Name */}
@@ -255,13 +361,35 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     alignItems: 'center',
   },
-  emojiBox: {
+  visualBox: {
     width: 140,
     height: 140,
     borderRadius: 70,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
+    overflow: 'hidden',
+  },
+  circle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: '#4CAF50',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  circleGroup: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: '#2196F3',
+    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+  },
+  rectangle: {
+    backgroundColor: '#2196F3',
+    borderRadius: 8,
+    opacity: 0.8,
   },
   largeEmoji: {
     fontSize: 72,
