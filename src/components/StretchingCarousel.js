@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -7,60 +7,91 @@ const STRETCHES = [
     id: 1,
     name: 'Neck Roll',
     description: 'Slow circular motion of the neck',
-    duration: '30 seconds each direction',
-    emoji: '🔀',
+    durationText: '30 seconds each direction',
+    durationSeconds: 60, // 30 sec * 2 directions
+    gifUrl: 'https://media.giphy.com/media/LNLlMyhY3tO0UWAqR0/giphy.gif',
   },
   {
     id: 2,
     name: 'Shoulder Shrug',
     description: 'Lift shoulders to ears, hold 1 sec, release',
-    duration: '10-15 reps',
-    emoji: '🤷',
+    durationText: '10-15 reps',
+    durationSeconds: 45, // Approx 3-4 seconds per rep
+    gifUrl: 'https://media.giphy.com/media/3o85xIO33l7RlmLjIQ/giphy.gif',
   },
   {
     id: 3,
     name: 'Arm Circles',
     description: 'Extend arms, make small then large circles',
-    duration: '15 circles each direction',
-    emoji: '💨',
+    durationText: '15 circles each direction',
+    durationSeconds: 60, // 30 seconds per direction
+    gifUrl: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
   },
   {
     id: 4,
     name: 'Forward Fold',
     description: 'Bend forward at hips, let arms hang',
-    duration: 'Hold 30 seconds',
-    emoji: '🙇',
+    durationText: 'Hold 30 seconds',
+    durationSeconds: 30,
+    gifUrl: 'https://media.giphy.com/media/l0HlNaQ9hWt8sJiIo/giphy.gif',
   },
   {
     id: 5,
     name: 'Child\'s Pose',
     description: 'Knees wide, bring chest to thighs',
-    duration: 'Hold 1 minute',
-    emoji: '🧘',
+    durationText: 'Hold 1 minute',
+    durationSeconds: 60,
+    gifUrl: 'https://media.giphy.com/media/3oh8xyOIvE7sO22idW/giphy.gif',
   },
   {
     id: 6,
     name: 'Quad Stretch',
     description: 'Pull foot toward glute, standing or lying',
-    duration: '30 sec per leg',
-    emoji: '🦵',
+    durationText: '30 sec per leg',
+    durationSeconds: 60, // 30 sec * 2 legs
+    gifUrl: 'https://media.giphy.com/media/l0HlSY9x8FZo0XO1i/giphy.gif',
   },
 ];
 
 /**
- * StretchingCarousel - Swipeable stretching guide
+ * StretchingCarousel - Swipeable stretching guide with integrated timer
  * Pure UI component - does NOT affect task completion
  */
 export default function StretchingCarousel({ isVisible, onClose }) {
   const { isDarkMode, colors } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isStarted, setIsStarted] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(0);
   const screenWidth = Dimensions.get('window').width;
+
+  const currentStretch = STRETCHES[currentIndex];
+
+  // Reset timer when exercise changes
+  useEffect(() => {
+    setIsStarted(false);
+    setTimeRemaining(currentStretch.durationSeconds);
+  }, [currentIndex, currentStretch.durationSeconds]);
+
+  // Timer effect
+  useEffect(() => {
+    if (!isStarted || !isVisible) return;
+
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          setIsStarted(false);
+          return currentStretch.durationSeconds;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isStarted, isVisible, currentStretch.durationSeconds]);
 
   if (!isVisible) {
     return null;
   }
-
-  const currentStretch = STRETCHES[currentIndex];
 
   const handleNext = () => {
     if (currentIndex < STRETCHES.length - 1) {
@@ -74,6 +105,9 @@ export default function StretchingCarousel({ isVisible, onClose }) {
     }
   };
 
+  const minutes = Math.floor(timeRemaining / 60);
+  const seconds = timeRemaining % 60;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -86,8 +120,13 @@ export default function StretchingCarousel({ isVisible, onClose }) {
 
       {/* Content */}
       <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
-        {/* Large Emoji */}
-        <Text style={styles.largeEmoji}>{currentStretch.emoji}</Text>
+        {/* GIF Display */}
+        <Image
+          source={{ uri: currentStretch.gifUrl }}
+          style={styles.gif}
+          resizeMode="contain"
+          onError={() => console.warn(`Failed to load GIF for ${currentStretch.name}`)}
+        />
 
         {/* Stretch Name */}
         <Text style={[styles.stretchName, { color: colors.text }]}>{currentStretch.name}</Text>
@@ -101,7 +140,7 @@ export default function StretchingCarousel({ isVisible, onClose }) {
         {/* Duration */}
         <View style={[styles.durationBox, { backgroundColor: colors.surfaceSecondary }]}>
           <Text style={[styles.durationLabel, { color: colors.textSecondary }]}>Duration:</Text>
-          <Text style={[styles.duration, { color: colors.accent }]}>{currentStretch.duration}</Text>
+          <Text style={[styles.duration, { color: colors.accent }]}>{currentStretch.durationText}</Text>
         </View>
 
         {/* Tips */}
@@ -113,8 +152,15 @@ export default function StretchingCarousel({ isVisible, onClose }) {
         </View>
       </ScrollView>
 
-      {/* Footer with Navigation */}
+      {/* Footer with Navigation and Timer */}
       <View style={[styles.footer, { backgroundColor: colors.surfacePrimary, borderTopColor: colors.border }]}>
+        {/* Timer */}
+        <View style={[styles.timerBox, { backgroundColor: colors.surfaceSecondary }]}>
+          <Text style={[styles.timerText, { color: colors.text }]}>
+            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          </Text>
+        </View>
+
         {/* Progress Dots */}
         <View style={styles.dotsContainer}>
           {STRETCHES.map((_, idx) => (
@@ -143,14 +189,22 @@ export default function StretchingCarousel({ isVisible, onClose }) {
             <Text style={[styles.navButtonText, { color: colors.text }]}>← Prev</Text>
           </TouchableOpacity>
 
-          <Text style={[styles.counter, { color: colors.textSecondary }]}>
-            {currentIndex + 1} / {STRETCHES.length}
-          </Text>
+          <TouchableOpacity
+            style={[
+              styles.navButton,
+              { backgroundColor: colors.accent },
+            ]}
+            onPress={() => setIsStarted(!isStarted)}
+          >
+            <Text style={[styles.navButtonText, { color: '#FFF' }]}>
+              {isStarted ? '⏸ Pause' : '▶ Start'}
+            </Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.navButton,
-              { backgroundColor: currentIndex < STRETCHES.length - 1 ? colors.accent : colors.success },
+              { backgroundColor: currentIndex < STRETCHES.length - 1 ? colors.surfaceSecondary : colors.success },
             ]}
             onPress={currentIndex < STRETCHES.length - 1 ? handleNext : onClose}
           >
@@ -193,9 +247,12 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     alignItems: 'center',
   },
-  largeEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
+  gif: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 20,
+    backgroundColor: '#f0f0f0',
   },
   stretchName: {
     fontSize: 24,
@@ -255,12 +312,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
+    gap: 12,
+  },
+  timerBox: {
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  timerText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    fontFamily: 'Menlo',
   },
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 6,
-    marginBottom: 12,
   },
   dot: {
     width: 8,
@@ -271,7 +339,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   navButton: {
     flex: 1,
@@ -281,10 +348,6 @@ const styles = StyleSheet.create({
   },
   navButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-  },
-  counter: {
-    fontSize: 12,
     fontWeight: '600',
   },
 });
