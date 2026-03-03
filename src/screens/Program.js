@@ -58,6 +58,9 @@ function Program({ navigation, route }) {
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [currentGuide, setCurrentGuide] = useState(null); // { type, duration }
   const [showStretchingGuide, setShowStretchingGuide] = useState(false);
+  const [stretchingTaskDay, setStretchingTaskDay] = useState(null);
+  const [stretchingTaskName, setStretchingTaskName] = useState('');
+  const [stretchingTaskPoints, setStretchingTaskPoints] = useState(0);
 
   // Confetti animation state (triggered AFTER task complete)
   const [showConfetti, setShowConfetti] = useState(false);
@@ -70,14 +73,18 @@ function Program({ navigation, route }) {
     const guide = getGuideForTask(taskName);
     if (guide && guide.type === 'stretching') {
       setShowStretchingGuide(true);
-      // Don't return - let task completion flow continue below
+      setStretchingTaskDay(day);
+      setStretchingTaskName(taskName);
+      setStretchingTaskPoints(points);
+      // Stretching carousel has its own timer - don't show TimerModal
+      return;
     } else if (guide && (guide.type === 'breathwork' || guide.type === 'meditation')) {
       setCurrentGuide(guide);
       setShowGuideModal(true);
       // Don't return - let task completion flow continue below
     }
 
-    // Always proceed with normal completion flow
+    // Proceed with normal completion flow (only for non-stretching tasks)
     if (durationData) {
       // Task has a timer - show the TimerModal
       setTimerTaskName(taskName);
@@ -106,6 +113,16 @@ function Program({ navigation, route }) {
 
   const handleTimerSkip = () => {
     // Skip without marking complete - modal will close automatically
+  };
+
+  const handleStretchingComplete = () => {
+    // Mark task as complete after stretching
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    toggleTodayTaskCompletion(stretchingTaskDay, stretchingTaskName, stretchingTaskPoints);
+    playSuccessSound();
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 2500);
+    setShowStretchingGuide(false);
   };
 
   useEffect(() => {
@@ -1180,6 +1197,7 @@ function Program({ navigation, route }) {
       <StretchingCarousel
         isVisible={showStretchingGuide}
         onClose={() => setShowStretchingGuide(false)}
+        onComplete={handleStretchingComplete}
       />
 
       {/* Confetti Celebration Animation (pure UI) */}

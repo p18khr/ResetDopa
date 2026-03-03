@@ -57,7 +57,7 @@ const STRETCHES = [
  * StretchingCarousel - Swipeable stretching guide with integrated timer
  * Pure UI component - does NOT affect task completion
  */
-export default function StretchingCarousel({ isVisible, onClose }) {
+export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
   const { isDarkMode, colors } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
@@ -206,7 +206,7 @@ export default function StretchingCarousel({ isVisible, onClose }) {
               styles.navButton,
               { backgroundColor: currentIndex < STRETCHES.length - 1 ? colors.surfaceSecondary : colors.success },
             ]}
-            onPress={currentIndex < STRETCHES.length - 1 ? handleNext : onClose}
+            onPress={currentIndex < STRETCHES.length - 1 ? handleNext : onComplete}
           >
             <Text style={[styles.navButtonText, { color: '#FFF' }]}>
               {currentIndex < STRETCHES.length - 1 ? 'Next →' : 'Done ✓'}
