@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet, Dimensions, Modal } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 const STRETCHES = [
@@ -89,10 +89,6 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
     return () => clearInterval(interval);
   }, [isStarted, isVisible, currentStretch.durationSeconds]);
 
-  if (!isVisible) {
-    return null;
-  }
-
   const handleNext = () => {
     if (currentIndex < STRETCHES.length - 1) {
       setCurrentIndex(currentIndex + 1);
@@ -109,112 +105,114 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
   const seconds = timeRemaining % 60;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surfacePrimary, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>🏃 Stretching Guide</Text>
-        <TouchableOpacity onPress={onClose}>
-          <Text style={[styles.closeButton, { color: colors.accent }]}>✕</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
-        {/* GIF Display */}
-        <Image
-          source={{ uri: currentStretch.gifUrl }}
-          style={styles.gif}
-          resizeMode="contain"
-          onError={() => console.warn(`Failed to load GIF for ${currentStretch.name}`)}
-        />
-
-        {/* Stretch Name */}
-        <Text style={[styles.stretchName, { color: colors.text }]}>{currentStretch.name}</Text>
-
-        {/* Description */}
-        <View style={[styles.descBox, { backgroundColor: colors.surfacePrimary }]}>
-          <Text style={[styles.descLabel, { color: colors.textSecondary }]}>How to do it:</Text>
-          <Text style={[styles.description, { color: colors.text }]}>{currentStretch.description}</Text>
+    <Modal visible={isVisible} transparent={false} animationType="slide">
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: colors.surfacePrimary, borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>🏃 Stretching Guide</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Text style={[styles.closeButton, { color: colors.accent }]}>✕</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Duration */}
-        <View style={[styles.durationBox, { backgroundColor: colors.surfaceSecondary }]}>
-          <Text style={[styles.durationLabel, { color: colors.textSecondary }]}>Duration:</Text>
-          <Text style={[styles.duration, { color: colors.accent }]}>{currentStretch.durationText}</Text>
-        </View>
+        {/* Content */}
+        <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
+          {/* GIF Display */}
+          <Image
+            source={{ uri: currentStretch.gifUrl }}
+            style={styles.gif}
+            resizeMode="contain"
+            onError={() => console.warn(`Failed to load GIF for ${currentStretch.name}`)}
+          />
 
-        {/* Tips */}
-        <View style={[styles.tipsBox, { backgroundColor: colors.surfacePrimary }]}>
-          <Text style={[styles.tipsLabel, { color: colors.textSecondary }]}>💡 Pro Tip:</Text>
-          <Text style={[styles.tips, { color: colors.text }]}>
-            Breathe deeply. Never bounce into stretches. Hold steady without pain.
-          </Text>
-        </View>
-      </ScrollView>
+          {/* Stretch Name */}
+          <Text style={[styles.stretchName, { color: colors.text }]}>{currentStretch.name}</Text>
 
-      {/* Footer with Navigation and Timer */}
-      <View style={[styles.footer, { backgroundColor: colors.surfacePrimary, borderTopColor: colors.border }]}>
-        {/* Timer */}
-        <View style={[styles.timerBox, { backgroundColor: colors.surfaceSecondary }]}>
-          <Text style={[styles.timerText, { color: colors.text }]}>
-            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-          </Text>
-        </View>
+          {/* Description */}
+          <View style={[styles.descBox, { backgroundColor: colors.surfacePrimary }]}>
+            <Text style={[styles.descLabel, { color: colors.textSecondary }]}>How to do it:</Text>
+            <Text style={[styles.description, { color: colors.text }]}>{currentStretch.description}</Text>
+          </View>
 
-        {/* Progress Dots */}
-        <View style={styles.dotsContainer}>
-          {STRETCHES.map((_, idx) => (
-            <View
-              key={idx}
+          {/* Duration */}
+          <View style={[styles.durationBox, { backgroundColor: colors.surfaceSecondary }]}>
+            <Text style={[styles.durationLabel, { color: colors.textSecondary }]}>Duration:</Text>
+            <Text style={[styles.duration, { color: colors.accent }]}>{currentStretch.durationText}</Text>
+          </View>
+
+          {/* Tips */}
+          <View style={[styles.tipsBox, { backgroundColor: colors.surfacePrimary }]}>
+            <Text style={[styles.tipsLabel, { color: colors.textSecondary }]}>💡 Pro Tip:</Text>
+            <Text style={[styles.tips, { color: colors.text }]}>
+              Breathe deeply. Never bounce into stretches. Hold steady without pain.
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* Footer with Navigation and Timer */}
+        <View style={[styles.footer, { backgroundColor: colors.surfacePrimary, borderTopColor: colors.border }]}>
+          {/* Timer */}
+          <View style={[styles.timerBox, { backgroundColor: colors.surfaceSecondary }]}>
+            <Text style={[styles.timerText, { color: colors.text }]}>
+              {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+            </Text>
+          </View>
+
+          {/* Progress Dots */}
+          <View style={styles.dotsContainer}>
+            {STRETCHES.map((_, idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor: idx === currentIndex ? colors.accent : colors.border,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Navigation Buttons */}
+          <View style={styles.navButtons}>
+            <TouchableOpacity
               style={[
-                styles.dot,
-                {
-                  backgroundColor: idx === currentIndex ? colors.accent : colors.border,
-                },
+                styles.navButton,
+                { backgroundColor: currentIndex > 0 ? colors.surfaceSecondary : colors.border },
               ]}
-            />
-          ))}
-        </View>
+              onPress={handlePrev}
+              disabled={currentIndex === 0}
+            >
+              <Text style={[styles.navButtonText, { color: colors.text }]}>← Prev</Text>
+            </TouchableOpacity>
 
-        {/* Navigation Buttons */}
-        <View style={styles.navButtons}>
-          <TouchableOpacity
-            style={[
-              styles.navButton,
-              { backgroundColor: currentIndex > 0 ? colors.surfaceSecondary : colors.border },
-            ]}
-            onPress={handlePrev}
-            disabled={currentIndex === 0}
-          >
-            <Text style={[styles.navButtonText, { color: colors.text }]}>← Prev</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.navButton,
+                { backgroundColor: colors.accent },
+              ]}
+              onPress={() => setIsStarted(!isStarted)}
+            >
+              <Text style={[styles.navButtonText, { color: '#FFF' }]}>
+                {isStarted ? '⏸ Pause' : '▶ Start'}
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.navButton,
-              { backgroundColor: colors.accent },
-            ]}
-            onPress={() => setIsStarted(!isStarted)}
-          >
-            <Text style={[styles.navButtonText, { color: '#FFF' }]}>
-              {isStarted ? '⏸ Pause' : '▶ Start'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.navButton,
-              { backgroundColor: currentIndex < STRETCHES.length - 1 ? colors.surfaceSecondary : colors.success },
-            ]}
-            onPress={currentIndex < STRETCHES.length - 1 ? handleNext : onComplete}
-          >
-            <Text style={[styles.navButtonText, { color: '#FFF' }]}>
-              {currentIndex < STRETCHES.length - 1 ? 'Next →' : 'Done ✓'}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.navButton,
+                { backgroundColor: currentIndex < STRETCHES.length - 1 ? colors.surfaceSecondary : colors.success },
+              ]}
+              onPress={currentIndex < STRETCHES.length - 1 ? handleNext : onComplete}
+            >
+              <Text style={[styles.navButtonText, { color: '#FFF' }]}>
+                {currentIndex < STRETCHES.length - 1 ? 'Next →' : 'Done ✓'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
+    </Modal>
   );
 }
 
