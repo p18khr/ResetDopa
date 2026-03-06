@@ -256,52 +256,71 @@ function Dashboard({ navigation, route }) {
 
 
   const handleMoodSelect = async (moodId) => {
-    // Build user context for AI task selection
-    const recentTasks = [
-      ...(todayPicks[currentDay - 1] || []),
-      ...(todayPicks[currentDay - 2] || []),
-    ].slice(0, 6);
-    const recentUrgeEmotions = urges
-      .slice(-7)
-      .map(u => u.emotion)
-      .filter(Boolean);
-    const userContext = {
-      streak,
-      recentTasks,
-      recentUrgeEmotions,
-    };
+    try {
+      if (__DEV__) console.log('[Dashboard] Mood selected:', moodId);
 
-    // Generate tasks with AI selection (falls back to random if Groq unavailable)
-    const { allTasks, aiSelected } = await generateDailyTasks(currentDay, userProfile, moodId, userContext);
-    setTodayPicksForDay(currentDay, allTasks);
+      // Build user context for AI task selection
+      const recentTasks = [
+        ...(todayPicks[currentDay - 1] || []),
+        ...(todayPicks[currentDay - 2] || []),
+      ].slice(0, 6);
+      const recentUrgeEmotions = urges
+        .slice(-7)
+        .map(u => u.emotion)
+        .filter(Boolean);
+      const userContext = {
+        streak,
+        recentTasks,
+        recentUrgeEmotions,
+      };
 
-    const timestamp = new Date().toISOString();
-    setLastMoodCheckTime(timestamp);
+      // Generate tasks with AI selection (falls back to random if Groq unavailable)
+      const { allTasks, aiSelected } = await generateDailyTasks(currentDay, userProfile, moodId, userContext);
+      setTodayPicksForDay(currentDay, allTasks);
 
-    await setUserProfile({
-      ...userProfile,
-      lastMood: moodId,
-      lastMoodCheckTime: timestamp,
-      aiPickDate: aiSelected ? new Date().toDateString() : (userProfile?.aiPickDate || null),
-    });
+      const timestamp = new Date().toISOString();
+      setLastMoodCheckTime(timestamp);
 
-    setShowMoodPrompt(false);
+      await setUserProfile({
+        ...userProfile,
+        lastMood: moodId,
+        lastMoodCheckTime: timestamp,
+        aiPickDate: aiSelected ? new Date().toDateString() : (userProfile?.aiPickDate || null),
+      });
+
+      if (__DEV__) console.log('[Dashboard] Mood selection completed successfully');
+      setShowMoodPrompt(false);
+    } catch (error) {
+      console.error('[Dashboard] Error in handleMoodSelect:', error?.message || error);
+      // Still close modal to prevent user being stuck
+      setShowMoodPrompt(false);
+      // Optionally show user-friendly error (can add Alert if needed)
+    }
   };
 
   const handleMoodSkip = async () => {
-    const { allTasks } = await generateDailyTasks(currentDay, userProfile, 'good');
-    setTodayPicksForDay(currentDay, allTasks);
+    try {
+      if (__DEV__) console.log('[Dashboard] Mood skipped');
 
-    const timestamp = new Date().toISOString();
-    setLastMoodCheckTime(timestamp);
+      const { allTasks } = await generateDailyTasks(currentDay, userProfile, 'good');
+      setTodayPicksForDay(currentDay, allTasks);
 
-    await setUserProfile({
-      ...userProfile,
-      lastMood: 'good',
-      lastMoodCheckTime: timestamp,
-    });
+      const timestamp = new Date().toISOString();
+      setLastMoodCheckTime(timestamp);
 
-    setShowMoodPrompt(false);
+      await setUserProfile({
+        ...userProfile,
+        lastMood: 'good',
+        lastMoodCheckTime: timestamp,
+      });
+
+      if (__DEV__) console.log('[Dashboard] Mood skip completed successfully');
+      setShowMoodPrompt(false);
+    } catch (error) {
+      console.error('[Dashboard] Error in handleMoodSkip:', error?.message || error);
+      // Still close modal to prevent user being stuck
+      setShowMoodPrompt(false);
+    }
   };
 
   const loadProfile = async () => {

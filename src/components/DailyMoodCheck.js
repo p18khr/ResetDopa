@@ -36,13 +36,23 @@ export default function DailyMoodCheck({ visible, onMoodSelect, onSkip }) {
   }
 
   const handleSelectMood = async (moodId) => {
-    if (__DEV__) console.log('[DailyMoodCheck] Selected mood:', moodId);
-    // Log mood with context
-    await logMood(moodId);
+    try {
+      if (__DEV__) console.log('[DailyMoodCheck] Selected mood:', moodId);
 
-    // Notify parent component
-    if (onMoodSelect) {
-      onMoodSelect(moodId);
+      // Log mood with context
+      await logMood(moodId);
+      if (__DEV__) console.log('[DailyMoodCheck] Mood logged successfully');
+
+      // Notify parent component
+      if (onMoodSelect) {
+        onMoodSelect(moodId);
+      }
+    } catch (error) {
+      console.error('[DailyMoodCheck] Error logging mood:', error?.message || error);
+      // Still notify parent to prevent modal from getting stuck
+      if (onMoodSelect) {
+        onMoodSelect(moodId);
+      }
     }
   };
 
