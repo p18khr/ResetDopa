@@ -698,7 +698,14 @@ function Dashboard({ navigation, route }) {
           </View>
         </View>
         
-        <View style={[styles.statCard, styles.moodCard, { borderColor: moodColor, backgroundColor: colors.surfacePrimary }]}>
+        <TouchableOpacity
+          style={[styles.statCard, styles.moodCard, { borderColor: moodColor, backgroundColor: colors.surfacePrimary }]}
+          onPress={() => {
+            if (__DEV__) console.log('[Dashboard] Mood card tapped, opening mood modal');
+            setShowMoodPrompt(true);
+          }}
+          activeOpacity={0.7}
+        >
           <Text style={styles.moodEmoji}>{moodParsed.emoji}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Mood</Text>
           <Text style={[styles.statValue, { color: moodColor }]}>{moodParsed.label || 'No entry'}</Text>
@@ -708,7 +715,7 @@ function Dashboard({ navigation, route }) {
               <Text style={[styles.statTrendText, { color: trendColor }]}>{trendText}</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         <View style={[styles.statCard, { backgroundColor: colors.surfacePrimary }]}>
           <Text style={styles.statIcon}>📊</Text>
