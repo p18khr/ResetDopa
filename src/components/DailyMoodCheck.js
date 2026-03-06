@@ -20,20 +20,130 @@ export default function DailyMoodCheck({ visible, onMoodSelect, onSkip }) {
   // Debug logging
   if (__DEV__) {
     console.log('[DailyMoodCheck] Component function called with visible=', visible);
-  }
-  if (__DEV__ && visible) {
-    console.log('[DailyMoodCheck] Modal visible');
-    console.log('[DailyMoodCheck] MOOD_OPTIONS length:', MOOD_OPTIONS?.length);
-    console.log('[DailyMoodCheck] colors:', colors);
+    console.log('[DailyMoodCheck] colors object:', colors);
     console.log('[DailyMoodCheck] isDarkMode:', isDarkMode);
-    console.log('[DailyMoodCheck] Rendering modal component now');
   }
 
-  // Safety check: Ensure colors has required properties
-  if (!colors || !colors.background || !colors.text) {
-    console.error('[DailyMoodCheck] Invalid colors object:', colors);
+  if (__DEV__ && visible) {
+    console.log('[DailyMoodCheck] Modal is VISIBLE');
+    console.log('[DailyMoodCheck] MOOD_OPTIONS length:', MOOD_OPTIONS?.length);
+    console.log('[DailyMoodCheck] colors properties:', {
+      background: colors?.background,
+      text: colors?.text,
+      surfacePrimary: colors?.surfacePrimary,
+    });
+  }
+
+  // Safety check: Provide fallback colors if needed
+  const safeColors = colors || {
+    background: '#FFFFFF',
+    text: '#000000',
+    textSecondary: '#6B7280',
+    border: '#E5E7EB',
+    surfacePrimary: '#F3F4F6',
+  };
+
+  if (__DEV__) {
+    if (!colors) {
+      console.warn('[DailyMoodCheck] useTheme returned null/undefined, using fallback colors');
+    }
+  }
+
+  if (!MOOD_OPTIONS || MOOD_OPTIONS.length === 0) {
+    console.error('[DailyMoodCheck] MOOD_OPTIONS is empty or undefined!');
     return null;
   }
+
+  const getStyles = (isDarkMode, colors) => StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end'
+    },
+    modalContainer: {
+      width: '100%',
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      maxHeight: '85%',
+      paddingBottom: 20
+    },
+    header: {
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: 'center'
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 20
+    },
+    scrollView: {
+      maxHeight: 500
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 20
+    },
+    moodGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between'
+    },
+    moodCard: {
+      width: '48%',
+      backgroundColor: isDarkMode ? colors.surfacePrimary : '#FFFFFF',
+      borderRadius: 16,
+      padding: 16,
+      alignItems: 'center',
+      borderWidth: 2,
+      minHeight: 140,
+      marginBottom: 12
+    },
+    moodEmoji: {
+      fontSize: 40,
+      marginBottom: 8
+    },
+    moodLabel: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+      textAlign: 'center'
+    },
+    moodDescription: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 16
+    },
+    skipContainer: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.background
+    },
+    skipButton: {
+      height: 60,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingBottom: 8
+    },
+    skipButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary
+    }
+  });
 
   const handleSelectMood = async (moodId) => {
     try {
@@ -63,12 +173,7 @@ export default function DailyMoodCheck({ visible, onMoodSelect, onSkip }) {
     }
   };
 
-  const styles = getStyles(isDarkMode, colors);
-
-  if (!MOOD_OPTIONS || MOOD_OPTIONS.length === 0) {
-    console.error('[DailyMoodCheck] MOOD_OPTIONS is empty or undefined!');
-    return null;
-  }
+  const styles = getStyles(isDarkMode, safeColors);
 
   return (
     <Modal
@@ -126,94 +231,3 @@ export default function DailyMoodCheck({ visible, onMoodSelect, onSkip }) {
     </Modal>
   );
 }
-
-const getStyles = (isDarkMode, colors) => StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end'
-  },
-  modalContainer: {
-    width: '100%',
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '85%',
-    paddingBottom: 20
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-    textAlign: 'center'
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20
-  },
-  scrollView: {
-    maxHeight: 500
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 20
-  },
-  moodGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between'
-  },
-  moodCard: {
-    width: '48%',
-    backgroundColor: isDarkMode ? colors.surfacePrimary : '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    minHeight: 140,
-    marginBottom: 12
-  },
-  moodEmoji: {
-    fontSize: 40,
-    marginBottom: 8
-  },
-  moodLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
-    textAlign: 'center'
-  },
-  moodDescription: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 16
-  },
-  skipContainer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background
-  },
-  skipButton: {
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 8
-  },
-  skipButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary
-  }
-});
