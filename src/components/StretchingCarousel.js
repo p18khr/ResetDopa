@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Modal, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Modal, Animated, Image } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 const STRETCHES = [
@@ -10,6 +10,7 @@ const STRETCHES = [
     durationText: '30 seconds each direction',
     durationSeconds: 60,
     emoji: '🔄',
+    gifUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExcG1tNWZoNTljcjJzMHB1NXU5dmp5YzA0b2J0YmY0bDhyNmdudHY4ciZlcD12MV9naWZzX3NlYXJjaCZjdD1n/L4XmhbjtQBLapRFMi5/giphy.gif',
     instruction: 'Rotate your head in slow circles, one direction for 30 sec, then reverse',
   },
   {
@@ -19,6 +20,7 @@ const STRETCHES = [
     durationText: '10-15 reps',
     durationSeconds: 45,
     emoji: '⬆️',
+    gifUrl: 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWFzd3NzZHpsdXdyMGcxeWc0enV5OW1sY2llMjJieWVjamNpYmh1YSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/tZHD3LQOrBn0rSMxlk/giphy.gif',
     instruction: 'Pull shoulders up towards ears, hold briefly, then relax. Repeat smoothly.',
   },
   {
@@ -28,6 +30,7 @@ const STRETCHES = [
     durationText: '15 circles each direction',
     durationSeconds: 60,
     emoji: '⭕',
+    gifUrl: 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXp0bm9zeTg2djBxcjFuZmU0YnJxaDczeGZhZ2xjYXR0dzNrM255eCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PkoUdJKnL58UHfr4C9/giphy.gif',
     instruction: 'Extend arms out, make 15 small circles forward, then 15 large circles',
   },
   {
@@ -37,6 +40,7 @@ const STRETCHES = [
     durationText: 'Hold 30 seconds',
     durationSeconds: 30,
     emoji: '🙇',
+    gifUrl: 'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExcnUxdjJwYjg0OWk1bjRkcTRhdThoenBqNWMyaW1vNTBlMXo1dXA5byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/7fdmEVa2rwGBQFPoW4/giphy.gif',
     instruction: 'Bend from your hips, let your upper body fold down. Keep legs straight.',
   },
   {
@@ -46,6 +50,7 @@ const STRETCHES = [
     durationText: 'Hold 1 minute',
     durationSeconds: 60,
     emoji: '🧘',
+    gifUrl: 'https://media4.giphy.com/media/qXHefJkvwzWWLrmpAA/giphy.gif',
     instruction: 'Kneel on ground, sit hips back to heels, stretch arms forward on floor.',
   },
   {
@@ -55,6 +60,7 @@ const STRETCHES = [
     durationText: '30 sec per leg',
     durationSeconds: 60,
     emoji: '🦵',
+    gifUrl: 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbng3cmFoaGs2a2JmaDkzbnA1NWRobHpxZmNnNm8wMzBmM2NxbTNvdiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/QW9pbiH6LLWEL9Je6g/giphy.gif',
     instruction: 'Pull one foot toward your glute. Hold 30sec per leg. Stay balanced.',
   },
 ];
@@ -196,42 +202,11 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
         <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
           {/* Animated Stretch Visualization */}
           <View style={[styles.visualBox, { backgroundColor: colors.surfaceSecondary }]}>
-            {/* Neck Roll */}
-            {currentIndex === 0 && (
-              <Animated.View style={{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }}>
-                <View style={styles.circle} />
-              </Animated.View>
-            )}
-            {/* Shoulder Shrug */}
-            {currentIndex === 1 && (
-              <Animated.View style={{ transform: [{ translateY: moveAnim }] }}>
-                <View style={[styles.rectangle, { width: 80, height: 120 }]} />
-              </Animated.View>
-            )}
-            {/* Arm Circles */}
-            {currentIndex === 2 && (
-              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                <View style={styles.circleGroup} />
-              </Animated.View>
-            )}
-            {/* Forward Fold */}
-            {currentIndex === 3 && (
-              <Animated.View style={{ transform: [{ perspective: 1000 }, { rotateX: rotateAnim.interpolate({ inputRange: [0, 90], outputRange: ['0deg', '90deg'] }) }] }}>
-                <View style={[styles.rectangle, { width: 60, height: 100 }]} />
-              </Animated.View>
-            )}
-            {/* Child's Pose */}
-            {currentIndex === 4 && (
-              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                <View style={[styles.circle, { width: 100, height: 100 }]} />
-              </Animated.View>
-            )}
-            {/* Quad Stretch */}
-            {currentIndex === 5 && (
-              <Animated.View style={{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [-45, 0, 45], outputRange: ['-45deg', '0deg', '45deg'] }) }] }}>
-                <View style={[styles.rectangle, { width: 70, height: 110 }]} />
-              </Animated.View>
-            )}
+            <Image
+              source={{ uri: currentStretch.gifUrl }}
+              style={styles.gifImage}
+              resizeMode="contain"
+            />
           </View>
 
           {/* Stretch Name */}
@@ -369,6 +344,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     overflow: 'hidden',
+  },
+  gifImage: {
+    width: '100%',
+    height: '100%',
   },
   circle: {
     width: 80,
