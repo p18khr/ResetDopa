@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Modal, Animated, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Modal, Animated } from 'react-native';
+import { Image } from 'expo-image';
 import { useTheme } from '../context/ThemeContext';
 
 const STRETCHES = [
@@ -10,7 +11,7 @@ const STRETCHES = [
     durationText: '30 seconds each direction',
     durationSeconds: 60,
     emoji: '🔄',
-    gifUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExcG1tNWZoNTljcjJzMHB1NXU5dmp5YzA0b2J0YmY0bDhyNmdudHY4ciZlcD12MV9naWZzX3NlYXJjaCZjdD1n/L4XmhbjtQBLapRFMi5/giphy.gif',
+    gif: require('../../assets/stretches/neck-roll.gif'),
     instruction: 'Rotate your head in slow circles, one direction for 30 sec, then reverse',
   },
   {
@@ -20,7 +21,7 @@ const STRETCHES = [
     durationText: '10-15 reps',
     durationSeconds: 45,
     emoji: '⬆️',
-    gifUrl: 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWFzd3NzZHpsdXdyMGcxeWc0enV5OW1sY2llMjJieWVjamNpYmh1YSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/tZHD3LQOrBn0rSMxlk/giphy.gif',
+    gif: require('../../assets/stretches/shoulder-shrug.gif'),
     instruction: 'Pull shoulders up towards ears, hold briefly, then relax. Repeat smoothly.',
   },
   {
@@ -30,7 +31,7 @@ const STRETCHES = [
     durationText: '15 circles each direction',
     durationSeconds: 60,
     emoji: '⭕',
-    gifUrl: 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXp0bm9zeTg2djBxcjFuZmU0YnJxaDczeGZhZ2xjYXR0dzNrM255eCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PkoUdJKnL58UHfr4C9/giphy.gif',
+    gif: require('../../assets/stretches/arm-circles.gif'),
     instruction: 'Extend arms out, make 15 small circles forward, then 15 large circles',
   },
   {
@@ -40,7 +41,7 @@ const STRETCHES = [
     durationText: 'Hold 30 seconds',
     durationSeconds: 30,
     emoji: '🙇',
-    gifUrl: 'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExcnUxdjJwYjg0OWk1bjRkcTRhdThoenBqNWMyaW1vNTBlMXo1dXA5byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/7fdmEVa2rwGBQFPoW4/giphy.gif',
+    gif: require('../../assets/stretches/forward-fold.gif'),
     instruction: 'Bend from your hips, let your upper body fold down. Keep legs straight.',
   },
   {
@@ -50,7 +51,7 @@ const STRETCHES = [
     durationText: 'Hold 1 minute',
     durationSeconds: 60,
     emoji: '🧘',
-    gifUrl: 'https://media4.giphy.com/media/qXHefJkvwzWWLrmpAA/giphy.gif',
+    gif: require('../../assets/stretches/childs-pose.gif'),
     instruction: 'Kneel on ground, sit hips back to heels, stretch arms forward on floor.',
   },
   {
@@ -60,7 +61,7 @@ const STRETCHES = [
     durationText: '30 sec per leg',
     durationSeconds: 60,
     emoji: '🦵',
-    gifUrl: 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbng3cmFoaGs2a2JmaDkzbnA1NWRobHpxZmNnNm8wMzBmM2NxbTNvdiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/QW9pbiH6LLWEL9Je6g/giphy.gif',
+    gif: require('../../assets/stretches/quad-stretch.gif'),
     instruction: 'Pull one foot toward your glute. Hold 30sec per leg. Stay balanced.',
   },
 ];
@@ -203,9 +204,9 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
           {/* Animated Stretch Visualization */}
           <View style={[styles.visualBox, { backgroundColor: colors.surfaceSecondary }]}>
             <Image
-              source={{ uri: currentStretch.gifUrl }}
+              source={currentStretch.gif}
               style={styles.gifImage}
-              resizeMode="contain"
+              contentFit="contain"
             />
           </View>
 
@@ -337,9 +338,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   visualBox: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: '100%',
+    height: 220,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
