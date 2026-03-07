@@ -33,7 +33,7 @@
     },
     "android": {
       "package": "com.dopareset.app",
-      "versionCode": 12,
+      "versionCode": 13,
       "jsEngine": "hermes",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
