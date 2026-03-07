@@ -214,7 +214,7 @@ export default function StretchingCarousel({ isVisible, onClose, onComplete }) {
           <Text style={[styles.stretchName, { color: colors.text }]}>{currentStretch.name}</Text>
 
           {/* Instruction Box */}
-          <View style={[styles.instructionBox, { backgroundColor: colors.accent, opacity: 0.1 }]}>
+          <View style={[styles.instructionBox, { backgroundColor: isDarkMode ? 'rgba(76,175,80,0.15)' : 'rgba(76,175,80,0.08)' }]}>
             <Text style={[styles.instruction, { color: colors.text }]}>
               📝 {currentStretch.instruction}
             </Text>
