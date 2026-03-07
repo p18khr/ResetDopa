@@ -501,7 +501,7 @@ function Dashboard({ navigation, route }) {
 
   const selectedAvatarData = AVATAR_OPTIONS.find(a => a.id === avatar);
   const adherence = getAdherence ? getAdherence(adherenceWindowDays) : 0;
-  const adherencePct = Math.round(adherence * 100);
+  const adherencePct = Math.round(Math.min(1, adherence) * 100);
   let adherenceMsg = 'Start tiny: lock 1 win.';
   let adherenceColor = '#10B981';
   if (adherence >= 0.8) { adherenceMsg = 'Momentum strong — keep compounding.'; adherenceColor = '#10B981'; }
