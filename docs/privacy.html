@@ -266,10 +266,16 @@
             <h3>Information You Provide</h3>
             <ul>
                 <li><strong>Email and Authentication Data</strong> — Your email address and password (securely handled by Firebase Authentication)</li>
-                <li><strong>Usage Data</strong> — Task completions, urge logs, streak information, mood entries, badge progress</li>
+                <li><strong>Health Data</strong> — Mood entries, urge logs, task completions, and daily activity tracking for dopamine management and habit building</li>
                 <li><strong>Optional Data</strong> — Profile information, preferences, feedback</li>
             </ul>
-            <h3>Automatically Collected</h3>
+            <h3>Health Data Automatically Collected</h3>
+            <ul>
+                <li><strong>Step Count &amp; Activity Recognition</strong> — Your daily step count via ACTIVITY_RECOGNITION and BODY_SENSORS permissions to track physical activity and encourage healthy movement habits</li>
+                <li><strong>Movement &amp; Motion Data</strong> — Device accelerometer and motion sensors to detect activity patterns</li>
+                <li><strong>Health-Related Usage</strong> — When and how you use the app's wellness features (mood logging, urge tracking, breathing exercises, stretching guides)</li>
+            </ul>
+            <h3>Other Automatically Collected Data</h3>
             <ul>
                 <li><strong>Device Information</strong> — Device type, operating system, app version</li>
                 <li><strong>Analytics Data</strong> — Screens visited, features used, session duration</li>
@@ -302,7 +308,35 @@
         </div>
 
         <div class="section">
-            <h2>3. Data Storage &amp; Security</h2>
+            <h2>2.1 Health Data Usage &amp; Purpose</h2>
+            <p><strong>What health data we collect:</strong> Mood entries, urge logs, mood-triggered task recommendations, step/activity counts, and usage of wellness features (breathing exercises, stretching guides, meditation timers).</p>
+            <p><strong>Why we collect it:</strong> Health data is essential to ResetDopa's core functionality — providing personalized dopamine reset support, tracking recovery progress, and recommending beneficial activities based on your mood and activity level.</p>
+            <p><strong>How we use it:</strong></p>
+            <ul>
+                <li>Personalize your daily recommendations based on mood and activity</li>
+                <li>Track your streaks, adherence, and progress over time</li>
+                <li>Suggest healthy movement (stretching) when you're sedentary</li>
+                <li>Generate wellness insights and statistics</li>
+                <li>Improve the app's ability to support your recovery journey</li>
+            </ul>
+            <p><strong>Who has access:</strong> Only you and your account have access to your health data. We never share or sell your health information to third parties, marketers, or research organizations without your explicit written consent.</p>
+        </div>
+
+        <div class="section">
+            <h2>3. Permissions &amp; Sensor Access</h2>
+            <p>ResetDopa requests the following permissions to provide health and wellness features:</p>
+            <ul>
+                <li><strong>ACTIVITY_RECOGNITION</strong> — Access to step count and daily activity data. Used to track physical movement and encourage healthy habits as part of your dopamine reset journey.</li>
+                <li><strong>BODY_SENSORS</strong> — Access to accelerometer and motion sensors. Used to detect physical activity patterns and suggest movement-based exercises (stretching) when recommended.</li>
+                <li><strong>SCHEDULE_EXACT_ALARM</strong> — Ability to set daily reminders for mood logging and task completion.</li>
+                <li><strong>POST_NOTIFICATIONS</strong> — Permission to send notifications for reminders, task suggestions, and achievement badges.</li>
+                <li><strong>RECEIVE_BOOT_COMPLETED</strong> — Permission to restart reminders after device reboot to maintain consistent habit tracking.</li>
+            </ul>
+            <p><strong>You can revoke these permissions at any time</strong> through your device's Settings &gt; Apps &gt; ResetDopa &gt; Permissions. Revoking permissions will limit app functionality but will not delete your data.</p>
+        </div>
+
+        <div class="section">
+            <h2>4. Data Storage &amp; Security</h2>
             <h3>Where Your Data Is Stored</h3>
             <ul>
                 <li><strong>Authentication</strong> — Firebase Authentication (Google/Firebase managed)</li>
@@ -320,14 +354,14 @@
         </div>
 
         <div class="section">
-            <h2>4. Data Retention &amp; Deletion</h2>
+            <h2>5. Data Retention &amp; Deletion</h2>
             <p>We retain your data as long as your account is active, including task completions, streak history, mood and urge logs, and badge data.</p>
             <p>You may request deletion of your account at any time through the Settings screen. All personal data is permanently deleted within 30 days. Deletion is irreversible.</p>
             <p>If we receive a legal request to preserve data, we may retain information longer than our normal retention period to comply with legal obligations.</p>
         </div>
 
         <div class="section">
-            <h2>5. Third-Party Services</h2>
+            <h2>6. Third-Party Services</h2>
             <ul>
                 <li><strong>Firebase (Google)</strong> — Authentication, app data storage. <a href="https://policies.google.com/privacy" target="_blank">Google Privacy Policy</a></li>
                 <li><strong>Expo</strong> — Build and deployment platform. <a href="https://expo.dev/privacy" target="_blank">Expo Privacy Policy</a></li>
@@ -336,12 +370,12 @@
         </div>
 
         <div class="section">
-            <h2>6. Children's Privacy</h2>
+            <h2>7. Children's Privacy</h2>
             <p>ResetDopa is not intended for children under 13. We do not knowingly collect personal information from children under 13. If we become aware of such collection, we will delete the data and terminate the account.</p>
         </div>
 
         <div class="section">
-            <h2>7. Your Privacy Rights</h2>
+            <h2>8. Your Privacy Rights</h2>
             <ul>
                 <li><strong>Access</strong> — Request a copy of your data through the App or by email</li>
                 <li><strong>Correction</strong> — Update your profile information in App Settings</li>
@@ -351,22 +385,22 @@
         </div>
 
         <div class="section">
-            <h2>8. GDPR Compliance (EU Users)</h2>
+            <h2>9. GDPR Compliance (EU Users)</h2>
             <p>If you are located in the European Union, you have additional rights under GDPR, including right to access, correct, delete, restrict processing, data portability, and object to processing. You may also lodge a complaint with your local data protection authority.</p>
         </div>
 
         <div class="section">
-            <h2>9. California Consumer Privacy Act (CCPA)</h2>
+            <h2>10. California Consumer Privacy Act (CCPA)</h2>
             <p>If you are a California resident, you have the right to know what personal information is collected, know whether your information is sold or disclosed, opt out of the sale of your information, access your information, and request deletion. ResetDopa does NOT sell your personal information to third parties.</p>
         </div>
 
         <div class="section">
-            <h2>10. Changes to This Policy</h2>
+            <h2>11. Changes to This Policy</h2>
             <p>We may update this Privacy Policy from time to time. When we do, we will notify you by email or by posting a notice in the App. Continued use of the App after changes constitutes acceptance.</p>
         </div>
 
         <div class="section">
-            <h2>11. Contact Us</h2>
+            <h2>12. Contact Us</h2>
             <ul>
                 <li><strong>Email</strong> — <a href="mailto:privacy@resetdopa.com">privacy@resetdopa.com</a></li>
                 <li><strong>Website</strong> — <a href="https://resetdopa.com">resetdopa.com</a></li>
