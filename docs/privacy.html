@@ -66,6 +66,22 @@
         .nav-links a:hover { color: var(--text); }
         .nav-links a.active { color: var(--accent-light); }
 
+        .nav-download {
+            background: var(--accent);
+            color: white !important;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .nav-download:hover {
+            color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
         /* PAGE HEADER */
         .page-header {
             border-bottom: 1px solid var(--border);
@@ -246,6 +262,7 @@
             <a href="privacy.html" class="active">Privacy</a>
             <a href="terms.html">Terms</a>
             <a href="mailto:support@resetdopa.com">Contact</a>
+            <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" class="nav-download">Download App</a>
         </div>
     </nav>
 

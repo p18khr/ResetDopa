@@ -106,6 +106,13 @@
             color: var(--accent-light);
             margin-bottom: 32px;
             letter-spacing: 0.5px;
+            text-decoration: none;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .hero-badge:hover {
+            border-color: var(--accent-light);
+            background: var(--accent-glow);
         }
 
         .hero-badge-dot {
@@ -377,14 +384,14 @@
 
     <!-- HERO -->
     <section class="hero">
-        <div class="hero-badge">
+        <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" class="hero-badge">
             <span class="hero-badge-dot"></span>
-            Coming Soon on Google Play
-        </div>
+            Now on Google Play
+        </a>
         <h1>Reset Your <span class="highlight">Dopamine.</span><br>Reclaim Your Focus.</h1>
         <p class="hero-sub">A science-backed habit tracker that adapts to your mood, helps you log urges, and guides you through a structured dopamine detox — one day at a time.</p>
         <div class="hero-cta">
-            <a href="mailto:support@resetdopa.com" class="btn-primary">Get in Touch</a>
+            <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" class="btn-primary">Download on Google Play</a>
             <a href="privacy.html" class="btn-ghost">Privacy Policy</a>
         </div>
     </section>
