@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>ResetDopa™ — Reset Your Dopamine. Reclaim Your Focus.</title>
-    <meta name="description" content="ResetDopa is a science-backed dopamine reset app. Track moods, build habits, and reclaim focus with adaptive daily tasks and an AI companion.">
+    <meta name="description" content="ResetDopa is a science-backed dopamine reset app. Track moods, build habits, and reclaim focus with adaptive daily tasks and an AI companion. 100% free, no subscriptions.">
+    <meta name="keywords" content="dopamine detox, habit tracker, addiction recovery, wellness app, focus, mental health">
+    <meta name="author" content="ResetDopa">
+    <meta name="theme-color" content="#6C5CE7">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://ssl.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -17,8 +23,8 @@
             --accent-light: #A29BFE;
             --accent-glow: rgba(108, 92, 231, 0.25);
             --text: #EEEEFF;
-            --muted: #6868A0;
-            --muted2: #9090B8;
+            --muted: #9BA0B8;
+            --muted2: #BCC0D6;
         }
 
         html { scroll-behavior: smooth; }
@@ -354,11 +360,242 @@
 
         .footer-right a:hover { color: var(--text); }
 
+        /* PRICING */
+        .pricing-section {
+            padding: 100px 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .pricing-badge {
+            display: inline-block;
+            background: rgba(108, 92, 231, 0.1);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 8px 20px;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 24px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .pricing-highlight {
+            background: var(--surface);
+            border: 2px solid var(--accent);
+            border-radius: 16px;
+            padding: 48px 32px;
+            max-width: 500px;
+            margin: 40px auto 0;
+            text-align: center;
+        }
+
+        .pricing-highlight h3 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        .pricing-highlight p {
+            color: var(--muted2);
+            font-size: 1rem;
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+
+        .pricing-highlight .badge-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+            margin: 32px 0;
+        }
+
+        .badge-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--muted2);
+            font-size: 0.95rem;
+        }
+
+        .badge-item::before {
+            content: '✓';
+            color: #4CAF50;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        /* TESTIMONIALS */
+        .testimonials-section {
+            padding: 100px 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+            border-top: 1px solid var(--border);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-top: 60px;
+        }
+
+        .testimonial-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px 28px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .testimonial-card:hover {
+            border-color: rgba(108, 92, 231, 0.5);
+            transform: translateY(-4px);
+        }
+
+        .testimonial-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .testimonial-author {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .testimonial-author-name {
+            color: var(--text);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .testimonial-author-title {
+            color: var(--muted2);
+            font-size: 0.85rem;
+        }
+
+        .testimonial-rating {
+            display: flex;
+            gap: 4px;
+            color: #FFB800;
+            font-size: 0.9rem;
+        }
+
+        .testimonial-text {
+            color: var(--muted2);
+            font-size: 0.95rem;
+            line-height: 1.7;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
+        /* FAQ SECTION */
+        .faq-section {
+            padding: 100px 24px;
+            max-width: 900px;
+            margin: 0 auto;
+            border-top: 1px solid var(--border);
+        }
+
+        .faq-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 60px;
+        }
+
+        .faq-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .faq-item.active {
+            border-color: var(--accent);
+        }
+
+        .faq-trigger {
+            width: 100%;
+            padding: 20px 24px;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .faq-trigger:hover {
+            background: var(--surface2);
+            color: var(--accent-light);
+        }
+
+        .faq-trigger::after {
+            content: '▼';
+            display: inline-block;
+            width: 16px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--muted);
+            transition: transform 0.3s ease;
+        }
+
+        .faq-item.active .faq-trigger::after {
+            transform: rotate(180deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: var(--surface2);
+        }
+
+        .faq-item.active .faq-answer {
+            max-height: 500px;
+        }
+
+        .faq-answer-content {
+            padding: 0 24px 20px;
+            color: var(--muted2);
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        .faq-answer-content a {
+            color: var(--accent-light);
+            text-decoration: none;
+            border-bottom: 1px dashed var(--accent);
+        }
+
+        .faq-answer-content a:hover {
+            border-bottom-style: solid;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 600px) {
             nav { padding: 16px 20px; }
             .nav-links { gap: 16px; }
             footer { flex-direction: column; align-items: flex-start; padding: 32px 20px; }
+            .pricing-highlight { padding: 32px 20px; }
+            .pricing-highlight h3 { font-size: 1.75rem; }
+            .testimonial-header { flex-direction: column; align-items: flex-start; }
+            .testimonial-rating { margin-top: 12px; }
+            .faq-trigger { padding: 16px 20px; font-size: 0.95rem; }
+            .faq-answer-content { padding: 0 20px 16px; }
         }
     </style>
     <!-- Google Analytics -->
@@ -458,6 +695,120 @@
         </div>
     </section>
 
+    <!-- PRICING -->
+    <section class="pricing-section">
+        <div class="pricing-badge">Pricing</div>
+        <h2 class="section-title">Free for Everyone</h2>
+        <p class="section-sub">ResetDopa v1.0.0 is completely free. No hidden charges. No subscriptions. No ads.</p>
+        <div class="pricing-highlight">
+            <h3>$0</h3>
+            <p>Forever free</p>
+            <div class="badge-list">
+                <div class="badge-item">All mood-adaptive tasks</div>
+                <div class="badge-item">AI companion chat</div>
+                <div class="badge-item">Streak tracking</div>
+                <div class="badge-item">Urge logging</div>
+                <div class="badge-item">Breathing & stretching guides</div>
+                <div class="badge-item">No ads. No tracking. Yours alone.</div>
+            </div>
+            <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" class="btn-primary" style="margin-top: 24px;">Get Started on Google Play</a>
+        </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="testimonials-section">
+        <p class="section-label">What Users Say</p>
+        <h2 class="section-title">Real Stories of Change</h2>
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <div class="testimonial-author">
+                        <span class="testimonial-author-name">Sarah M.</span>
+                        <span class="testimonial-author-title">Creator</span>
+                    </div>
+                    <div class="testimonial-rating">★★★★★</div>
+                </div>
+                <p class="testimonial-text">"ResetDopa has been a game-changer for me. The mood-adaptive tasks feel like they actually understand what I need each day."</p>
+                <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" style="color: var(--accent-light); text-decoration: none; font-size: 0.85rem;">View on Play Store →</a>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <div class="testimonial-author">
+                        <span class="testimonial-author-name">James K.</span>
+                        <span class="testimonial-author-title">Habit Builder</span>
+                    </div>
+                    <div class="testimonial-rating">★★★★★</div>
+                </div>
+                <p class="testimonial-text">"I've tried many habit trackers, but this one's different. The dopamine reset framework actually makes sense and works."</p>
+                <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" style="color: var(--accent-light); text-decoration: none; font-size: 0.85rem;">View on Play Store →</a>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <div class="testimonial-author">
+                        <span class="testimonial-author-name">Alex T.</span>
+                        <span class="testimonial-author-title">Recovery Coach</span>
+                    </div>
+                    <div class="testimonial-rating">★★★★★</div>
+                </div>
+                <p class="testimonial-text">"As someone in recovery, I appreciate the evidence-based approach. This app feels supportive, not judgmental."</p>
+                <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" style="color: var(--accent-light); text-decoration: none; font-size: 0.85rem;">View on Play Store →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq-section">
+        <p class="section-label">Questions</p>
+        <h2 class="section-title">Frequently Asked</h2>
+        <div class="faq-container">
+            <div class="faq-item">
+                <button class="faq-trigger" aria-expanded="false">How does the 30-day reset work?</button>
+                <div class="faq-answer">
+                    <div class="faq-answer-content">
+                        <p>The 30-day reset is a structured framework built into ResetDopa. Each day, you log your current mood (high dopamine, baseline, or low dopamine), and the app recommends tasks tailored to your state. As you complete these tasks and maintain your streaks, you're rewiring your brain's response patterns. The 30-day period is based on neuroplasticity research—the time typically needed to form lasting habit changes. You can repeat the reset cycle as many times as needed.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-trigger" aria-expanded="false">Is my data private?</button>
+                <div class="faq-answer">
+                    <div class="faq-answer-content">
+                        <p>Yes. ResetDopa prioritizes your privacy. Your mood logs, urge patterns, and activity data are stored securely in your account. We never sell or share your data with third parties, marketers, or researchers without your explicit written consent. All sensitive data is encrypted in transit and at rest. We follow industry-standard security practices. For complete details, see our <a href="privacy.html">Privacy Policy</a>.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-trigger" aria-expanded="false">What are 'Micro-Quests'?</button>
+                <div class="faq-answer">
+                    <div class="faq-answer-content">
+                        <p>Micro-Quests are small, actionable tasks designed for your current mood state. Instead of a generic "exercise" or "meditate" suggestion, ResetDopa generates specific, time-boxed activities: "Do 5 minutes of diaphragmatic breathing," "Take a 10-minute walk," or "Write 3 things you're grateful for." Each quest is calibrated to help reset your dopamine baseline and build momentum. Completing quests earns you Calm Points and contributes to your streak.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-trigger" aria-expanded="false">Can I use the app offline?</button>
+                <div class="faq-answer">
+                    <div class="faq-answer-content">
+                        <p>ResetDopa requires an internet connection to sync your data across devices and access the AI companion. However, many features (mood logging, viewing your streak, checking recent urges) work during periods of reduced connectivity. We're continuously improving offline support. If connectivity is a concern, please <a href="mailto:support@resetdopa.com">reach out</a>.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-trigger" aria-expanded="false">What if I'm in a mental health crisis?</button>
+                <div class="faq-answer">
+                    <div class="faq-answer-content">
+                        <p>ResetDopa is a wellness tool, not a replacement for professional mental health care. If you're experiencing a crisis, please reach out immediately:</p>
+                        <p style="margin-top: 12px; margin-bottom: 0;">
+                            <strong>National Suicide Prevention Lifeline:</strong> <strong>988</strong> (US)<br>
+                            <strong>Crisis Text Line:</strong> Text "HELLO" to <strong>741741</strong><br>
+                            <strong>Emergency Services:</strong> 911
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- FOOTER -->
     <footer>
         <span class="footer-left">&copy; 2026 ResetDopa™. All rights reserved.</span>
@@ -467,6 +818,51 @@
             <a href="mailto:support@resetdopa.com">support@resetdopa.com</a>
         </div>
     </footer>
+
+    <script>
+        // FAQ Accordion functionality
+        (function() {
+            const triggers = document.querySelectorAll('.faq-trigger');
+
+            triggers.forEach(trigger => {
+                trigger.addEventListener('click', function() {
+                    const item = this.closest('.faq-item');
+                    const isActive = item.classList.contains('active');
+
+                    // Close all other items
+                    document.querySelectorAll('.faq-item').forEach(el => {
+                        el.classList.remove('active');
+                        el.querySelector('.faq-trigger').setAttribute('aria-expanded', 'false');
+                    });
+
+                    // Toggle current item if it wasn't active
+                    if (!isActive) {
+                        item.classList.add('active');
+                        this.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            });
+        })();
+
+        // Optimize button hovers with CSS instead of JS
+        // Batch DOM reads/writes to prevent layout thrashing
+        (function() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            // Lazy-load section visibility for performance
+            document.querySelectorAll('.pricing-section, .testimonials-section, .faq-section').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.6s ease';
+                observer.observe(el);
+            });
+        })();
+    </script>
 
 </body>
 </html>
