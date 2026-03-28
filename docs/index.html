@@ -429,72 +429,6 @@
             font-size: 1.2rem;
         }
 
-        /* TESTIMONIALS */
-        .testimonials-section {
-            padding: 100px 24px;
-            max-width: 1100px;
-            margin: 0 auto;
-            border-top: 1px solid var(--border);
-        }
-
-        .testimonials-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
-            margin-top: 60px;
-        }
-
-        .testimonial-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 32px 28px;
-            transition: border-color 0.2s, transform 0.2s;
-        }
-
-        .testimonial-card:hover {
-            border-color: rgba(108, 92, 231, 0.5);
-            transform: translateY(-4px);
-        }
-
-        .testimonial-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-
-        .testimonial-author {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .testimonial-author-name {
-            color: var(--text);
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-
-        .testimonial-author-title {
-            color: var(--muted2);
-            font-size: 0.85rem;
-        }
-
-        .testimonial-rating {
-            display: flex;
-            gap: 4px;
-            color: #FFB800;
-            font-size: 0.9rem;
-        }
-
-        .testimonial-text {
-            color: var(--muted2);
-            font-size: 0.95rem;
-            line-height: 1.7;
-            font-style: italic;
-            margin-bottom: 20px;
-        }
-
         /* FAQ SECTION */
         .faq-section {
             padding: 100px 24px;
@@ -592,8 +526,6 @@
             footer { flex-direction: column; align-items: flex-start; padding: 32px 20px; }
             .pricing-highlight { padding: 32px 20px; }
             .pricing-highlight h3 { font-size: 1.75rem; }
-            .testimonial-header { flex-direction: column; align-items: flex-start; }
-            .testimonial-rating { margin-top: 12px; }
             .faq-trigger { padding: 16px 20px; font-size: 0.95rem; }
             .faq-answer-content { padding: 0 20px 16px; }
         }
@@ -715,47 +647,6 @@
         </div>
     </section>
 
-    <!-- TESTIMONIALS -->
-    <section class="testimonials-section">
-        <p class="section-label">What Users Say</p>
-        <h2 class="section-title">Real Stories of Change</h2>
-        <div class="testimonials-grid">
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <div class="testimonial-author">
-                        <span class="testimonial-author-name">Sarah M.</span>
-                        <span class="testimonial-author-title">Creator</span>
-                    </div>
-                    <div class="testimonial-rating">★★★★★</div>
-                </div>
-                <p class="testimonial-text">"ResetDopa has been a game-changer for me. The mood-adaptive tasks feel like they actually understand what I need each day."</p>
-                <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" style="color: var(--accent-light); text-decoration: none; font-size: 0.85rem;">View on Play Store →</a>
-            </div>
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <div class="testimonial-author">
-                        <span class="testimonial-author-name">James K.</span>
-                        <span class="testimonial-author-title">Habit Builder</span>
-                    </div>
-                    <div class="testimonial-rating">★★★★★</div>
-                </div>
-                <p class="testimonial-text">"I've tried many habit trackers, but this one's different. The dopamine reset framework actually makes sense and works."</p>
-                <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" style="color: var(--accent-light); text-decoration: none; font-size: 0.85rem;">View on Play Store →</a>
-            </div>
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <div class="testimonial-author">
-                        <span class="testimonial-author-name">Alex T.</span>
-                        <span class="testimonial-author-title">Recovery Coach</span>
-                    </div>
-                    <div class="testimonial-rating">★★★★★</div>
-                </div>
-                <p class="testimonial-text">"As someone in recovery, I appreciate the evidence-based approach. This app feels supportive, not judgmental."</p>
-                <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" target="_blank" rel="noopener" style="color: var(--accent-light); text-decoration: none; font-size: 0.85rem;">View on Play Store →</a>
-            </div>
-        </div>
-    </section>
-
     <!-- FAQ -->
     <section class="faq-section">
         <p class="section-label">Questions</p>
@@ -799,7 +690,13 @@
                     <div class="faq-answer-content">
                         <p>ResetDopa is a wellness tool, not a replacement for professional mental health care. If you're experiencing a crisis, please reach out immediately:</p>
                         <p style="margin-top: 12px; margin-bottom: 0;">
-                            <strong>National Suicide Prevention Lifeline:</strong> <strong>988</strong> (US)<br>
+                            <strong>India:</strong><br>
+                            <strong>AASRA (24/7 Helpline):</strong> <strong>9820466726</strong><br>
+                            <strong>iCall Emotional Support:</strong> <strong>9152987821</strong><br>
+                            <strong>Vandrevala Foundation:</strong> <strong>9999 77 8888</strong><br>
+                            <strong>IMHANS Crisis Intervention:</strong> <strong>011-4141 3760</strong><br><br>
+                            <strong>United States:</strong><br>
+                            <strong>National Suicide Prevention Lifeline:</strong> <strong>988</strong><br>
                             <strong>Crisis Text Line:</strong> Text "HELLO" to <strong>741741</strong><br>
                             <strong>Emergency Services:</strong> 911
                         </p>
@@ -856,7 +753,7 @@
             }, { threshold: 0.1 });
 
             // Lazy-load section visibility for performance
-            document.querySelectorAll('.pricing-section, .testimonials-section, .faq-section').forEach(el => {
+            document.querySelectorAll('.pricing-section, .faq-section').forEach(el => {
                 el.style.opacity = '0';
                 el.style.transition = 'opacity 0.6s ease';
                 observer.observe(el);
