@@ -1,23 +1,19 @@
 package com.doparesetupdopa
 
 import android.content.Context
-import android.content.IntentFilter
-import android.content.BroadcastReceiver
-import android.content.Intent
 import android.app.admin.DevicePolicyManager
-import android.app.admin.DeviceAdminReceiver
 import android.content.ComponentName
 import com.facebook.react.bridge.*
 
 /**
  * AppBlockerModule - React Native bridge to native app blocking
+ * Simplified version focusing on core functionality
  */
 class AppBlockerModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
 
   private var blockedApps = mutableSetOf<String>()
   private val context = reactContext
-  private var isBroadcastRegistered = false
 
   override fun getName() = "AppBlocker"
 
@@ -37,11 +33,6 @@ class AppBlockerModule(reactContext: ReactApplicationContext) :
       // Save to SharedPreferences for persistence
       val sharedPref = context.getSharedPreferences("doparesetupdopa", Context.MODE_PRIVATE)
       sharedPref.edit().putStringSet("blockedApps", blockedApps).apply()
-
-      // Start monitoring if not already
-      if (!isBroadcastRegistered && blockedApps.isNotEmpty()) {
-        startMonitoring()
-      }
 
       promise.resolve(mapOf(
         "success" to true,
@@ -89,47 +80,24 @@ class AppBlockerModule(reactContext: ReactApplicationContext) :
   }
 
   /**
+   * Request admin permissions (stub for now)
+   */
+  @ReactMethod
+  fun requestAdminPermission() {
+    // This will be triggered by the AccessibilityService or DeviceAdminReceiver
+  }
+
+  /**
    * Stop monitoring apps
    */
   @ReactMethod
   fun stopMonitoring(promise: Promise) {
     try {
       blockedApps.clear()
-
-      if (isBroadcastRegistered) {
-        context.unregisterReceiver(appBlockerReceiver)
-        isBroadcastRegistered = false
-      }
-
       promise.resolve(mapOf("success" to true))
     } catch (e: Exception) {
       promise.reject("stopMonitoring_error", e.message, e)
     }
   }
-
-  /**
-   * Start monitoring app launches
-   */
-  private fun startMonitoring() {
-    try {
-      val intentFilter = IntentFilter()
-      intentFilter.addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
-      intentFilter.addAction("com.doparesetupdopa.BLOCK_APP_LAUNCH")
-
-      context.registerReceiver(appBlockerReceiver, intentFilter)
-      isBroadcastRegistered = true
-    } catch (e: Exception) {
-      e.printStackTrace()
-    }
-  }
-
-  /**
-   * Broadcast receiver for app launch interception
-   */
-  private val appBlockerReceiver = object : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-      // This will be used by AppBlockerReceiver device admin
-      // to handle blocked app launches
-    }
-  }
 }
+
