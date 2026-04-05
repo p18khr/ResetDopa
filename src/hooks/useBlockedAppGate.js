@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import VagusGatekeeper from './VagusGatekeeper';
+import VagusGatekeeper from '../screens/VagusGatekeeper';
 
 /**
  * BlockedAppGate: Intercepts navigation to blocked apps/content
@@ -35,6 +35,17 @@ export function useBlockedAppGate() {
    * Called when user closes/cancels the gate (e.g., "Stay Calm" button)
    */
   const handleGateCancel = () => {
+    setShowGate(false);
+    setPendingNavigation(null);
+  };
+
+  /**
+   * Called when user completes the gate (e.g., "Still Proceed" button)
+   */
+  const handleGateComplete = () => {
+    if (pendingNavigation) {
+      pendingNavigation();
+    }
     setShowGate(false);
     setPendingNavigation(null);
   };
