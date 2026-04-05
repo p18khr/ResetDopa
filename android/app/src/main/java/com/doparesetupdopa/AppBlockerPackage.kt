@@ -26,7 +26,7 @@ class AppBlockerPackage : TurboReactPackage() {
           override fun hasConstants(): Boolean = false
           override fun isCxxModule(): Boolean = false
           override fun isNativeModule(): Boolean = true
-          override fun isTurboModule(): Boolean = true
+          override fun isTurboModule(): Boolean = false
         }
       )
     }
