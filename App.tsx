@@ -29,9 +29,11 @@ import Settings from './src/screens/Settings';
 import Profile from './src/screens/Profile';
 import LearnLaws from './src/screens/LearnLaws';
 import LegalAcceptanceScreen from './src/screens/LegalAcceptanceScreen';
+import PersonaSelectionScreen from './src/screens/PersonaSelectionScreen';
 import DiagnosticScreen from './src/screens/DiagnosticScreen';
 import BundleRecommendationScreen from './src/screens/BundleRecommendationScreen';
 import ImmediateWinScreen from './src/screens/ImmediateWinScreen';
+import BlockedAppsManager from './src/screens/BlockedAppsManager';
 
 const navigationRef = React.createRef<any>();
 
@@ -148,10 +150,16 @@ function AppNavigator(): React.ReactElement {
             <Stack.Screen name="Settings" component={Settings} />
             <Stack.Screen name="Profile" component={Profile} />
             <Stack.Screen name="LearnLaws" component={LearnLaws} />
+            <Stack.Screen
+              name="BlockedApps"
+              component={BlockedAppsManager}
+              options={{ title: 'Content Blockers' }}
+            />
           </>
         ) : (
           // User hasn't completed onboarding - show onboarding flow
           <>
+            <Stack.Screen name="PersonaSelection" component={PersonaSelectionScreen} />
             <Stack.Screen name="Diagnostic" component={DiagnosticScreen} />
             <Stack.Screen name="BundleRecommendation" component={BundleRecommendationScreen} />
             <Stack.Screen name="ImmediateWin" component={ImmediateWinScreen} />

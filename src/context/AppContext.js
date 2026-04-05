@@ -98,10 +98,12 @@ export function AppProvider({ children }) {
 
   // User profile for personalized experience
   const [userProfile, setUserProfile] = useState({
-    coreHabits: [],          // 3 fixed tasks from onboarding
+    coreHabits: [],          // 5 fixed tasks from onboarding
     diagnosticAnswers: {},   // Q1, Q2 answers from onboarding
     onboardingCompleted: false,
-    onboardingVersion: 1     // For future migrations
+    onboardingVersion: 1,    // For future migrations
+    userPersona: null,       // 'student' | 'professional' | 'minimalist' - from PersonaSelectionScreen
+    blockedApps: []          // Apps gated behind VagusGatekeeper breathing exercise
   });
 
   // Mood-based task system state

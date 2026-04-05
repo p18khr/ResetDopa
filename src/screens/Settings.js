@@ -412,6 +412,27 @@ export default function Settings({ navigation }) {
           </View>
         </View>
 
+        {/* Content Blockers Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Wellbeing</Text>
+
+          <TouchableOpacity
+            style={[styles.card, { backgroundColor: colors.surfacePrimary }]}
+            onPress={() => navigation.navigate('BlockedApps')}
+          >
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Ionicons name="lock-closed-outline" size={20} color={colors.accent} />
+                <View style={styles.settingTextContainer}>
+                  <Text style={[styles.settingTitle, { color: colors.text }]}>Content Blockers</Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>Gate apps behind breathing exercises</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* Account Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>

@@ -138,6 +138,7 @@ export default function Signup({ navigation }) {
           diagnosticAnswers: {},
           onboardingCompleted: false,
           onboardingVersion: 1,
+          userPersona: null,
           lastMood: null,
           lastMoodCheckTime: null
         },

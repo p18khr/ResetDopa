@@ -12,10 +12,12 @@ import FirstVisitOverlay from '../components/FirstVisitOverlay';
 import StreakNumber from '../components/StreakNumber';
 import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { usePersonaLabels } from '../hooks/usePersonaLabels';
 
 export default function Stats({ navigation, route }) {
   const { isDarkMode, colors } = useTheme();
   const { calmPoints, urges, streak, getRecentMetrics, dailyMetrics, devDayOffset, getCurrentDay, startDate, dailyQuote } = useContext(AppContext);
+  const labels = usePersonaLabels();
   const currentDay = getCurrentDay();
   const isFocused = useIsFocused();
   const [showIntro, setShowIntro] = useState(false);
@@ -324,17 +326,18 @@ export default function Stats({ navigation, route }) {
           </View>
         </View>
 
+        {/* Persona-Mapped Metrics */}
         <View style={[styles.tiles, { marginTop: 8 }]}>
           <View style={[styles.tile, { backgroundColor: colors.surfacePrimary }]}>
-            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>Today Adherence</Text>
+            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>{labels.metric1}</Text>
             <Text style={[styles.tileValue, { color: colors.text }]}>{todayMetrics ? Math.round(todayMetrics.adherence * 100) + '%' : '—'}</Text>
           </View>
           <View style={[styles.tile, { backgroundColor: colors.surfacePrimary }]}>
-            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>Completions</Text>
+            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>{labels.metric2}</Text>
             <Text style={[styles.tileValue, { color: colors.text }]}>{todayMetrics ? `${todayMetrics.completions}/${todayMetrics.target}` : '—'}</Text>
           </View>
           <View style={[styles.tile, { backgroundColor: colors.surfacePrimary }]}>
-            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>Variety</Text>
+            <Text style={[styles.tileTitle, { color: colors.textSecondary }]}>{labels.metric3}</Text>
             <Text style={[styles.tileValue, { color: colors.text }]}>{todayMetrics ? Math.round(todayMetrics.variety * 100) + '%' : '—'}</Text>
           </View>
         </View>
