@@ -1,0 +1,7 @@
+{
+  "name": "app-blocker-plugin",
+  "version": "1.0.0",
+  "description": "Expo config plugin for native Android app blocking",
+  "main": "withAppBlocker.js",
+  "private": true
+}
