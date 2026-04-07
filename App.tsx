@@ -181,29 +181,10 @@ function App(): React.ReactElement {
   const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
-    async function loadFonts(): Promise<void> {
-  try {
-    // We use the direct object to ensure nothing is 'undefined'
-    await Font.loadAsync({
-  'ionicons': require('./assets/font.ttf'), // Must be exactly the name on your folder
-    });
-  } catch (e) {
-    console.error("Font loading error:", e);
-  } finally {
+    // Ionicons font is automatically loaded by @expo/vector-icons
+    // No need to manually load it
     setFontsLoaded(true);
-  }
-}
-    loadFonts();
   }, []);
-
-  // 4. Don't show the navigator until fonts are ready
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90E2" />
-      </View>
-    );
-  }
 
   return (
     <ErrorBoundary>

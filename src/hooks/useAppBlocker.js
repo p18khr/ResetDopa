@@ -8,35 +8,57 @@ const { AppBlocker } = NativeModules;
  * Bridges React Native ↔ Native Kotlin module
  */
 export function useAppBlocker() {
-  const [isAdminActive, setIsAdminActive] = useState(false);
+  const [hasPermissions, setHasPermissions] = useState(false);
+  const [permissionDetails, setPermissionDetails] = useState(null);
   const [blockedApps, setBlockedAppsState] = useState([]);
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [error, setError] = useState(null);
 
-  // Check if admin is active on mount
+  // Check permissions on mount
   useEffect(() => {
     if (Platform.OS !== 'android') {
       return; // iOS not supported
     }
 
-    checkAdminStatus();
+    checkPermissions();
+    loadBlockedApps();
   }, []);
 
   /**
-   * Check if device admin is active
+   * Check if all required permissions are granted
    */
-  const checkAdminStatus = async () => {
+  const checkPermissions = async () => {
     try {
       if (!AppBlocker) {
         setError('AppBlocker module not available');
         return;
       }
 
-      const result = await AppBlocker.isAdminActive();
-      setIsAdminActive(result.isAdmin);
+      const result = await AppBlocker.checkPermissions();
+      setPermissionDetails(result);
+      setHasPermissions(result.allGranted);
     } catch (err) {
-      console.error('Error checking admin status:', err);
+      console.error('Error checking permissions:', err);
       setError(err.message);
+    }
+  };
+
+  /**
+   * Load blocked apps from native storage
+   */
+  const loadBlockedApps = async () => {
+    try {
+      if (!AppBlocker) {
+        return;
+      }
+
+      const result = await AppBlocker.getBlockedApps();
+      if (result.success && result.apps) {
+        setBlockedAppsState(result.apps);
+        setIsMonitoring(result.apps.length > 0);
+      }
+    } catch (err) {
+      console.error('Error loading blocked apps:', err);
     }
   };
 
@@ -99,15 +121,15 @@ export function useAppBlocker() {
 
   /**
    * Start monitoring for blocked app launches
+   * (Native service starts automatically when blockedApps > 0)
    */
   const startMonitoring = async () => {
     try {
-      if (!AppBlocker || !isAdminActive) {
+      if (!AppBlocker || !hasPermissions) {
         return;
       }
 
-      // In a real app, you'd set up an event listener here
-      // For now, the native service handles it automatically
+      // Native service starts automatically in setBlockedApps
       setIsMonitoring(true);
     } catch (err) {
       console.error('Error starting monitoring:', err);
@@ -133,28 +155,75 @@ export function useAppBlocker() {
   };
 
   /**
-   * Request admin permissions
+   * Request Usage Stats permission (required for app detection)
    */
-  const requestAdminPermissions = () => {
+  const requestUsageStatsPermission = () => {
     if (Platform.OS !== 'android') {
       Alert.alert('Not Supported', 'App blocking is only available on Android');
       return;
     }
 
-    if (AppBlocker && AppBlocker.requestAdminPermission) {
-      AppBlocker.requestAdminPermission();
+    if (AppBlocker) {
+      AppBlocker.requestUsageStatsPermission();
+    }
+  };
+
+  /**
+   * Request Overlay permission (required for blocking overlay)
+   */
+  const requestOverlayPermission = () => {
+    if (Platform.OS !== 'android') {
+      Alert.alert('Not Supported', 'App blocking is only available on Android');
+      return;
+    }
+
+    if (AppBlocker) {
+      AppBlocker.requestOverlayPermission();
+    }
+  };
+
+  /**
+   * Request all permissions with user guidance
+   */
+  const requestPermissions = () => {
+    if (!permissionDetails) {
+      Alert.alert('Error', 'Permission status unknown. Please try again.');
+      return;
+    }
+
+    if (!permissionDetails.usageStats) {
+      Alert.alert(
+        '📊 Usage Stats Permission',
+        'This permission allows DopaReset to detect when you open blocked apps.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Grant Permission', onPress: requestUsageStatsPermission },
+        ]
+      );
+    } else if (!permissionDetails.overlay) {
+      Alert.alert(
+        '🚫 Overlay Permission',
+        'This permission allows DopaReset to show a blocking screen when you open blocked apps.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Grant Permission', onPress: requestOverlayPermission },
+        ]
+      );
     }
   };
 
   return {
-    isAdminActive,
-    checkAdminStatus,
+    hasPermissions,
+    permissionDetails,
+    checkPermissions,
     blockedApps,
     updateBlockedApps,
     getBlockedApps,
     startMonitoring,
     stopMonitoring,
-    requestAdminPermissions,
+    requestUsageStatsPermission,
+    requestOverlayPermission,
+    requestPermissions,
     isMonitoring,
     error,
   };

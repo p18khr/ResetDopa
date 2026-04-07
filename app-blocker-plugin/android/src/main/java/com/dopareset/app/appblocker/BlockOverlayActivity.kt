@@ -20,14 +20,10 @@ class BlockOverlayActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Make full screen, transparent background
+        // Make full screen
         window.setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
-        )
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         )
 
         // Get blocked app name
@@ -38,73 +34,87 @@ class BlockOverlayActivity : Activity() {
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(48, 48, 48, 48)
-            setBackgroundColor(0xDD000000.toInt()) // Semi-transparent black
+            setPadding(64, 64, 64, 64)
+            setBackgroundColor(0xF0000000.toInt()) // Nearly opaque black
         }
 
-        // Title
-        val titleText = TextView(this).apply {
-            text = "🛡️ DopaReset Protection"
-            textSize = 28f
-            setTextColor(0xFFFFFFFF.toInt())
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 32)
-        }
-
-        // Blocked app message
-        val blockedAppText = TextView(this).apply {
-            text = "\"$appName\" is blocked"
-            textSize = 20f
-            setTextColor(0xFFFF6B6B.toInt())
+        // Emoji/Icon
+        val emojiText = TextView(this).apply {
+            text = "🧘"
+            textSize = 72f
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 24)
         }
 
-        // Motivational message
-        val motivationText = TextView(this).apply {
-            text = "You're building better habits.\nStay focused on what matters."
-            textSize = 16f
-            setTextColor(0xFFCCCCCC.toInt())
+        // Title
+        val titleText = TextView(this).apply {
+            text = "Pause & Breathe"
+            textSize = 32f
+            setTextColor(0xFFFFFFFF.toInt())
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, 16)
+        }
+
+        // Subtitle - which app is being opened
+        val subtitleText = TextView(this).apply {
+            text = "Opening $appName"
+            textSize = 18f
+            setTextColor(0xFFFF6B6B.toInt())
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 48)
         }
 
-        // Return button
-        val returnButton = Button(this).apply {
-            text = "Return to DopaReset"
+        // Instruction message
+        val instructionText = TextView(this).apply {
+            text = "Complete 60 seconds of\nbreathing to unlock"
             textSize = 18f
-            setPadding(48, 24, 48, 24)
+            setTextColor(0xFFCCCCCC.toInt())
+            gravity = Gravity.CENTER
+            lineHeight = (textSize * 1.5f).toInt()
+            setPadding(0, 0, 0, 64)
+        }
+
+        // Start Breathing button (primary action)
+        val breathingButton = Button(this).apply {
+            text = "Start Breathing Exercise"
+            textSize = 18f
+            setPadding(64, 32, 64, 32)
             setBackgroundColor(0xFF4A90E2.toInt())
             setTextColor(0xFFFFFFFF.toInt())
+            isAllCaps = false
+            setOnClickListener {
+                launchBreathingExercise(blockedPackage)
+            }
+        }
+
+        // Spacer
+        val spacer = TextView(this).apply {
+            text = ""
+            setPadding(0, 24, 0, 0)
+        }
+
+        // Go back button (secondary action)
+        val backButton = Button(this).apply {
+            text = "No Thanks, Go Back"
+            textSize = 16f
+            setPadding(48, 24, 48, 24)
+            setBackgroundColor(0x00000000.toInt()) // Transparent
+            setTextColor(0xFF888888.toInt())
+            isAllCaps = false
             setOnClickListener {
                 returnToDopaReset()
             }
         }
 
-        // "Still want to proceed" option (with delay/friction)
-        val bypassText = TextView(this).apply {
-            text = "\n\nI understand the consequences"
-            textSize = 12f
-            setTextColor(0xFF888888.toInt())
-            gravity = Gravity.CENTER
-            setPadding(0, 32, 0, 8)
-            setOnClickListener {
-                // Add friction: require 3-second hold or multiple taps
-                // For now, just close
-                finish()
-            }
-        }
-
+        layout.addView(emojiText)
         layout.addView(titleText)
-        layout.addView(blockedAppText)
-        layout.addView(motivationText)
-        layout.addView(returnButton)
-        layout.addView(bypassText)
+        layout.addView(subtitleText)
+        layout.addView(instructionText)
+        layout.addView(breathingButton)
+        layout.addView(spacer)
+        layout.addView(backButton)
 
         setContentView(layout)
-
-        // Re-enable touch after UI is set
-        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
     }
 
     private fun getAppName(packageName: String): String {
@@ -114,6 +124,24 @@ class BlockOverlayActivity : Activity() {
             pm.getApplicationLabel(appInfo).toString()
         } catch (e: PackageManager.NameNotFoundException) {
             packageName
+        }
+    }
+
+    private fun launchBreathingExercise(blockedPackage: String) {
+        try {
+            // Launch DopaReset with deep link to breathing exercise
+            val intent = packageManager.getLaunchIntentForPackage(applicationContext.packageName)
+            intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            // Add data about which app was blocked (for future use)
+            intent?.putExtra("blocked_app", blockedPackage)
+            intent?.putExtra("action", "breathing_gate")
+            startActivity(intent)
+            finish()
+        } catch (e: Exception) {
+            android.util.Log.e("BlockOverlayActivity", "Error launching breathing exercise", e)
+            // Fallback: just return to app
+            returnToDopaReset()
         }
     }
 

@@ -23,25 +23,25 @@ export default function BlockedAppsManager({ navigation }) {
   const { isDarkMode, colors } = useTheme();
   const { userProfile, setUserProfile } = useContext(AppContext);
   const { navigateWithGate, GateModal } = useBlockedAppGate();
-  const { isAdminActive, checkAdminStatus, updateBlockedApps, requestAdminPermissions } = useAppBlocker();
+  const { hasPermissions, permissionDetails, checkPermissions, updateBlockedApps, requestPermissions } = useAppBlocker();
 
   const [isSettingUp, setIsSettingUp] = useState(false);
 
   // Available apps to block
   const AVAILABLE_APPS = [
-    { id: 'com.instagram.android', name: '📱 Instagram', category: 'Social Media' },
-    { id: 'com.zhiliaoapp.musically', name: '🎬 TikTok', category: 'Social Media' },
-    { id: 'com.twitter.android', name: '𝕏 Twitter', category: 'Social Media' },
-    { id: 'com.google.android.youtube', name: '▶️ YouTube', category: 'Video' },
-    { id: 'tv.twitch.android.app', name: '🎮 Twitch', category: 'Streaming' },
-    { id: 'com.reddit.frontpage', name: '👽 Reddit', category: 'Social Media' },
+    { id: 'com.instagram.android', name: 'Instagram', emoji: '📱', category: 'Social Media' },
+    { id: 'com.zhiliaoapp.musically', name: 'TikTok', emoji: '🎬', category: 'Social Media' },
+    { id: 'com.twitter.android', name: 'X (Twitter)', emoji: '🐦', category: 'Social Media' },
+    { id: 'com.google.android.youtube', name: 'YouTube', emoji: '▶️', category: 'Video' },
+    { id: 'tv.twitch.android.app', name: 'Twitch', emoji: '🎮', category: 'Streaming' },
+    { id: 'com.reddit.frontpage', name: 'Reddit', emoji: '👽', category: 'Social Media' },
   ];
 
   const blockedApps = userProfile?.blockedApps || [];
 
-  // Check admin status on mount
+  // Check permissions on mount
   useEffect(() => {
-    checkAdminStatus();
+    checkPermissions();
   }, []);
 
   /**
@@ -65,23 +65,26 @@ export default function BlockedAppsManager({ navigation }) {
 
       // Android: Sync with native module
       if (Platform.OS === 'android') {
-        if (!isAdminActive && newBlockedApps.length > 0) {
-          // Request admin if not already granted
+        if (!hasPermissions && newBlockedApps.length > 0) {
+          // Request permissions if not already granted
           Alert.alert(
-            '🔐 Admin Permission Required',
-            'ResetDopa needs admin permission to block apps. This is secure and used only to prevent app launches.',
+            '🔐 Permissions Required',
+            'DopaReset needs:\n\n1. Usage Stats - to detect when you open blocked apps\n2. Display Over Apps - to show blocking screen',
             [
               { text: 'Cancel', style: 'cancel' },
               {
-                text: 'Grant Permission',
-                onPress: requestAdminPermissions,
+                text: 'Grant Permissions',
+                onPress: requestPermissions,
               },
             ]
           );
         } else {
           // Sync to native
-          await updateBlockedApps(newBlockedApps);
-          Alert.alert('Success', `${isBlocked ? 'Unblocked' : 'Blocked'} ${appId}`);
+          const success = await updateBlockedApps(newBlockedApps);
+          if (success) {
+            const appName = AVAILABLE_APPS.find((a) => a.id === appId)?.name || appId;
+            Alert.alert('✅ Success', `${isBlocked ? 'Unblocked' : 'Blocked'} ${appName}`);
+          }
         }
       }
 
@@ -134,20 +137,27 @@ export default function BlockedAppsManager({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Content Blockers</Text>
         <Text style={styles.headerSubtitle}>
-          {isAdminActive
-            ? '✅ Admin enabled - apps are protected'
-            : '⚠️ Grant admin permission to enable full blocking'}
+          {hasPermissions
+            ? '✅ Permissions granted - apps are protected'
+            : '⚠️ Grant permissions to enable OS-level blocking'}
         </Text>
       </View>
 
-      {/* Admin Status Alert */}
-      {!isAdminActive && Platform.OS === 'android' && (
+      {/* Permissions Status Alert */}
+      {!hasPermissions && Platform.OS === 'android' && (
         <TouchableOpacity
-          style={[styles.adminAlert, { backgroundColor: colors.surfacePrimary, borderColor: colors.accent }]}
-          onPress={requestAdminPermissions}
+          style={[styles.permissionAlert, { backgroundColor: colors.surfacePrimary, borderColor: colors.accent }]}
+          onPress={requestPermissions}
         >
-          <Text style={[styles.adminAlertText, { color: colors.accent }]}>
-            🔐 Tap to grant admin permission
+          <Text style={[styles.permissionAlertTitle, { color: colors.text }]}>
+            🔐 Permissions Needed
+          </Text>
+          <Text style={[styles.permissionAlertText, { color: colors.textSecondary }]}>
+            {!permissionDetails?.usageStats && '• Usage Stats\n'}
+            {!permissionDetails?.overlay && '• Display Over Apps\n'}
+          </Text>
+          <Text style={[styles.permissionAlertButton, { color: colors.accent }]}>
+            Tap to Grant →
           </Text>
         </TouchableOpacity>
       )}
@@ -162,6 +172,7 @@ export default function BlockedAppsManager({ navigation }) {
 
           return (
             <View style={styles.appCard}>
+              <Text style={styles.appEmoji}>{item.emoji}</Text>
               <View style={styles.appInfo}>
                 <Text style={styles.appName}>{item.name}</Text>
                 <Text style={styles.appCategory}>{item.category}</Text>
@@ -221,16 +232,25 @@ const getStyles = (isDarkMode, colors) =>
       fontSize: 14,
       color: colors.textSecondary,
     },
-    adminAlert: {
+    permissionAlert: {
       marginHorizontal: 24,
       marginVertical: 12,
-      paddingVertical: 12,
+      paddingVertical: 16,
       paddingHorizontal: 16,
       borderRadius: 12,
       borderWidth: 2,
-      alignItems: 'center',
     },
-    adminAlertText: {
+    permissionAlertTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      marginBottom: 8,
+    },
+    permissionAlertText: {
+      fontSize: 14,
+      marginBottom: 8,
+      lineHeight: 20,
+    },
+    permissionAlertButton: {
       fontSize: 14,
       fontWeight: '600',
     },
@@ -247,6 +267,11 @@ const getStyles = (isDarkMode, colors) =>
       borderColor: colors.border,
       padding: 16,
       gap: 12,
+    },
+    appEmoji: {
+      fontSize: 28,
+      width: 36,
+      textAlign: 'center',
     },
     appInfo: {
       flex: 1,
