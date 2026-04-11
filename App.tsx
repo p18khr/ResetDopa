@@ -12,6 +12,7 @@ import { UrgesProvider } from './src/context/UrgesContext';
 import { BadgesProvider } from './src/context/BadgesContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { EconomyProvider } from './src/context/EconomyContext';
 import * as Font from 'expo-font';
 import type { AppContextValue } from './src/types';
 
@@ -34,6 +35,9 @@ import DiagnosticScreen from './src/screens/DiagnosticScreen';
 import BundleRecommendationScreen from './src/screens/BundleRecommendationScreen';
 import ImmediateWinScreen from './src/screens/ImmediateWinScreen';
 import BlockedAppsManager from './src/screens/BlockedAppsManager';
+import Store from './src/screens/Store';
+import { BlockedAppGateManager } from './src/components/BlockedAppGateManager';
+import DevSandboxScreen from './src/screens/DevSandboxScreen';
 
 const navigationRef = React.createRef<any>();
 
@@ -95,8 +99,8 @@ function TabNavigator(): React.ReactElement {
           // Render standard tab icon for all routes
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarActiveTintColor: colors.accent || '#4A90E2',
+        tabBarInactiveTintColor: isDarkMode ? '#9CA3AF' : '#6B7280',
         tabBarStyle: {
           backgroundColor: colors.surfacePrimary,
           borderTopColor: colors.border,
@@ -150,6 +154,12 @@ function AppNavigator(): React.ReactElement {
             <Stack.Screen name="Settings" component={Settings} />
             <Stack.Screen name="Profile" component={Profile} />
             <Stack.Screen name="LearnLaws" component={LearnLaws} />
+            <Stack.Screen name="Store" component={Store} options={{ title: 'Calm Point Store' }} />
+            <Stack.Screen
+              name="DevSandbox"
+              component={DevSandboxScreen}
+              options={{ title: 'Developer Sandbox' }}
+            />
             <Stack.Screen
               name="BlockedApps"
               component={BlockedAppsManager}
@@ -181,9 +191,18 @@ function App(): React.ReactElement {
   const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
-    // Ionicons font is automatically loaded by @expo/vector-icons
-    // No need to manually load it
-    setFontsLoaded(true);
+    // Load custom fonts if needed; Ionicons is provided by @expo/vector-icons
+    const loadFonts = async () => {
+      try {
+        await Font.loadAsync({
+          // Custom fonts would go here
+        });
+      } catch (e) {
+        console.warn('[App] Font loading error:', e.message);
+      }
+      setFontsLoaded(true);
+    };
+    loadFonts();
   }, []);
 
   return (
@@ -195,12 +214,15 @@ function App(): React.ReactElement {
               <BadgesProvider>
                 <SettingsProvider>
                   <AppProvider>
-                    <SafeAreaProvider>
-                      <NavigationContainer ref={navigationRef}>
-                        <AppNavigator />
-                      </NavigationContainer>
-                      <BannerLayer />
-                    </SafeAreaProvider>
+                    <EconomyProvider>
+                      <SafeAreaProvider>
+                        <NavigationContainer ref={navigationRef}>
+                          <AppNavigator />
+                        </NavigationContainer>
+                        <BlockedAppGateManager />
+                        <BannerLayer />
+                      </SafeAreaProvider>
+                    </EconomyProvider>
                   </AppProvider>
                 </SettingsProvider>
               </BadgesProvider>

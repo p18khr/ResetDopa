@@ -68,13 +68,14 @@
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0",
             "minSdkVersion": 24,
-            "kotlinVersion": "2.2.20"
+            "kotlinVersion": "2.1.20"
           },
           "ios": {
             "deploymentTarget": "15.1"
           }
         }
       ],
+      "./app-blocker-plugin/withAppBlocker.js",
       "expo-font",
       "expo-asset"
     ],

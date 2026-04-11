@@ -17,6 +17,12 @@ const CALORIES_PER_MILE = 100; // Average person burns ~100 cal/mile (varies by 
 let permissionChecked = false;
 let permissionStatus = null;
 
+// Real-time step counter (Android uses watch-based counting)
+let currentStepCount = 0;
+let stepWatcherSubscription = null;
+let sessionStartSteps = 0;
+let sessionStartTime = Date.now();
+
 /**
  * Check if step counting is available on this device
  * @returns {Promise<boolean>}
@@ -30,20 +36,115 @@ export async function isStepCountingAvailable() {
 }
 
 /**
- * Request permission to access step count
+ * Explicitly request step permission (should be called on app startup)
+ * Only actually requests it once; caches result in AsyncStorage
  * @returns {Promise<boolean>} - true if permission granted
  */
-export async function requestStepPermission() {
+export async function ensureStepPermission() {
   try {
-    const { status } = await Pedometer.requestPermissionsAsync();
-    return status === 'granted';
-  } catch {
+    // Check if we already cached a result
+    const alreadyAsked = await AsyncStorage.getItem(STEPS_PERMISSION_KEY);
+    if (alreadyAsked === 'true') {
+      if (__DEV__) console.log('[Steps] Already requested permission, cached result:', permissionStatus);
+      // Ensure permissionStatus is initialized
+      if (permissionStatus === null) {
+        permissionStatus = false; // Default to false if somehow uninitialized
+      }
+      return permissionStatus;
+    }
+
+    // Always try to request - even if device says unavailable, ask anyway (might work on some devices)
+    try {
+      const { status } = await Pedometer.requestPermissionsAsync();
+      const granted = status === 'granted';
+
+      if (__DEV__) console.log('[Steps] Permission request result:', status);
+
+      // Cache the result
+      permissionChecked = true;
+      permissionStatus = granted;
+      await AsyncStorage.setItem(STEPS_PERMISSION_KEY, 'true');
+
+      return granted;
+    } catch (permError) {
+      // If permission request fails, device probably doesn't support it
+      if (__DEV__) console.log('[Steps] Permission request unavailable on this device:', permError.message);
+      permissionStatus = false;
+      await AsyncStorage.setItem(STEPS_PERMISSION_KEY, 'true');
+      return false;
+    }
+  } catch (error) {
+    if (__DEV__) console.error('[Steps] Error in ensureStepPermission:', error.message);
+    permissionStatus = false;
     return false;
   }
 }
 
 /**
- * Get today's step count
+ * Request permission to access step count (legacy - use ensureStepPermission instead)
+ * @returns {Promise<boolean>} - true if permission granted
+ */
+export async function requestStepPermission() {
+  return await ensureStepPermission();
+}
+
+/**
+ * Start watching real-time step count (Android-compatible)
+ * @returns {Promise<boolean>} - true if watcher started successfully
+ */
+export async function startStepWatcher() {
+  try {
+    if (stepWatcherSubscription) {
+      if (__DEV__) console.log('[Steps] Watcher already running');
+      return true;
+    }
+
+    const available = await isStepCountingAvailable();
+    if (!available) {
+      if (__DEV__) console.log('[Steps] Step counting not available on this device');
+      return false;
+    }
+
+    // Ensure permission is granted
+    if (!permissionStatus) {
+      await ensureStepPermission();
+    }
+
+    if (!permissionStatus) {
+      if (__DEV__) console.log('[Steps] Permission not granted');
+      return false;
+    }
+
+    // Start watching step count
+    stepWatcherSubscription = Pedometer.watchStepCount((result) => {
+      currentStepCount = result.steps;
+      if (__DEV__) console.log('[Steps] Real-time count:', currentStepCount);
+    });
+
+    sessionStartSteps = currentStepCount;
+    sessionStartTime = Date.now();
+
+    if (__DEV__) console.log('[Steps] Step watcher started');
+    return true;
+  } catch (error) {
+    if (__DEV__) console.error('[Steps] Error starting watcher:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Stop watching step count
+ */
+export function stopStepWatcher() {
+  if (stepWatcherSubscription) {
+    stepWatcherSubscription.remove();
+    stepWatcherSubscription = null;
+    if (__DEV__) console.log('[Steps] Step watcher stopped');
+  }
+}
+
+/**
+ * Get today's step count (uses real-time watcher on Android)
  * @returns {Promise<{ steps: number, available: boolean, permissionGranted: boolean }>}
  */
 export async function getTodaySteps() {
@@ -53,23 +154,23 @@ export async function getTodaySteps() {
       return { steps: 0, available: false, permissionGranted: false };
     }
 
-    // Only request permission once per app session
-    if (!permissionChecked) {
-      permissionStatus = await requestStepPermission();
+    // Ensure permission is granted
+    if (!permissionStatus) {
+      permissionStatus = await ensureStepPermission();
       permissionChecked = true;
-      if (__DEV__) console.log('[Steps] Permission check done:', permissionStatus);
     }
 
     if (!permissionStatus) {
       return { steps: 0, available: true, permissionGranted: false };
     }
 
-    const start = new Date();
-    start.setHours(0, 0, 0, 0); // Start of today
-    const end = new Date();     // Now
+    // Make sure watcher is running
+    if (!stepWatcherSubscription) {
+      await startStepWatcher();
+    }
 
-    const result = await Pedometer.getStepCountAsync(start, end);
-    const steps = result?.steps ?? 0;
+    // Return current accumulated steps
+    const steps = currentStepCount;
 
     // Cache to AsyncStorage for quick reads
     await cacheSteps(steps);

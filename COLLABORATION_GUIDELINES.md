@@ -50,7 +50,7 @@ react-native-worklets: 0.5.1
 compileSdkVersion: 35
 targetSdkVersion: 35
 minSdkVersion: 24
-kotlinVersion: 2.0.21
+kotlinVersion: 2.1.20
 ```
 
 ### iOS Build Config

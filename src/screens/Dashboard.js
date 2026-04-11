@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppContext } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import LawChip from '../components/LawChip';
+import { BalanceHeader } from '../components/BalanceHeader';
 import { getLawForRoute } from '../utils/lawLabels';
 import { TASK_METADATA, TASK_POOLS, getCanonicalTask } from '../utils/programData';
 import { Ionicons } from '@expo/vector-icons';
@@ -532,7 +533,7 @@ function Dashboard({ navigation, route }) {
           </View>
           <View style={styles.headerIcons}>
             <View style={{ marginRight: 10 }}>
-              <Ionicons name="help-circle-outline" size={24} color={colors.textSecondary} />
+              <Ionicons name="help-circle-outline" size={24} color={isDarkMode ? '#D1D5DB' : '#374151'} />
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('Settings')}
@@ -559,7 +560,7 @@ function Dashboard({ navigation, route }) {
               }}
               delayLongPress={400}
             >
-              <Ionicons name="settings-outline" size={24} color="#6B7280" />
+              <Ionicons name="settings-outline" size={24} color={isDarkMode ? '#D1D5DB' : '#374151'} />
             </TouchableOpacity>
             <Animated.View
               style={{
@@ -577,10 +578,19 @@ function Dashboard({ navigation, route }) {
                 <Ionicons
                   name={isDarkMode ? "moon" : "sunny"}
                   size={24}
-                  color={colors.textSecondary}
+                  color={isDarkMode ? '#D1D5DB' : '#374151'}
                 />
               </TouchableOpacity>
             </Animated.View>
+            {__DEV__ && (
+              <TouchableOpacity
+                style={{ marginLeft: 10 }}
+                onPress={() => navigation.navigate('DevSandbox')}
+                testID="dev-sandbox-button"
+              >
+                <Ionicons name="bug" size={24} color="#FF6B6B" />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity 
               style={styles.avatar}
               onPress={() => navigation.navigate('Profile')}
@@ -614,6 +624,12 @@ function Dashboard({ navigation, route }) {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Balance Header with Store Link */}
+        <BalanceHeader
+          onPressStore={() => navigation.navigate('Store')}
+          showStoreLink={true}
+        />
 
         {/* Rollover Banner */}
         {(() => {

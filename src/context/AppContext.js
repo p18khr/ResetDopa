@@ -5,6 +5,7 @@ import uuid from 'react-native-uuid';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { mergeUserData } from '../services/firestore.service';
+import { ensureStepPermission, startStepWatcher } from '../services/steps.service';
 import { TASK_METADATA, getTaskExplanation, generateDayTasks, PROGRAM_DAY_TITLES, getCanonicalTask } from '../utils/programData';
 import { scheduleMilestoneNotification, scheduleThresholdNotification, scheduleBadgeUnlockNotification } from '../utils/notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -337,6 +338,23 @@ Return ONLY the quest text, nothing else.`;
       } catch {}
     };
     initDevOffset();
+  }, []);
+
+  // Request step counting permission on app startup and start watcher
+  useEffect(() => {
+    const requestPermissions = async () => {
+      try {
+        const granted = await ensureStepPermission();
+        if (__DEV__) console.log('[AppContext] Step permission request completed:', granted);
+
+        // Start the step counter watcher
+        const started = await startStepWatcher();
+        if (__DEV__) console.log('[AppContext] Step watcher started:', started);
+      } catch (error) {
+        if (__DEV__) console.error('[AppContext] Failed to request step permission:', error?.message);
+      }
+    };
+    requestPermissions();
   }, []);
 
   // Flush pending saves when app backgrounds (to prevent data loss)
