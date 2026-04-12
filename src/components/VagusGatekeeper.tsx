@@ -1,15 +1,17 @@
 /**
- * Vagus Gatekeeper Component
+ * Vagus Gatekeeper Component (REFACTORED)
  *
  * Full-screen overlay that blocks access to restricted apps for 60 seconds
- * Implements balance check → bankruptcy trigger flow
+ * Implements reflection → conscious choice → balance check flow
  *
  * Flow:
- * 1. User opens blocked app
- * 2. Gatekeep shows 60s countdown
- * 3. User waits → +2 points earned
- * 4. User taps "Bypass" → Balance check:
- *    - If balance >= 15: Deduct 15, proceed
+ * 1. User opens blocked app → 60s countdown starts
+ * 2. After 60s → Award +2 points + Show choice screen
+ * 3. User chooses:
+ *    - [NO] → Close overlay, keep +2 points, return home (SAFE)
+ *    - [YES - HOLD 3s] → Open app (NUCLEAR - requires confirmation)
+ * 4. Alt: User clicks "Bypass" anytime → Cost 15pts:
+ *    - If balance >= 15: Deduct 15, skip 60s wait
  *    - If balance < 15: Show BankruptcyModal
  */
 
@@ -23,6 +25,7 @@ import {
   Easing,
   Dimensions,
   Alert,
+  Pressable,
 } from 'react-native';
 import { useEconomy } from '../context/EconomyContext';
 import { BankruptcyModal } from './BankruptcyModal';
@@ -31,8 +34,98 @@ import {
   POINTS_GATE_BYPASSED,
   BANKRUPTCY_BALANCE_THRESHOLD,
   TransactionTypeValue,
+  HOLD_TO_CONFIRM_DURATION_MS,
 } from '../constants/economyConstants';
 import { Ionicons } from '@expo/vector-icons';
+
+/**
+ * Hold-to-Confirm Button for opening the app
+ * User must hold for 3 seconds
+ */
+function HoldToConfirmButton({
+  onComplete,
+  isLoading,
+}: {
+  onComplete: () => void;
+  isLoading: boolean;
+}) {
+  const holdProgress = useRef(new Animated.Value(0)).current;
+  const [isHolding, setIsHolding] = useState(false);
+  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+
+  const handlePressIn = () => {
+    if (isLoading) return;
+
+    setIsHolding(true);
+    startTimeRef.current = Date.now();
+    holdProgress.setValue(0);
+
+    Animated.timing(holdProgress, {
+      toValue: 1,
+      duration: HOLD_TO_CONFIRM_DURATION_MS,
+      useNativeDriver: false,
+    }).start();
+
+    holdTimerRef.current = setTimeout(() => {
+      if (isHolding) {
+        setIsHolding(false);
+        onComplete();
+      }
+    }, HOLD_TO_CONFIRM_DURATION_MS);
+  };
+
+  const handlePressOut = () => {
+    const elapsedMs = startTimeRef.current ? Date.now() - startTimeRef.current : 0;
+
+    if (elapsedMs < HOLD_TO_CONFIRM_DURATION_MS) {
+      setIsHolding(false);
+      holdProgress.setValue(0);
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+      }
+    }
+  };
+
+  const progressWidth = holdProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
+  return (
+    <View>
+      <Animated.View
+        style={[
+          styles.progressRing,
+          {
+            width: progressWidth,
+          },
+        ]}
+      />
+
+      <Pressable
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={isLoading}
+        style={({ pressed }) => [
+          styles.holdButtonContainer,
+          pressed && { transform: [{ scale: 0.95 }] },
+        ]}
+      >
+        <Text style={styles.holdButtonText}>
+          {isLoading
+            ? 'Opening...'
+            : isHolding
+            ? `Hold (${Math.ceil(
+                (HOLD_TO_CONFIRM_DURATION_MS - (Date.now() - (startTimeRef.current || Date.now()))) /
+                  1000
+              )}s)`
+            : '💣 YES (Hold 3s)'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
 
 interface VagusGatekeeperProps {
   blockedAppPackage: string;
@@ -52,7 +145,9 @@ export function VagusGatekeeper({
   // ===== STATE =====
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [showBankruptcy, setShowBankruptcy] = useState(false);
+  const [showPostSurvivalChoice, setShowPostSurvivalChoice] = useState(false); // NEW: Choice screen after 60s
   const [isProcessing, setIsProcessing] = useState(false);
+  const [survivalReward, setSurvivalReward] = useState(false); // NEW: Track if +2pts awarded
 
   // ===== ANIMATIONS =====
   const breathCircleScale = useRef(new Animated.Value(0.8)).current;
@@ -129,8 +224,9 @@ export function VagusGatekeeper({
   // ===== HANDLERS =====
 
   /**
-   * User survived the gate (waited 60s)
-   * Award points and proceed
+   * User survived the 60s gate (timer completed)
+   * Award points + show choice screen
+   * User now decides: "Do I still want Instagram?"
    */
   const handleSurvived = useCallback(async () => {
     setIsProcessing(true);
@@ -145,7 +241,8 @@ export function VagusGatekeeper({
       );
 
       if (response.success) {
-        onGateComplete(); // Proceed to app
+        setSurvivalReward(true); // +2 points awarded
+        setShowPostSurvivalChoice(true); // Show choice screen
       } else {
         Alert.alert('Error', 'Failed to record gate survival. Please try again.');
       }
@@ -155,7 +252,7 @@ export function VagusGatekeeper({
     } finally {
       setIsProcessing(false);
     }
-  }, [blockedAppPackage, addTransaction, onGateComplete]);
+  }, [blockedAppPackage, addTransaction]);
 
   /**
    * User attempts to bypass (close the gate early)
@@ -209,13 +306,22 @@ export function VagusGatekeeper({
   }, [blockedAppPackage, executeBankruptcy, onGateComplete]);
 
   /**
-   * User cancelled bankruptcy modal
-   * Return to countdown, do NOT deduct points
+   * User said "NO" to opening the app
+   * Close overlay, user keeps +2 points, returns home
    */
-  const handleBankruptcyCancel = useCallback(() => {
-    setShowBankruptcy(false);
-    // Timer continues, user can still survive by waiting
-  }, []);
+  const handleRejectApp = useCallback(() => {
+    setShowPostSurvivalChoice(false);
+    onClose(); // Return to home screen
+  }, [onClose]);
+
+  /**
+   * User confirmed "YES" to opening the app (after 3s hold)
+   * Open the app
+   */
+  const handleConfirmApp = useCallback(() => {
+    setShowPostSurvivalChoice(false);
+    onGateComplete(); // Open the blocked app
+  }, [onGateComplete]);
 
   // ===== RENDER =====
 
@@ -242,14 +348,17 @@ export function VagusGatekeeper({
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Breathe. Refocus.</Text>
-          <Text style={styles.subtitle}>{blockedAppName} is protected</Text>
-        </View>
+        {!showPostSurvivalChoice ? (
+          <>
+            {/* ===== COUNTDOWN MODE ===== */}
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Breathe. Refocus.</Text>
+              <Text style={styles.subtitle}>{blockedAppName} is protected</Text>
+            </View>
 
-        {/* Breathing Circle with Timer */}
-        <View style={styles.breathingSection}>
+            {/* Breathing Circle with Timer */}
+            <View style={styles.breathingSection}>
           <Animated.View
             style={[
               styles.breathingCircle,
@@ -356,6 +465,55 @@ export function VagusGatekeeper({
             Resisting urges trains your discipline. Every moment counts.
           </Text>
         </View>
+          </>
+        ) : (
+          <>
+            {/* ===== POST-SURVIVAL CHOICE SCREEN ===== */}
+            <View style={styles.header}>
+              <Text style={styles.title}>You Survived!</Text>
+              <Text style={styles.subtitle}>+{POINTS_GATE_SURVIVED} Calm Points Earned</Text>
+            </View>
+
+            {/* Reflection Message */}
+            <View style={styles.messageSection}>
+              <Text style={styles.messageText}>
+                Take a moment. Do you still want to open {blockedAppName}?
+              </Text>
+              <Text style={styles.subtext}>
+                You can say "No" and keep your points. The choice is yours.
+              </Text>
+            </View>
+
+            {/* Choice Buttons */}
+            <View style={styles.choiceButtonGroup}>
+              {/* SAFE: NO Button (Simple Press) */}
+              <TouchableOpacity
+                onPress={handleRejectApp}
+                disabled={isProcessing}
+                style={[
+                  styles.buttonNo,
+                  isProcessing && styles.buttonDisabled,
+                ]}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#00CC00" />
+                <Text style={styles.buttonNoText}>No, I'm Good</Text>
+              </TouchableOpacity>
+
+              {/* NUCLEAR: YES Button (3-Second Hold) */}
+              <HoldToConfirmButton
+                onComplete={handleConfirmApp}
+                isLoading={isProcessing}
+              />
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                This is your moment to choose. Don't just react—think first.
+              </Text>
+            </View>
+          </>
+        )}
       </View>
 
       {/* Bankruptcy Modal */}
@@ -601,5 +759,64 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
     fontStyle: 'italic',
+  },
+
+  // ===== CHOICE SCREEN STYLES =====
+
+  choiceButtonGroup: {
+    width: '100%',
+    gap: 12,
+  },
+
+  buttonNo: {
+    backgroundColor: '#00CC00',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+
+  buttonNoText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    letterSpacing: 0.5,
+  },
+
+  // ===== HOLD BUTTON STYLES =====
+
+  progressRing: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    backgroundColor: '#FF3333',
+    opacity: 0.2,
+    zIndex: 0,
+  },
+
+  holdButtonContainer: {
+    position: 'relative',
+    backgroundColor: 'rgba(255, 51, 51, 0.15)',
+    borderWidth: 2,
+    borderColor: '#FF3333',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+    overflow: 'hidden',
+  },
+
+  holdButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF3333',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });
