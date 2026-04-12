@@ -36,8 +36,9 @@ import BundleRecommendationScreen from './src/screens/BundleRecommendationScreen
 import ImmediateWinScreen from './src/screens/ImmediateWinScreen';
 import BlockedAppsManager from './src/screens/BlockedAppsManager';
 import Store from './src/screens/Store';
-import { BlockedAppGateManager } from './src/components/BlockedAppGateManager';
-import DevSandboxScreen from './src/screens/DevSandboxScreen';
+// Temporarily disabled - to be debugged
+// import { BlockedAppGateManager } from './src/components/BlockedAppGateManager';
+// import DevSandboxScreen from './src/screens/DevSandboxScreen';
 
 const navigationRef = React.createRef<any>();
 
@@ -155,11 +156,12 @@ function AppNavigator(): React.ReactElement {
             <Stack.Screen name="Profile" component={Profile} />
             <Stack.Screen name="LearnLaws" component={LearnLaws} />
             <Stack.Screen name="Store" component={Store} options={{ title: 'Calm Point Store' }} />
-            <Stack.Screen
+            {/* Temporarily disabled - to be debugged */}
+            {/* <Stack.Screen
               name="DevSandbox"
               component={DevSandboxScreen}
               options={{ title: 'Developer Sandbox' }}
-            />
+            /> */}
             <Stack.Screen
               name="BlockedApps"
               component={BlockedAppsManager}
@@ -219,7 +221,8 @@ function App(): React.ReactElement {
                         <NavigationContainer ref={navigationRef}>
                           <AppNavigator />
                         </NavigationContainer>
-                        <BlockedAppGateManager />
+                        {/* Temporarily disabled - to be debugged */}
+                        {/* <BlockedAppGateManager /> */}
                         <BannerLayer />
                       </SafeAreaProvider>
                     </EconomyProvider>

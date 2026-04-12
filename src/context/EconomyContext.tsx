@@ -322,15 +322,11 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
   );
 
   /**
-   * Get current balance (derive from transactions with timeout)
+   * Get current balance (derive from transactions)
    */
   const getBalance = useCallback(async (): Promise<number> => {
-    return new Promise((resolve) => {
-      // Return current balance with 500ms timeout
-      const timeout = setTimeout(() => resolve(balance), 500);
-      clearTimeout(timeout);
-      resolve(balance);
-    });
+    // Return current balance immediately (it's already synchronous in state)
+    return balance;
   }, [balance]);
 
   /**

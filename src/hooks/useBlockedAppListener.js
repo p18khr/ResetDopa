@@ -10,8 +10,8 @@ const { AppBlocker } = NativeModules;
  * when a user attempts to open a blocked app. This is different from useBlockedAppGate
  * which handles in-app route gating.
  */
-export function useBlockedAppListener(onBlockedAppDetected?: (packageName: string) => void) {
-  const [blockedPackage, setBlockedPackage] = useState<string | null>(null);
+export function useBlockedAppListener(onBlockedAppDetected) {
+  const [blockedPackage, setBlockedPackage] = useState(null);
   const [showBlockedAppGate, setShowBlockedAppGate] = useState(false);
 
   /**
@@ -30,7 +30,7 @@ export function useBlockedAppListener(onBlockedAppDetected?: (packageName: strin
       // Listen for 'BlockedAppDetected' events fired from native code
       const subscription = eventEmitter.addListener(
         'BlockedAppDetected',
-        (event: { blockedPackage: string }) => {
+        (event) => {
           console.log('[useBlockedAppListener] Blocked app detected:', event.blockedPackage);
 
           if (event && event.blockedPackage) {
