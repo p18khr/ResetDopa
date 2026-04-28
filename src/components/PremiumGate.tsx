@@ -27,7 +27,10 @@ interface PremiumGateProps {
  */
 export function PremiumGate({ feature, description, icon, onBack }: PremiumGateProps) {
   const { colors } = useTheme();
-  const { presentPaywall, restorePurchases } = useSubscription();
+  const { presentPaywall, restorePurchases, offerings } = useSubscription();
+  const monthlyPkg = offerings?.current?.monthly;
+  const priceString = monthlyPkg?.product.priceString;
+  const introPeriod = monthlyPkg?.product.introPrice?.periodNumberOfUnits;
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
@@ -83,9 +86,12 @@ export function PremiumGate({ feature, description, icon, onBack }: PremiumGateP
           ))}
         </View>
 
-        <Text style={[styles.priceLine, { color: colors.textSecondary }]}>
-          Just <Text style={[styles.priceStrong, { color: colors.text }]}>$6.99/month</Text> · 7-day free trial
-        </Text>
+        {priceString ? (
+          <Text style={[styles.priceLine, { color: colors.textSecondary }]}>
+            Just <Text style={[styles.priceStrong, { color: colors.text }]}>{priceString}/month</Text>
+            {introPeriod ? ` · ${introPeriod}-day free trial` : ''}
+          </Text>
+        ) : null}
 
         <TouchableOpacity
           style={[styles.ctaButton, { backgroundColor: PREMIUM_GOLD }]}
