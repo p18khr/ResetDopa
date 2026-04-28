@@ -1,41 +1,53 @@
-import React, { useContext, useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useEconomy } from '../context/EconomyContext';
+import { AppContext } from '../context/AppContext';
 import { STORE_ITEMS } from '../constants/economyConstants';
-
-// Dynamic import to avoid circular dependency issues at module load time
-let EconomyContext: any = null;
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../context/SubscriptionContext';
+import { PremiumGate } from '../components/PremiumGate';
 
 function Store({ navigation }: { navigation: any }): React.ReactElement {
-  const { isDarkMode, colors } = useTheme();
+  const { colors } = useTheme();
   const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Lazy load context on first render
-  if (!EconomyContext) {
-    EconomyContext = require('../context/EconomyContext').EconomyContext;
-  }
+  const { balance, purchaseItem, ownedItems } = useEconomy();
+  const { user } = useAuth() as any;
+  const { streak, setStreak } = useContext(AppContext) as any;
+  const { isPremium, presentCustomerCenter } = useSubscription();
 
-  let economyValue: any;
-  try {
-    economyValue = useContext(EconomyContext);
-  } catch (e) {
-    console.error('Error accessing EconomyContext:', e);
-    economyValue = null;
-  }
+  const isItemOwned = (itemId: string, isPermanent: boolean): boolean => {
+    return ownedItems.some((p) => {
+      if (p.itemId !== itemId) return false;
+      if (isPermanent) return true;
+      const expiry = p.expiresAt?.toDate?.() || (p.expiresAt ? new Date(p.expiresAt) : null);
+      return expiry ? expiry > new Date() : false;
+    });
+  };
 
-  const balance = economyValue?.balance || 0;
-  const purchaseItem = economyValue?.purchaseItem;
-  const isLoading = economyValue?.isLoading || false;
+  const isMonthlyLimitReached = (itemId: string, maxPerMonth: number): boolean => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recent = ownedItems.filter((p) => {
+      if (p.itemId !== itemId) return false;
+      const granted = p.grantedAt?.toDate?.() || (p.grantedAt ? new Date(p.grantedAt) : null);
+      return granted ? granted >= thirtyDaysAgo : false;
+    });
+    return recent.length >= maxPerMonth;
+  };
 
   const handlePurchase = useCallback(
     async (itemId: string) => {
@@ -51,7 +63,17 @@ function Store({ navigation }: { navigation: any }): React.ReactElement {
         const result = await purchaseItem(itemId);
 
         if (result.success) {
-          Alert.alert('Purchase Successful', `You've purchased: ${result.item.name}`);
+          if (itemId === 'streak_repair' && user?.uid) {
+            const restoredStreak = Math.max(streak, 1);
+            setStreak(restoredStreak);
+            await updateDoc(doc(db, 'users', user.uid), {
+              currentStreak: true,
+              streak: restoredStreak,
+            });
+            Alert.alert('Streak Repaired', `Your streak has been restored to ${restoredStreak} days.`);
+          } else {
+            Alert.alert('Purchase Successful', 'Purchase complete!');
+          }
         } else {
           setError(result.error || 'Purchase failed');
           Alert.alert('Purchase Failed', result.error || 'Unable to complete purchase');
@@ -64,8 +86,19 @@ function Store({ navigation }: { navigation: any }): React.ReactElement {
         setLoadingItemId(null);
       }
     },
-    [purchaseItem]
+    [purchaseItem, user?.uid, streak, setStreak]
   );
+
+  if (!isPremium) {
+    return (
+      <PremiumGate
+        feature="Calm Points Store"
+        description="Spend Calm Points you've earned on streak repairs, themes, and exclusive features."
+        icon="storefront"
+        onBack={() => navigation.goBack()}
+      />
+    );
+  }
 
   const canPurchase = (cost: number): boolean => balance >= cost;
 
@@ -84,7 +117,29 @@ function Store({ navigation }: { navigation: any }): React.ReactElement {
 
   const renderStoreItem = (item: any) => {
     const isAffordable = canPurchase(item.cost);
-    const isLoading = loadingItemId === item.id;
+    const isItemLoading = loadingItemId === item.id;
+    const isPermanent = item.duration === null;
+    const owned = isItemOwned(item.id, isPermanent);
+    const monthlyMaxed = item.maxPurchasesPerMonth
+      ? isMonthlyLimitReached(item.id, item.maxPurchasesPerMonth)
+      : false;
+    const canBuy = isAffordable && !owned && !monthlyMaxed;
+
+    let buttonLabel = 'Purchase';
+    let buttonColor = colors.accent;
+    if (owned && item.category === 'cosmetic') {
+      buttonLabel = 'EQUIPPED';
+      buttonColor = '#10B981';
+    } else if (owned && item.category === 'feature') {
+      buttonLabel = 'Purchased ✓';
+      buttonColor = '#10B981';
+    } else if (monthlyMaxed) {
+      buttonLabel = 'Used this month';
+      buttonColor = colors.border;
+    } else if (!isAffordable) {
+      buttonLabel = 'Insufficient';
+      buttonColor = colors.border;
+    }
 
     return (
       <View
@@ -93,8 +148,8 @@ function Store({ navigation }: { navigation: any }): React.ReactElement {
           styles.itemCard,
           {
             backgroundColor: colors.surfacePrimary,
-            borderColor: isAffordable ? colors.accent : colors.border,
-            opacity: isAffordable ? 1 : 0.6,
+            borderColor: owned ? '#10B981' : isAffordable ? colors.accent : colors.border,
+            opacity: canBuy ? 1 : 0.6,
           },
         ]}
       >
@@ -106,9 +161,7 @@ function Store({ navigation }: { navigation: any }): React.ReactElement {
           <Text
             style={[
               styles.itemCost,
-              {
-                color: isAffordable ? colors.accent : colors.textSecondary,
-              },
+              { color: canBuy ? colors.accent : colors.textSecondary },
             ]}
           >
             {item.cost} Calm Points
@@ -116,21 +169,14 @@ function Store({ navigation }: { navigation: any }): React.ReactElement {
         </View>
 
         <TouchableOpacity
-          style={[
-            styles.purchaseButton,
-            {
-              backgroundColor: isAffordable ? colors.accent : colors.border,
-            },
-          ]}
+          style={[styles.purchaseButton, { backgroundColor: buttonColor }]}
           onPress={() => handlePurchase(item.id)}
-          disabled={!isAffordable || isLoading}
+          disabled={!canBuy || isItemLoading}
         >
-          {isLoading ? (
+          {isItemLoading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.purchaseButtonText}>
-              {isAffordable ? 'Purchase' : 'Insufficient'}
-            </Text>
+            <Text style={styles.purchaseButtonText}>{buttonLabel}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -187,6 +233,14 @@ function Store({ navigation }: { navigation: any }): React.ReactElement {
               ⚠️ Low balance - cannot bypass gate
             </Text>
           )}
+          <TouchableOpacity
+            style={[styles.auditButton, { borderColor: colors.border }]}
+            onPress={presentCustomerCenter}
+          >
+            <Text style={[styles.auditButtonText, { color: colors.textSecondary }]}>
+              MANAGE SUBSCRIPTION
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Error Banner */}
@@ -342,6 +396,18 @@ const styles = StyleSheet.create({
   footerBullet: {
     fontSize: 13,
     lineHeight: 20,
+  },
+  auditButton: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  auditButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
 

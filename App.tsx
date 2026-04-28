@@ -1,3 +1,15 @@
+// Polyfill crypto for React Native UUID support
+if (typeof global.crypto === 'undefined') {
+  (global as any).crypto = {
+    getRandomValues: (arr: any) => {
+      for (let i = 0; i < arr.length; i++) {
+        arr[i] = Math.floor(Math.random() * 256);
+      }
+      return arr;
+    },
+  };
+}
+
 import React, { useContext, useEffect, useState, ReactNode } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,7 +24,11 @@ import { UrgesProvider } from './src/context/UrgesContext';
 import { BadgesProvider } from './src/context/BadgesContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-import { EconomyProvider } from './src/context/EconomyContext';
+import { EconomyProvider, useEconomy } from './src/context/EconomyContext';
+import { SubscriptionProvider } from './src/context/SubscriptionContext';
+import { useAuth } from './src/context/AuthContext';
+import { useSyncBalanceToNative } from './src/hooks/useSyncBalanceToNative';
+import { useAppBlockerTransactions } from './src/hooks/useAppBlockerTransactions';
 import * as Font from 'expo-font';
 import type { AppContextValue } from './src/types';
 
@@ -36,9 +52,10 @@ import BundleRecommendationScreen from './src/screens/BundleRecommendationScreen
 import ImmediateWinScreen from './src/screens/ImmediateWinScreen';
 import BlockedAppsManager from './src/screens/BlockedAppsManager';
 import Store from './src/screens/Store';
+import { NeuroAuditScreen } from './src/screens/NeuroAuditScreen';
 // Temporarily disabled - to be debugged
 // import { BlockedAppGateManager } from './src/components/BlockedAppGateManager';
-// import DevSandboxScreen from './src/screens/DevSandboxScreen';
+import DevSandboxScreen from './src/screens/DevSandboxScreen';
 
 const navigationRef = React.createRef<any>();
 
@@ -156,16 +173,20 @@ function AppNavigator(): React.ReactElement {
             <Stack.Screen name="Profile" component={Profile} />
             <Stack.Screen name="LearnLaws" component={LearnLaws} />
             <Stack.Screen name="Store" component={Store} options={{ title: 'Calm Point Store' }} />
-            {/* Temporarily disabled - to be debugged */}
-            {/* <Stack.Screen
+            <Stack.Screen
               name="DevSandbox"
               component={DevSandboxScreen}
               options={{ title: 'Developer Sandbox' }}
-            /> */}
+            />
             <Stack.Screen
               name="BlockedApps"
               component={BlockedAppsManager}
               options={{ title: 'Content Blockers' }}
+            />
+            <Stack.Screen
+              name="NeuroAudit"
+              component={NeuroAuditScreen}
+              options={{ title: 'Neuro-Audit' }}
             />
           </>
         ) : (
@@ -187,6 +208,47 @@ function AppNavigator(): React.ReactElement {
       }
     </Stack.Navigator>
   );
+}
+
+/**
+ * Reads userId from AuthContext and wraps children in SubscriptionProvider.
+ * Must sit inside AuthProvider so useAuth() resolves correctly.
+ */
+function SubscriptionBridge({ children }: { children: ReactNode }): React.ReactElement {
+  const { user } = useAuth() as any;
+  return (
+    <SubscriptionProvider userId={user?.uid}>
+      {children}
+    </SubscriptionProvider>
+  );
+}
+
+/**
+ * Activates vantablack theme on mount if the user owns vantablack_theme in purchases.
+ * Runs inside EconomyProvider so ownedItems is available.
+ */
+function VantablackActivator(): React.ReactElement {
+  const { ownedItems } = useEconomy();
+  const { isVantablack, enableVantablack } = useTheme();
+
+  useEffect(() => {
+    const ownsIt = ownedItems.some((p) => p.itemId === 'vantablack_theme');
+    if (ownsIt && !isVantablack) {
+      enableVantablack();
+    }
+  }, [ownedItems]);
+
+  return null;
+}
+
+/**
+ * Component that syncs balance to native side and processes app blocker transactions
+ * Must be inside EconomyProvider to access economy context
+ */
+function BalanceSyncComponent(): React.ReactElement {
+  useSyncBalanceToNative();
+  useAppBlockerTransactions();
+  return null;
 }
 
 function App(): React.ReactElement {
@@ -211,12 +273,15 @@ function App(): React.ReactElement {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
+          <SubscriptionBridge>
           <ProgramProvider>
             <UrgesProvider>
               <BadgesProvider>
                 <SettingsProvider>
                   <AppProvider>
                     <EconomyProvider>
+                      <BalanceSyncComponent />
+                      <VantablackActivator />
                       <SafeAreaProvider>
                         <NavigationContainer ref={navigationRef}>
                           <AppNavigator />
@@ -231,6 +296,7 @@ function App(): React.ReactElement {
               </BadgesProvider>
             </UrgesProvider>
           </ProgramProvider>
+          </SubscriptionBridge>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

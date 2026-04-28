@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Animat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppContext } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
+import { useEconomy } from '../context/EconomyContext';
 import LawChip from '../components/LawChip';
 import { BalanceHeader } from '../components/BalanceHeader';
 import { getLawForRoute } from '../utils/lawLabels';
@@ -37,6 +38,7 @@ const AVATAR_OPTIONS = [
 function Dashboard({ navigation, route }) {
   const { calmPoints, streak, tasks, urges, getDailyRecommendations, todayPicks, todayCompletions, toggleTodayTaskCompletion, getCurrentDay, getAdherence, adherenceWindowDays, week1SetupDone, setWeek1SetupDone, setTodayPicksForDay, setAllTodayPicks, lastStreakMessage, graceDayDates, setWeek1Anchors, week1Anchors, dailyMood, setDailyMood, dailyQuest, dailyQuestDone, markDailyQuestDone, enableEnhancedFeatures, getGeneratedTasks, devDayOffset, rolloverBannerInfo, dismissRolloverBanner, dailyMetrics, hasAcceptedTerms, loading, acceptanceLoaded, userProfile, setUserProfile, currentMood, lastMoodCheckTime, setLastMoodCheckTime } = useContext(AppContext);
   const { isDarkMode, colors, toggleTheme } = useTheme();
+
   const currentDay = getCurrentDay();
   const picks = (() => {
     const saved = todayPicks[currentDay];
@@ -739,6 +741,22 @@ function Dashboard({ navigation, route }) {
         </View>
       </View>
 
+      {/* Neuro-Audit Entry */}
+      <TouchableOpacity
+        style={[styles.neuroAuditCard, { backgroundColor: colors.surfacePrimary, borderColor: colors.border }]}
+        onPress={() => navigation.navigate('NeuroAudit')}
+        activeOpacity={0.75}
+      >
+        <View style={styles.neuroAuditLeft}>
+          <Text style={styles.neuroAuditIcon}>🧠</Text>
+          <View>
+            <Text style={[styles.neuroAuditTitle, { color: colors.text }]}>NEURO-AUDIT</Text>
+            <Text style={[styles.neuroAuditSub, { color: colors.textSecondary }]}>Weekly behavioral analysis</Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </TouchableOpacity>
+
       {/* Steps Widget - only shown if pedometer is available */}
       {stepsAvailable && (
         <View style={[styles.stepsCard, { backgroundColor: colors.surfacePrimary }]}>
@@ -1175,6 +1193,30 @@ function Dashboard({ navigation, route }) {
     fontWeight: '600',
     color: '#6B7280',
   },
+  neuroAuditCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  neuroAuditLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  neuroAuditIcon: { fontSize: 24 },
+  neuroAuditTitle: { fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+  neuroAuditSub: { fontSize: 12, marginTop: 2 },
   stepsCard: {
     marginHorizontal: 20,
     marginTop: 16,

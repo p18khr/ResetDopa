@@ -14,6 +14,8 @@ import { AppContext } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { useBlockedAppGate } from '../hooks/useBlockedAppGate';
 import { useAppBlocker } from '../hooks/useAppBlocker';
+import { useSubscription } from '../context/SubscriptionContext';
+import { PremiumGate } from '../components/PremiumGate';
 
 /**
  * BlockedAppsManager - Manage content blocking with native Android blocker
@@ -24,8 +26,20 @@ export default function BlockedAppsManager({ navigation }) {
   const { userProfile, setUserProfile } = useContext(AppContext);
   const { navigateWithGate, GateModal } = useBlockedAppGate();
   const { hasPermissions, permissionDetails, checkPermissions, updateBlockedApps, requestPermissions } = useAppBlocker();
+  const { isPremium } = useSubscription();
 
   const [isSettingUp, setIsSettingUp] = useState(false);
+
+  if (!isPremium) {
+    return (
+      <PremiumGate
+        feature="App Blocker"
+        description="Block dopamine-hijacking apps with Vagus Gate — a 60-second mindfulness checkpoint before you can access them."
+        icon="shield-checkmark"
+        onBack={() => navigation.goBack()}
+      />
+    );
+  }
 
   // Available apps to block
   const AVAILABLE_APPS = [

@@ -8,19 +8,19 @@
  * 1. Fetch all users in batches of 50 (rate limiting)
  * 2. For each user: fetch last 7 days of urge_logs
  * 3. Call Groq API for "The Roast" (free analysis)
- * 4. If user purchased AI Protocol: add "Next Week's Protocol" (premium)
+ * 4. If user is Premium: add "Next Week's Protocol" section
  * 5. Save Markdown audit to weekly_audits subcollection
- * 6. Reset ai_protocol_purchased flag
  */
 
-import * as functions from 'firebase-functions/v2/scheduler';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { defineSecret } from 'firebase-functions/params';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 
-admin.initializeApp();
 const db = admin.firestore();
+const groqApiKey = defineSecret('GROQ_API_KEY');
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+let GROQ_API_KEY: string | undefined;
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const BATCH_SIZE = 50;
 const DELAY_BETWEEN_REQUESTS_MS = 100;
@@ -105,8 +105,7 @@ async function fetchRecentUrgeLogs(userId: string): Promise<UrgeLog[]> {
  */
 async function generateAudit(
   email: string,
-  logs: UrgeLog[],
-  hasPurchasedProtocol: boolean
+  logs: UrgeLog[]
 ): Promise<string> {
   const logSummary =
     logs.length > 0
@@ -134,14 +133,10 @@ Identify temporal patterns, environmental triggers, and failure sequences.
 ## The Weakest Link
 Name their biggest vulnerability. Brutal honesty.
 
-${
-  hasPurchasedProtocol
-    ? `## Next Week's Protocol
+## Next Week's Protocol
 ONE aggressive rule to break the weakness.
 Format: "If [TRIGGER], then [BEHAVIOR]."
-Absurdly specific.`
-    : ''
-}
+Absurdly specific.
 
 Max 2-3 sentences per section. 400 tokens max.`;
 
@@ -184,8 +179,8 @@ async function processUser(userDoc: any) {
 
   try {
     const logs = await fetchRecentUrgeLogs(uid);
-    const hasPurchasedProtocol = data.ai_protocol_purchased === true;
-    const audit = await generateAudit(data.email, logs, hasPurchasedProtocol);
+    const isPremium = data.subscription?.isPremium === true;
+    const audit = await generateAudit(data.email, logs);
 
     await db
       .collection('users')
@@ -197,11 +192,10 @@ async function processUser(userDoc: any) {
         audit,
         urge_count: logs.length,
         failures_this_week: logs.filter((l) => l.failed).length,
-        had_protocol_purchase: hasPurchasedProtocol,
+        had_protocol_purchase: isPremium,
       });
 
     await db.collection('users').doc(uid).update({
-      ai_protocol_purchased: false,
       last_audit_generated: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -219,13 +213,14 @@ function sleep(ms: number): Promise<void> {
 /**
  * MAIN: Weekly Neuro-Audit (Every Sunday 8:00 PM PT)
  */
-export const weeklyNeuroAudit = functions.onSchedule(
+export const weeklyNeuroAudit = onSchedule(
   {
     schedule: 'every sunday 20:00',
     timeZone: 'America/Los_Angeles',
-    retryConfig: { retries: 1, backoffSeconds: 60 },
+    secrets: [groqApiKey],
   },
   async (context: any) => {
+    process.env.GROQ_API_KEY = groqApiKey.value();
     console.log('🧠 Starting Weekly Neuro-Audit...');
     const start = Date.now();
     let processed = 0;
@@ -269,7 +264,7 @@ export const weeklyNeuroAudit = functions.onSchedule(
         error_details: errors.slice(0, 10),
       });
 
-      return { success: true, processed, successful: success, failed };
+      console.log(`Complete: ${success}/${processed} | ${failed} failures`);
     } catch (error: any) {
       console.error('🚨 Critical failure:', error.message);
 
