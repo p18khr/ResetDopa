@@ -169,6 +169,7 @@ export default function BlockedAppsManager({ navigation }) {
           <Text style={[styles.permissionAlertText, { color: colors.textSecondary }]}>
             {!permissionDetails?.usageStats && '• Usage Stats\n'}
             {!permissionDetails?.overlay && '• Display Over Apps\n'}
+            {!permissionDetails?.accessibility && '• Accessibility Service\n'}
           </Text>
           <Text style={[styles.permissionAlertButton, { color: colors.accent }]}>
             Tap to Grant →
