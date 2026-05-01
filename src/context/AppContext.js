@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { Alert, AppState } from 'react-native';
 import uuid from 'react-native-uuid';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { mergeUserData } from '../services/firestore.service';
 import { ensureStepPermission, startStepWatcher } from '../services/steps.service';
@@ -294,6 +294,18 @@ Return ONLY the quest text, nothing else.`;
     };
     computeQuest();
   }, [enableEnhancedFeatures, user, JSON.stringify(urges), adherenceWindowDays, observedDayKey]);
+
+  // Real-time listener: keep calmPoints in sync with Firestore
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+      if (snap.exists()) {
+        const pts = snap.data()?.calmPoints;
+        if (typeof pts === 'number') setCalmPoints(pts);
+      }
+    });
+    return () => unsub();
+  }, [user?.uid]);
 
   // Listen to user changes from AuthContext and load/reset data accordingly
   useEffect(() => {

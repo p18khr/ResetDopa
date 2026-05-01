@@ -27,7 +27,10 @@ class AppUsageMonitor(private val context: Context) {
      */
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     fun getForegroundApp(): String? {
-        if (usageStatsManager == null) return null
+        if (usageStatsManager == null) {
+            android.util.Log.w("AppUsageMonitor", "usageStatsManager is null, cannot get foreground app")
+            return null
+        }
 
         return try {
             val currentTime = System.currentTimeMillis()
@@ -38,7 +41,15 @@ class AppUsageMonitor(private val context: Context) {
                 currentTime
             )
 
+            android.util.Log.d("AppUsageMonitor", "queryUsageStats returned ${stats?.size ?: 0} entries")
+            if (stats != null && stats.isNotEmpty()) {
+                stats.forEach {
+                    android.util.Log.d("AppUsageMonitor", "  - ${it.packageName} (lastTimeUsed: ${it.lastTimeUsed}, ${currentTime - it.lastTimeUsed}ms ago)")
+                }
+            }
+
             if (stats.isNullOrEmpty()) {
+                android.util.Log.w("AppUsageMonitor", "No usage stats available (permission might not be granted)")
                 return null
             }
 
@@ -46,14 +57,18 @@ class AppUsageMonitor(private val context: Context) {
             val sortedStats = stats.sortedByDescending { it.lastTimeUsed }
             val mostRecent = sortedStats.firstOrNull()
 
-            // Additional check: make sure it was very recently used (within last 500ms)
-            if (mostRecent != null && (currentTime - mostRecent.lastTimeUsed) < 500) {
+            android.util.Log.d("AppUsageMonitor", "Most recent app: ${mostRecent?.packageName} (${currentTime - (mostRecent?.lastTimeUsed ?: 0)}ms ago)")
+
+            // Additional check: make sure it was very recently used (within last 3 seconds)
+            if (mostRecent != null && (currentTime - mostRecent.lastTimeUsed) < 3000) {
+                android.util.Log.d("AppUsageMonitor", "✓ ${mostRecent.packageName} is recent (< 3000ms), returning it")
                 mostRecent.packageName
             } else {
+                android.util.Log.d("AppUsageMonitor", "✗ Most recent app is too old (>= 3000ms), returning null")
                 null
             }
         } catch (e: Exception) {
-            android.util.Log.e("AppUsageMonitor", "Error getting foreground app", e)
+            android.util.Log.e("AppUsageMonitor", "Error getting foreground app: ${e.message}", e)
             null
         }
     }

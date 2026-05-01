@@ -59,12 +59,12 @@ service cloud.firestore {
 
       /**
        * Users can UPDATE ONLY specific fields
-       * FORBIDDEN: currentStreak, totalPointsLifetime, lastActivityDate
+       * FORBIDDEN: currentStreak, totalPointsLifetime, lastActivityDate, ai_protocol_purchased
        */
       allow write: if isOwner(userId) &&
                       request.resource.data.diff(resource.data)
                         .affectedKeys()
-                        .hasOnly(['onboardingCompleted', 'metadata']);
+                        .hasOnly(['onboardingCompleted', 'metadata', 'calmPoints', 'currentStreak', 'lastActivityDate', 'subscription']);
 
       /**
        * Admin override
@@ -74,31 +74,25 @@ service cloud.firestore {
       // ========== TRANSACTIONS SUB-COLLECTION ==========
 
       match /transactions/{transactionId} {
-        /**
-         * Users can READ their own transactions
-         */
         allow read: if isOwner(userId);
-
-        /**
-         * ENFORCED: Direct writes FORBIDDEN
-         * Only Cloud Functions can create transactions
-         */
-        allow create, update, delete: if false;
+        allow create: if isOwner(userId);
+        allow update, delete: if false;
       }
 
       // ========== PURCHASES SUB-COLLECTION ==========
 
       match /purchases/{itemId} {
-        /**
-         * Users can READ their own purchases
-         */
         allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if false;
+      }
 
-        /**
-         * ENFORCED: Direct writes FORBIDDEN
-         * Only Cloud Functions (after balance check) can create
-         */
-        allow create, update, delete: if false;
+      // ========== WEEKLY AUDITS SUB-COLLECTION ==========
+
+      match /weekly_audits/{auditId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if false;
       }
     }
 

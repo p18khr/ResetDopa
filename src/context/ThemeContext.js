@@ -15,6 +15,7 @@ export const useTheme = () => {
 export const ThemeProvider = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isVantablack, setIsVantablack] = useState(false);
   const [userPreference, setUserPreference] = useState(null);
 
   // Load user preference from AsyncStorage on mount
@@ -23,11 +24,14 @@ export const ThemeProvider = ({ children }) => {
       try {
         const saved = await AsyncStorage.getItem('themePreference');
 
-        if (saved) {
+        if (saved === 'vantablack') {
+          setUserPreference('vantablack');
+          setIsVantablack(true);
+          setIsDarkMode(true);
+        } else if (saved) {
           setUserPreference(saved);
           setIsDarkMode(saved === 'dark');
         } else {
-          // Use system preference as default
           const defaultMode = systemColorScheme === 'dark';
           setUserPreference(null);
           setIsDarkMode(defaultMode);
@@ -51,21 +55,55 @@ export const ThemeProvider = ({ children }) => {
     try {
       const newMode = !isDarkMode;
 
-      // Update state immediately
       setIsDarkMode(newMode);
+      setIsVantablack(false);
       setUserPreference(newMode ? 'dark' : 'light');
 
-      // Save to AsyncStorage
       await AsyncStorage.setItem('themePreference', newMode ? 'dark' : 'light');
     } catch (error) {
       console.error('Failed to save theme preference:', error);
-      // Revert on error
-      setIsDarkMode(!newMode);
+      setIsDarkMode(!isDarkMode);
+    }
+  };
+
+  const enableVantablack = async () => {
+    try {
+      setIsVantablack(true);
+      setIsDarkMode(true);
+      setUserPreference('vantablack');
+      await AsyncStorage.setItem('themePreference', 'vantablack');
+    } catch (error) {
+      console.error('Failed to save vantablack preference:', error);
     }
   };
 
   // Color palette — based on the app icon's deep navy/violet/indigo space theme
   const colors = {
+    // Vantablack — pure OLED black, minimal contrast for eye strain reduction
+    vantablack: {
+      background: '#000000',
+      backgroundSecondary: '#050505',
+      surfacePrimary: '#0A0A0A',
+      surfaceSecondary: '#111111',
+      border: '#1C1C1C',
+      text: '#FFFFFF',
+      textSecondary: '#AAAAAA',
+      textTertiary: '#555555',
+      accent: '#FFFFFF',
+      success: '#00E676',
+      warning: '#FF9100',
+      danger: '#FF3333',
+      info: '#4A90E2',
+      cardBackground: '#0A0A0A',
+      cardBorder: '#1C1C1C',
+      inputBackground: '#0A0A0A',
+      inputBorder: '#222222',
+      shadowColor: '#000000',
+      moodBgGood: '#001100',
+      moodBgOkay: '#000A11',
+      moodBgLow: '#110A00',
+      moodBgStressed: '#110000',
+    },
     // Light mode — airy, lavender-tinted, navy text
     light: {
       background: '#FFFFFF',
@@ -126,11 +164,13 @@ export const ThemeProvider = ({ children }) => {
     },
   };
 
-  const currentColors = isDarkMode ? colors.dark : colors.light;
+  const currentColors = isVantablack ? colors.vantablack : isDarkMode ? colors.dark : colors.light;
 
   const value = {
     isDarkMode,
+    isVantablack,
     toggleTheme,
+    enableVantablack,
     colors: currentColors,
     allColors: colors,
   };

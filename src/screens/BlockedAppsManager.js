@@ -79,11 +79,11 @@ export default function BlockedAppsManager({ navigation }) {
 
       // Android: Sync with native module
       if (Platform.OS === 'android') {
-        if (!hasPermissions && newBlockedApps.length > 0) {
+        if (!hasPermissions && !isBlocked) {
           // Request permissions if not already granted
           Alert.alert(
-            '🔐 Permissions Required',
-            'DopaReset needs:\n\n1. Usage Stats - to detect when you open blocked apps\n2. Display Over Apps - to show blocking screen',
+            'Permissions Required',
+            'DopaReset needs the following permissions to block apps:\n\n• Usage Stats — to detect when you open a blocked app\n• Display Over Apps — to show the calm-down screen\n• Accessibility Service — to detect app switches as a fallback\n\nNo personal data is collected or shared.',
             [
               { text: 'Cancel', style: 'cancel' },
               {

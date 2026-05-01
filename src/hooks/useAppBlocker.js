@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { NativeModules, TurboModuleRegistry, NativeEventEmitter, Platform, Alert } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, NativeModules, TurboModuleRegistry, NativeEventEmitter, Platform, Alert } from 'react-native';
 
 // New arch (newArchEnabled=true) may not expose modules via NativeModules — try TurboModuleRegistry first
 const AppBlocker = TurboModuleRegistry.get('AppBlocker') ?? NativeModules.AppBlocker;
@@ -19,14 +19,32 @@ export function useAppBlocker() {
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [error, setError] = useState(null);
 
+  const awaitingPermission = useRef(false);
+
   // Check permissions on mount
   useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return; // iOS not supported
-    }
+    if (Platform.OS !== 'android') return;
 
     checkPermissions();
     loadBlockedApps();
+  }, []);
+
+  // Re-check permissions when app returns to foreground after visiting Settings
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active' && awaitingPermission.current) {
+        awaitingPermission.current = false;
+        const freshDetails = await checkPermissions();
+        // Auto-advance to next missing permission without requiring another tap
+        if (freshDetails && !freshDetails.allGranted) {
+          requestNextPermission(freshDetails);
+        }
+      }
+    });
+
+    return () => sub.remove();
   }, []);
 
   /**
@@ -37,34 +55,55 @@ export function useAppBlocker() {
       if (!AppBlocker) {
         console.warn('AppBlocker module not available - running on non-Android device?');
         setError('AppBlocker module not available');
-        setPermissionDetails({
-          usageStats: false,
-          overlay: false,
-          allGranted: false,
-        });
-        return;
+        const fallback = { usageStats: false, overlay: false, allGranted: false };
+        setPermissionDetails(fallback);
+        return fallback;
       }
 
       const result = await AppBlocker.checkPermissions();
 
-      // Validate result structure
       if (!result || typeof result !== 'object') {
         console.error('Invalid response from AppBlocker.checkPermissions():', result);
         setError('Invalid permission check response');
-        return;
+        return null;
       }
 
       setPermissionDetails(result);
       setHasPermissions(result.allGranted === true);
+      return result;
     } catch (err) {
       console.error('Error checking permissions:', err);
       setError(err.message || 'Failed to check permissions');
-      // Set a default state so requestPermissions doesn't fail
-      setPermissionDetails({
-        usageStats: false,
-        overlay: false,
-        allGranted: false,
-      });
+      const fallback = { usageStats: false, overlay: false, allGranted: false };
+      setPermissionDetails(fallback);
+      return fallback;
+    }
+  };
+
+  // Shows the next missing permission dialog given a fresh details object.
+  // Used both by requestPermissions() and the AppState auto-advance flow.
+  const requestNextPermission = (details) => {
+    if (!details) return;
+    if (!details.usageStats) {
+      Alert.alert(
+        '📊 Usage Stats Permission',
+        'This permission allows DopaReset to detect when you open blocked apps.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Grant Permission', onPress: requestUsageStatsPermission },
+        ]
+      );
+    } else if (!details.overlay) {
+      Alert.alert(
+        '🚫 Overlay Permission',
+        'This permission allows DopaReset to show a blocking screen when you open blocked apps.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Grant Permission', onPress: requestOverlayPermission },
+        ]
+      );
+    } else if (!details.accessibility) {
+      requestAccessibilityPermission();
     }
   };
 
@@ -276,6 +315,7 @@ export function useAppBlocker() {
 
     if (AppBlocker) {
       console.log('[AppBlocker] Calling native AppBlocker.requestUsageStatsPermission()');
+      awaitingPermission.current = true;
       AppBlocker.requestUsageStatsPermission();
     } else {
       console.error('[AppBlocker] AppBlocker module is null!');
@@ -295,6 +335,7 @@ export function useAppBlocker() {
 
     if (AppBlocker) {
       console.log('[AppBlocker] Calling native AppBlocker.requestOverlayPermission()');
+      awaitingPermission.current = true;
       AppBlocker.requestOverlayPermission();
     } else {
       console.error('[AppBlocker] AppBlocker module is null!');
@@ -317,6 +358,7 @@ export function useAppBlocker() {
           text: 'Enable in Settings',
           onPress: () => {
             if (AppBlocker) {
+              awaitingPermission.current = true;
               AppBlocker.requestAccessibilityPermission();
             }
           },
@@ -329,41 +371,11 @@ export function useAppBlocker() {
    * Request all permissions with user guidance
    */
   const requestPermissions = async () => {
-    console.log('[AppBlocker] requestPermissions called');
-    if (!permissionDetails) {
-      console.log('[AppBlocker] permissionDetails is null, rechecking...');
-      await checkPermissions();
-      console.log('[AppBlocker] Permission check complete, permissionDetails:', permissionDetails);
-      return;
+    let details = permissionDetails;
+    if (!details) {
+      details = await checkPermissions();
     }
-
-    console.log('[AppBlocker] permissionDetails loaded:', permissionDetails);
-    if (!permissionDetails.usageStats) {
-      console.log('[AppBlocker] Requesting Usage Stats permission');
-      Alert.alert(
-        '📊 Usage Stats Permission',
-        'This permission allows DopaReset to detect when you open blocked apps.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Grant Permission', onPress: requestUsageStatsPermission },
-        ]
-      );
-    } else if (!permissionDetails.overlay) {
-      console.log('[AppBlocker] Requesting Overlay permission');
-      Alert.alert(
-        '🚫 Overlay Permission',
-        'This permission allows DopaReset to show a blocking screen when you open blocked apps.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Grant Permission', onPress: requestOverlayPermission },
-        ]
-      );
-    } else if (!permissionDetails.accessibility) {
-      console.log('[AppBlocker] Requesting Accessibility permission');
-      requestAccessibilityPermission();
-    } else {
-      console.log('[AppBlocker] All permissions already granted');
-    }
+    requestNextPermission(details);
   };
 
   return {

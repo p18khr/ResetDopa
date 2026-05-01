@@ -319,7 +319,16 @@ class AppBlockerModule(reactContext: ReactApplicationContext) :
     }
 
     private fun hasAccessibilityPermission(): Boolean {
-        return false
+        return try {
+            val enabledServices = Settings.Secure.getString(
+                reactApplicationContext.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            val target = "${reactApplicationContext.packageName}/${AppAccessibilityService::class.java.name}"
+            enabledServices.split(":").any { it.equals(target, ignoreCase = true) }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun startMonitoringService() {

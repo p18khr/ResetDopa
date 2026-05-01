@@ -42,18 +42,6 @@ export const POINTS_GATE_BYPASSED = 15;
  * These are sinks that remove points from the economy
  */
 export const STORE_ITEMS = {
-  // Features (unlock functionality)
-  WEEKLY_AI_PROTOCOL: {
-    id: 'ai_protocol',
-    name: 'Weekly AI Protocol',
-    description: 'Personalized insights & breakthrough patterns from your weekly activities',
-    cost: 100,
-    category: 'feature',
-    sku: 'ai_protocol_weekly',
-    available: true,
-    duration: 30, // days
-  },
-
   // Rescues (fix broken state)
   STREAK_REPAIR: {
     id: 'streak_repair',

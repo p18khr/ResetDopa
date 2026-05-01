@@ -13,13 +13,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   collection,
   doc,
+  addDoc,
+  getDoc,
+  updateDoc,
   onSnapshot,
   query,
   where,
   orderBy,
   limit,
-  getDocs,
-  httpsCallable,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { db } from '../config/firebase';
@@ -32,9 +34,20 @@ import {
   CreateTransactionResponse,
   PendingTransaction,
 } from '../types/economy';
-import { v4 as uuidv4 } from 'uuid';
+import { STORE_ITEMS } from '../constants/economyConstants';
+// Simple UUID replacement that doesn't need crypto
+function generateSimpleId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
 
 // ========== CONTEXT INTERFACE ==========
+
+export interface Purchase {
+  id: string;
+  itemId: string;
+  grantedAt: any;
+  expiresAt: any | null;
+}
 
 interface EconomyContextValue {
   // State
@@ -43,6 +56,7 @@ interface EconomyContextValue {
   isLoading: boolean;
   error: string | null;
   lastTransactions: Transaction[];
+  ownedItems: Purchase[];
 
   // Methods
   addTransaction(
@@ -55,6 +69,10 @@ interface EconomyContextValue {
   getBalance(): Promise<number>;
   syncOffline(): Promise<void>;
   executeBankruptcy(appBlocked: string): Promise<void>;
+
+  // Dev-only (no-op in production)
+  debugAddPurchase(itemId: string, permanent: boolean): void;
+  debugClearPurchases(): void;
 }
 
 // ========== CONTEXT CREATION ==========
@@ -77,6 +95,7 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const [lastTransactions, setLastTransactions] = useState<Transaction[]>([]);
   const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
+  const [ownedItems, setOwnedItems] = useState<Purchase[]>([]);
 
   // ===== INITIALIZATION & SYNC =====
 
@@ -100,40 +119,29 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
   const fetchBalance = useCallback(async (userId: string) => {
     if (!userId) return;
 
+    console.log('[Economy] fetchBalance() called for:', userId);
     setIsLoading(true);
     setError(null);
 
     try {
-      // Query all completed transactions
-      const transactionsQuery = query(
-        collection(db, 'users', userId, 'transactions'),
-        where('status', '==', 'completed'),
-        orderBy('timestamp', 'desc'),
-        limit(100)
-      );
+      // Get calmPoints directly from user document
+      const userDoc = await getDoc(doc(db, 'users', userId));
 
-      const snapshot = await getDocs(transactionsQuery);
-
-      const transactions = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      } as Transaction));
-
-      // Derive balance from transactions
-      const derivedBalance = transactions.reduce((sum, txn) => sum + (txn.amount || 0), 0);
-      setBalance(Math.max(derivedBalance, 0)); // Never negative
-
-      // Get last 10 for display
-      setLastTransactions(transactions.slice(0, 10));
-
-      // Get user profile for streak status
-      const userDoc = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
-      if (!userDoc.empty) {
-        const userData = userDoc.docs[0].data();
-        setCurrentStreak(userData.currentStreak ?? true);
+      if (!userDoc.exists()) {
+        console.log('[Economy] ⚠️ User document not found');
+        setBalance(0);
+        return;
       }
+
+      const userData = userDoc.data();
+      const calmPoints = userData?.calmPoints || 0;
+
+      console.log('[Economy] ✅ Got calmPoints from user document:', calmPoints);
+      setBalance(calmPoints);
+      setCurrentStreak(userData?.currentStreak ?? true);
+
     } catch (err: any) {
-      console.error('[Economy] Error fetching balance:', err);
+      console.error('[Economy] ❌ Error fetching balance:', err);
       setError(err.message || 'Failed to fetch balance');
     } finally {
       setIsLoading(false);
@@ -160,10 +168,6 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
         } as Transaction));
 
         setLastTransactions(transactions);
-
-        // Recalculate balance
-        const newBalance = transactions.reduce((sum, txn) => sum + (txn.amount || 0), 0);
-        setBalance(Math.max(newBalance, 0));
       },
       (err) => {
         console.error('[Economy] Snapshot listener error:', err);
@@ -185,6 +189,9 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
         const userData = snapshot.data();
         if (userData) {
           setCurrentStreak(userData.currentStreak ?? true);
+          if (typeof userData.calmPoints === 'number') {
+            setBalance(userData.calmPoints);
+          }
         }
       },
       (err) => {
@@ -195,16 +202,47 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
     return unsubscribe;
   }, []);
 
+  const subscribeToPurchases = useCallback((userId: string) => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'users', userId, 'purchases'),
+      (snapshot) => {
+        const purchases = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        } as Purchase));
+        setOwnedItems(purchases);
+      },
+      (err) => {
+        console.error('[Economy] Purchases listener error:', err);
+      }
+    );
+    return unsubscribe;
+  }, []);
+
   /**
    * Initialize on auth state change
    */
   useEffect(() => {
-    if (!user?.uid) {
+    console.log('━━━ [Economy] AUTH EFFECT FIRED ━━━');
+    console.log('[Economy] user:', user);
+
+    if (!user) {
+      console.log('[Economy] ❌ user is null');
       setBalance(0);
       setCurrentStreak(true);
       setLastTransactions([]);
       return;
     }
+
+    if (!user.uid) {
+      console.log('[Economy] ❌ user.uid is missing');
+      setBalance(0);
+      setCurrentStreak(true);
+      setLastTransactions([]);
+      return;
+    }
+
+    console.log('━━━ [Economy] INITIALIZING for user:', user.uid, '━━━');
 
     // Load initial state
     fetchBalance(user.uid);
@@ -213,12 +251,17 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
     // Subscribe to real-time updates
     const unsubTxns = subscribeToTransactions(user.uid);
     const unsubUser = subscribeToUserProfile(user.uid);
+    const unsubPurchases = subscribeToPurchases(user.uid);
+
+    console.log('[Economy] ✅ Subscriptions started');
 
     return () => {
+      console.log('[Economy] Cleaning up subscriptions');
       unsubTxns();
       unsubUser();
+      unsubPurchases();
     };
-  }, [user?.uid, fetchBalance, loadPendingTransactions, subscribeToTransactions, subscribeToUserProfile]);
+  }, [user, fetchBalance, loadPendingTransactions, subscribeToTransactions, subscribeToUserProfile, subscribeToPurchases]);
 
   // ===== METHODS =====
 
@@ -241,82 +284,79 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
         throw new Error('User not authenticated');
       }
 
-      const idempotencyKey = uuidv4();
-
-      const payload: CreateTransactionRequest = {
-        type,
-        metadata,
-        idempotencyKey,
-      };
-
-      if (customAmount) {
-        payload.amount = customAmount;
-      }
-
       try {
-        // Call Cloud Function
-        const createTransactionFn = httpsCallable(db.app as any, 'createTransaction');
-        const response = (await createTransactionFn(payload)) as any;
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        const currentBalance = userDocSnap.data()?.calmPoints || 0;
+        const amount = customAmount || 0;
+        const newBalance = Math.max(currentBalance + amount, 0);
 
-        if (response.data.success) {
-          setBalance(response.data.balance);
-          if (response.data.streakBroken) {
-            setCurrentStreak(false);
-          }
-          return response.data;
-        } else {
-          throw new Error(response.data.error || 'Unknown error');
+        console.log(`[Economy] ${type}: ${currentBalance} + ${amount} = ${newBalance}`);
+
+        // Update balance in Firestore
+        await updateDoc(userDocRef, { calmPoints: newBalance });
+
+        // Break streak if needed
+        if (type === 'app_blocker_open') {
+          await updateDoc(userDocRef, { currentStreak: false });
         }
+
+        setBalance(newBalance);
+        return { success: true, balance: newBalance, streakBroken: type === 'app_blocker_open' };
       } catch (err: any) {
-        // If offline or error, queue locally
-        console.warn('[Economy] Transaction failed, queuing locally:', err.message);
-
-        const pending: PendingTransaction = {
-          ...payload,
-          localId: uuidv4(),
-          createdAtLocal: Date.now(),
-          retryCount: 0,
-        };
-
-        const updated = [...pendingTransactions, pending];
-        setPendingTransactions(updated);
-        await AsyncStorage.setItem('@pending_transactions', JSON.stringify(updated));
-
-        return {
-          success: false,
-          error: 'Transaction queued for sync when online',
-        };
+        console.error('[Economy] ❌ Transaction error:', err);
+        throw err;
       }
     },
-    [user?.uid, pendingTransactions]
+    [user?.uid]
   );
 
   /**
-   * Purchase an item from premium store
+   * Purchase an item from premium store (client-side)
    */
   const purchaseItem = useCallback(
     async (itemId: string) => {
-      if (!user?.uid) {
-        throw new Error('User not authenticated');
+      if (!user?.uid) throw new Error('User not authenticated');
+
+      const item = Object.values(STORE_ITEMS).find((i) => i.id === itemId);
+      if (!item) throw new Error(`Item ${itemId} not found`);
+
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      const currentBalance = userSnap.data()?.calmPoints || 0;
+
+      if (currentBalance < item.cost) {
+        throw new Error(`Need ${item.cost} points, have ${currentBalance}`);
       }
 
-      try {
-        const purchaseItemFn = httpsCallable(db.app as any, 'purchaseItem');
-        const response = (await purchaseItemFn({
-          itemId,
-          idempotencyKey: uuidv4(),
-        })) as any;
+      const newBalance = currentBalance - item.cost;
+      const expiresAt = item.duration
+        ? new Date(Date.now() + item.duration * 24 * 60 * 60 * 1000)
+        : null;
 
-        if (response.data.success) {
-          setBalance(response.data.balance);
-          return response.data;
-        } else {
-          throw new Error(response.data.error || 'Purchase failed');
-        }
-      } catch (err: any) {
-        console.error('[Economy] Purchase error:', err);
-        throw err;
-      }
+      await updateDoc(userRef, {
+        calmPoints: newBalance,
+      });
+
+      await addDoc(collection(db, 'users', user.uid, 'purchases'), {
+        itemId,
+        grantedAt: serverTimestamp(),
+        expiresAt,
+        _idempotencyKey: generateSimpleId(),
+      });
+
+      await addDoc(collection(db, 'users', user.uid, 'transactions'), {
+        amount: -item.cost,
+        type: 'store_purchase',
+        timestamp: serverTimestamp(),
+        metadata: { itemPurchased: itemId },
+        status: 'completed',
+        idempotencyKey: generateSimpleId(),
+        processedBy: 'client',
+      });
+
+      setBalance(newBalance);
+      return { success: true, balance: newBalance };
     },
     [user?.uid]
   );
@@ -329,49 +369,9 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
     return balance;
   }, [balance]);
 
-  /**
-   * Sync offline transactions when coming online
-   */
   const syncOffline = useCallback(async () => {
-    if (!user?.uid || pendingTransactions.length === 0) {
-      return;
-    }
-
-    console.log(`[Economy] Syncing ${pendingTransactions.length} offline transactions...`);
-
-    try {
-      const syncOfflineFn = httpsCallable(db.app as any, 'syncOfflineTransactions');
-      const response = (await syncOfflineFn({
-        pendingTransactions: pendingTransactions.map(
-          ({ localId, createdAtLocal, retryCount, ...rest }) => rest
-        ),
-      })) as any;
-
-      if (response.data.success) {
-        // Clear successful pending transactions
-        const failedKeys = new Set(
-          response.data.results
-            .filter((r: any) => !r.success)
-            .map((r: any) => r.idempotencyKey)
-        );
-
-        const remaining = pendingTransactions.filter(
-          (t) => failedKeys.has(t.idempotencyKey)
-        );
-
-        setPendingTransactions(remaining);
-        await AsyncStorage.setItem('@pending_transactions', JSON.stringify(remaining));
-
-        // Update balance
-        setBalance(response.data.balance);
-
-        console.log(`[Economy] Sync complete. ${response.data.results.filter((r: any) => r.success).length} synced.`);
-      }
-    } catch (err: any) {
-      console.error('[Economy] Offline sync failed:', err);
-      // Will retry on next network change
-    }
-  }, [user?.uid, pendingTransactions]);
+    // Offline sync handled by Firestore SDK automatically
+  }, []);
 
   /**
    * Execute bankruptcy when user confirms in BankruptcyModal
@@ -418,6 +418,22 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
     [user?.uid, balance, addTransaction]
   );
 
+  // ===== DEV-ONLY HELPERS =====
+
+  const debugAddPurchase = useCallback((itemId: string, permanent: boolean) => {
+    const mockPurchase: Purchase = {
+      id: `debug_${Date.now()}`,
+      itemId,
+      grantedAt: new Date(),
+      expiresAt: permanent ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+    setOwnedItems((prev) => [...prev.filter((p) => p.itemId !== itemId), mockPurchase]);
+  }, []);
+
+  const debugClearPurchases = useCallback(() => {
+    setOwnedItems([]);
+  }, []);
+
   // ===== RETURN CONTEXT =====
 
   const value: EconomyContextValue = {
@@ -426,11 +442,14 @@ export function EconomyProvider({ children }: EconomyProviderProps) {
     isLoading,
     error,
     lastTransactions,
+    ownedItems,
     addTransaction,
     purchaseItem,
     getBalance,
     syncOffline,
     executeBankruptcy,
+    debugAddPurchase,
+    debugClearPurchases,
   };
 
   return <EconomyContext.Provider value={value}>{children}</EconomyContext.Provider>;
