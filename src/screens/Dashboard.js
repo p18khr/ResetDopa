@@ -584,7 +584,7 @@ function Dashboard({ navigation, route }) {
                 />
               </TouchableOpacity>
             </Animated.View>
-            {__DEV__ && (
+            {false && __DEV__ && (
               <TouchableOpacity
                 style={{ marginLeft: 10 }}
                 onPress={() => navigation.navigate('DevSandbox')}

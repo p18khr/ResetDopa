@@ -1,5 +1,5 @@
 <resources>
-  <string name="accessibility_service_description">DopaReset App Blocker monitors app usage to help you stay focused and avoid distracting apps.</string>
+  <string name="accessibility_service_description">ResetDopa uses this service solely to monitor which app is in the foreground in order to block distracting apps you have chosen to restrict. It does not read screen content, record keystrokes, or collect any personal data. No data is transmitted or shared with third parties. This service is not an accessibility tool for users with disabilities.</string>
   <string name="app_name">ResetDopa</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
   <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>

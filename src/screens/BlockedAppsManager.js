@@ -1,4 +1,5 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -25,7 +26,9 @@ export default function BlockedAppsManager({ navigation }) {
   const { isDarkMode, colors } = useTheme();
   const { userProfile, setUserProfile } = useContext(AppContext);
   const { navigateWithGate, GateModal } = useBlockedAppGate();
-  const { hasPermissions, permissionDetails, checkPermissions, updateBlockedApps, requestPermissions } = useAppBlocker();
+  const { hasPermissions, permissionDetails, checkPermissions, updateBlockedApps, requestPermissions } = useAppBlocker({
+    onAccessibilityNeeded: () => navigation.navigate('AccessibilityPermission'),
+  });
   const { isPremium } = useSubscription();
 
   const [isSettingUp, setIsSettingUp] = useState(false);
@@ -34,7 +37,7 @@ export default function BlockedAppsManager({ navigation }) {
     return (
       <PremiumGate
         feature="App Blocker"
-        description="Block dopamine-hijacking apps with Vagus Gate — a 60-second mindfulness checkpoint before you can access them."
+        description="Block dopamine-hijacking apps with ResetDopa App Blocker — a 60-second mindfulness checkpoint before you can access them."
         icon="shield-checkmark"
         onBack={() => navigation.goBack()}
       />
@@ -53,10 +56,20 @@ export default function BlockedAppsManager({ navigation }) {
 
   const blockedApps = userProfile?.blockedApps || [];
 
-  // Check permissions on mount
-  useEffect(() => {
-    checkPermissions();
-  }, []);
+  // Check permissions on focus. If all permissions just became granted and the user already
+  // toggled apps before completing the permission flow, sync the pending list to native now.
+  useFocusEffect(
+    useCallback(() => {
+      const syncOnFocus = async () => {
+        const details = await checkPermissions();
+        const pendingApps = userProfile?.blockedApps || [];
+        if (details?.allGranted && pendingApps.length > 0) {
+          await updateBlockedApps(pendingApps);
+        }
+      };
+      syncOnFocus();
+    }, [userProfile?.blockedApps])
+  );
 
   /**
    * Toggle block app
@@ -83,7 +96,7 @@ export default function BlockedAppsManager({ navigation }) {
           // Request permissions if not already granted
           Alert.alert(
             'Permissions Required',
-            'DopaReset needs the following permissions to block apps:\n\n• Usage Stats — to detect when you open a blocked app\n• Display Over Apps — to show the calm-down screen\n• Accessibility Service — to detect app switches as a fallback\n\nNo personal data is collected or shared.',
+            'ResetDopa needs the following permissions to block apps:\n\n• Usage Stats — to detect when you open a blocked app\n• Display Over Apps — to show the calm-down screen\n• Accessibility Service — to detect app switches as a fallback\n\nNo personal data is collected or shared.',
             [
               { text: 'Cancel', style: 'cancel' },
               {
@@ -218,7 +231,7 @@ export default function BlockedAppsManager({ navigation }) {
       {/* Info Box */}
       <View style={styles.infoBox}>
         <Text style={styles.infoText}>
-          🧠 <Text style={styles.infoBold}>How it works:</Text> Enable any app above. When you try to open it, VagusGatekeeper gates it with 60s of breathing. Choose [Stay Calm] to skip the app completely.
+            🧠 <Text style={styles.infoBold}>How it works:</Text> Enable any app above. When you try to open it, ResetDopa App Blocker shows 60s of breathing. Choose [Stay Calm] to skip the app completely.
         </Text>
       </View>
     </SafeAreaView>

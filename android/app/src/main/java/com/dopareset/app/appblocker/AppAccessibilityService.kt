@@ -45,7 +45,7 @@ class AppAccessibilityService : AccessibilityService() {
                         blockApp(packageName)
                     }
                 } else {
-                    // Reset when returning to DopaReset
+                    // Reset when returning to ResetDopa
                     if (packageName == applicationContext.packageName) {
                         lastBlockedApp = null
                     }

@@ -94,7 +94,7 @@ class AppMonitorService : Service() {
                     blockApp(foregroundApp)
                 }
             } else {
-                // Reset if user is back in DopaReset or another non-blocked app
+                // Reset if user is back in ResetDopa or another non-blocked app
                 if (foregroundApp == packageName) {
                     lastBlockedApp = null
                 }
@@ -156,7 +156,7 @@ class AppMonitorService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("DopaReset Protection Active")
+            .setContentTitle("ResetDopa Protection Active")
             .setContentText("Monitoring ${blockedApps.size} blocked apps")
             .setSmallIcon(android.R.drawable.ic_menu_view) // Use app icon in production
             .setContentIntent(pendingIntent)

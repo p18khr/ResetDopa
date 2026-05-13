@@ -33,6 +33,7 @@ export default function Settings({ navigation }) {
 
   const privacyUrl = Constants.expoConfig?.extra?.privacyPolicyUrl || 'https://resetdopa.com/privacy.html';
   const termsUrl = Constants.expoConfig?.extra?.termsUrl || 'https://resetdopa.com/terms.html';
+  const accountDeletionUrl = Constants.expoConfig?.extra?.accountDeletionUrl || 'https://resetdopa.com/account/delete/';
 
   useEffect(() => {
     loadNotificationSettings();
@@ -287,26 +288,7 @@ export default function Settings({ navigation }) {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      '⚠️ Delete Account',
-      'This action is PERMANENT and cannot be undone. All your data will be deleted immediately, including:\n\n• Your progress and streaks\n• All logged urges\n• Badges and achievements\n• Settings and preferences\n\nAre you absolutely sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Keep Account',
-          style: 'default',
-        },
-        {
-          text: 'Delete Everything',
-          style: 'destructive',
-          onPress: () => {
-            // Show password modal
-            setPassword('');
-            setShowPasswordModal(true);
-          },
-        },
-      ]
-    );
+    openLink(accountDeletionUrl, 'Account Deletion');
   };
 
   const openLink = async (url, title) => {
@@ -505,7 +487,7 @@ export default function Settings({ navigation }) {
 
           <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
             <Ionicons name="trash-outline" size={20} color="#fff" />
-            <Text style={styles.deleteButtonText}>Delete Account</Text>
+            <Text style={styles.deleteButtonText}>Request Account Deletion</Text>
           </TouchableOpacity>
         </View>
 

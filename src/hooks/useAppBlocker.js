@@ -12,7 +12,8 @@ const AppBlocker = TurboModuleRegistry.get('AppBlocker') ?? NativeModules.AppBlo
  * - Balance/Streak syncing to native side
  * - Transaction event handling (resist +2, open -15 and -1 streak)
  */
-export function useAppBlocker() {
+export function useAppBlocker(options = {}) {
+  const { onAccessibilityNeeded } = options;
   const [hasPermissions, setHasPermissions] = useState(false);
   const [permissionDetails, setPermissionDetails] = useState(null);
   const [blockedApps, setBlockedAppsState] = useState([]);
@@ -87,7 +88,7 @@ export function useAppBlocker() {
     if (!details.usageStats) {
       Alert.alert(
         '📊 Usage Stats Permission',
-        'This permission allows DopaReset to detect when you open blocked apps.',
+        'This permission allows ResetDopa to detect when you open blocked apps.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Grant Permission', onPress: requestUsageStatsPermission },
@@ -96,14 +97,18 @@ export function useAppBlocker() {
     } else if (!details.overlay) {
       Alert.alert(
         '🚫 Overlay Permission',
-        'This permission allows DopaReset to show a blocking screen when you open blocked apps.',
+        'This permission allows ResetDopa to show a blocking screen when you open blocked apps.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Grant Permission', onPress: requestOverlayPermission },
         ]
       );
     } else if (!details.accessibility) {
-      requestAccessibilityPermission();
+      if (onAccessibilityNeeded) {
+        onAccessibilityNeeded();
+      } else {
+        requestAccessibilityPermission();
+      }
     }
   };
 
@@ -350,7 +355,7 @@ export function useAppBlocker() {
     if (Platform.OS !== 'android') return;
     Alert.alert(
       'Accessibility Permission Required',
-      'DopaReset uses the Accessibility Service to detect when you open a blocked app and immediately show a 60-second calm-down screen.\n\n' +
+      'ResetDopa uses the Accessibility Service to detect when you open a blocked app and immediately show a 60-second calm-down screen.\n\n' +
       'This service only reads which app is in the foreground. It does not read any screen content, collect personal data, or share any information with third parties.',
       [
         { text: 'Not Now', style: 'cancel' },

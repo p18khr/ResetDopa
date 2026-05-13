@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases, {
   LOG_LEVEL,
   CustomerInfo,
@@ -31,7 +32,7 @@ export interface SubscriptionContextValue {
   presentCustomerCenter: () => Promise<void>;
   restorePurchases: () => Promise<boolean>;
   purchasePackage: (pkg: PurchasesPackage) => Promise<boolean>;
-  debugSetPremium?: (value: boolean | null) => void;
+  debugSetPremium: (value: boolean | null) => void;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
@@ -46,6 +47,14 @@ export function SubscriptionProvider({ userId, children }: SubscriptionProviderP
   const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [debugPremiumOverride, setDebugPremiumOverride] = useState<boolean | null>(null);
+
+  // Load persisted dev override on mount so it survives Fast Refresh and navigation
+  useEffect(() => {
+    if (!__DEV__) return;
+    AsyncStorage.getItem('__dev_premium_override__').then((val) => {
+      if (val === 'true') setDebugPremiumOverride(true);
+    });
+  }, []);
   const configured = useRef(false);
 
   const rcIsPremium =
@@ -54,9 +63,15 @@ export function SubscriptionProvider({ userId, children }: SubscriptionProviderP
 
   const isPremium = __DEV__ && debugPremiumOverride !== null ? debugPremiumOverride : rcIsPremium;
 
-  const debugSetPremium = __DEV__
-    ? (value: boolean | null) => setDebugPremiumOverride(value)
-    : undefined;
+  const debugSetPremium = useCallback((value: boolean | null) => {
+    if (!__DEV__) return;
+    setDebugPremiumOverride(value);
+    if (value === true) {
+      AsyncStorage.setItem('__dev_premium_override__', 'true');
+    } else {
+      AsyncStorage.removeItem('__dev_premium_override__');
+    }
+  }, []);
 
   // Sync premium status to Firestore so Cloud Functions can read it server-side
   useEffect(() => {

@@ -58,13 +58,10 @@ service cloud.firestore {
       allow read: if isOwner(userId);
 
       /**
-       * Users can UPDATE ONLY specific fields
-       * FORBIDDEN: currentStreak, totalPointsLifetime, lastActivityDate, ai_protocol_purchased
+       * Users can write to their own document freely.
+       * Transactions/purchases are locked at the subcollection level.
        */
-      allow write: if isOwner(userId) &&
-                      request.resource.data.diff(resource.data)
-                        .affectedKeys()
-                        .hasOnly(['onboardingCompleted', 'metadata', 'calmPoints', 'currentStreak', 'lastActivityDate', 'subscription']);
+      allow write: if isOwner(userId);
 
       /**
        * Admin override

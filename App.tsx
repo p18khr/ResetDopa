@@ -51,6 +51,7 @@ import DiagnosticScreen from './src/screens/DiagnosticScreen';
 import BundleRecommendationScreen from './src/screens/BundleRecommendationScreen';
 import ImmediateWinScreen from './src/screens/ImmediateWinScreen';
 import BlockedAppsManager from './src/screens/BlockedAppsManager';
+import AccessibilityPermissionScreen from './src/screens/AccessibilityPermissionScreen';
 import Store from './src/screens/Store';
 import { NeuroAuditScreen } from './src/screens/NeuroAuditScreen';
 // Temporarily disabled - to be debugged
@@ -182,6 +183,11 @@ function AppNavigator(): React.ReactElement {
               name="BlockedApps"
               component={BlockedAppsManager}
               options={{ title: 'Content Blockers' }}
+            />
+            <Stack.Screen
+              name="AccessibilityPermission"
+              component={AccessibilityPermissionScreen}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="NeuroAudit"

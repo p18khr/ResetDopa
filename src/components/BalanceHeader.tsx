@@ -55,7 +55,7 @@ export function BalanceHeader({
         <Text style={[styles.balance, { color: balanceColor }]}>{balance}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {isLowBalance
-            ? 'Below 15 — cannot bypass Vagus gate'
+            ? 'Below 15 — cannot bypass ResetDopa App Blocker'
             : 'Earned by surviving urges'}
         </Text>
       </View>

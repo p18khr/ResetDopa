@@ -102,7 +102,7 @@ class BlockOverlayActivity : Activity() {
             setTextColor(0xFF888888.toInt())
             isAllCaps = false
             setOnClickListener {
-                returnToDopaReset()
+                returnToResetDopa()
             }
         }
 
@@ -129,7 +129,7 @@ class BlockOverlayActivity : Activity() {
 
     private fun launchBreathingExercise(blockedPackage: String) {
         try {
-            // Launch DopaReset with deep link to breathing exercise
+            // Launch ResetDopa with deep link to breathing exercise
             val intent = packageManager.getLaunchIntentForPackage(applicationContext.packageName)
             intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -141,27 +141,27 @@ class BlockOverlayActivity : Activity() {
         } catch (e: Exception) {
             android.util.Log.e("BlockOverlayActivity", "Error launching breathing exercise", e)
             // Fallback: just return to app
-            returnToDopaReset()
+            returnToResetDopa()
         }
     }
 
-    private fun returnToDopaReset() {
+    private fun returnToResetDopa() {
         try {
-            // Launch DopaReset app
+            // Launch ResetDopa app
             val intent = packageManager.getLaunchIntentForPackage(applicationContext.packageName)
             intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             startActivity(intent)
             finish()
         } catch (e: Exception) {
-            android.util.Log.e("BlockOverlayActivity", "Error returning to DopaReset", e)
+            android.util.Log.e("BlockOverlayActivity", "Error returning to ResetDopa", e)
             finish()
         }
     }
 
     override fun onBackPressed() {
         // Prevent back button from closing overlay
-        returnToDopaReset()
+        returnToResetDopa()
     }
 
     override fun onPause() {

@@ -35,7 +35,8 @@ export function DevSandboxScreen({ navigation }: DevSandboxScreenProps): React.R
     debugClearPurchases,
   } = useEconomy();
   const { user } = useAuth() as any;
-  const { isPremium, debugSetPremium } = useSubscription();
+  const { isPremium, debugSetPremium, presentPaywall } = useSubscription();
+  const [premiumToggle, setPremiumToggle] = useState(isPremium);
 
   const [showGate, setShowGate] = useState(false);
   const [showStore, setShowStore] = useState(false);
@@ -231,7 +232,7 @@ If it's after 9 PM and you reach for your phone, then you must first do 10 slow 
 
         {/* Premium Override */}
         <SectionTitle title="💎 Subscription Override" />
-        <View style={[styles.toggleRow, { backgroundColor: colors.surfacePrimary, borderColor: isPremium ? '#FFD700' : colors.border }]}>
+        <View style={[styles.toggleRow, { backgroundColor: colors.surfacePrimary, borderColor: premiumToggle ? '#FFD700' : colors.border }]}>
           <View>
             <Text style={[styles.toggleLabel, { color: colors.text }]}>Force isPremium = true</Text>
             <Text style={[styles.toggleDesc, { color: colors.textSecondary }]}>
@@ -239,10 +240,13 @@ If it's after 9 PM and you reach for your phone, then you must first do 10 slow 
             </Text>
           </View>
           <Switch
-            value={isPremium}
-            onValueChange={(val) => debugSetPremium?.(val ? true : null)}
+            value={premiumToggle}
+            onValueChange={(val) => {
+              setPremiumToggle(val);
+              debugSetPremium(val ? true : null);
+            }}
             trackColor={{ false: colors.border, true: '#FFD700' }}
-            thumbColor={isPremium ? '#FFD700' : colors.surfacePrimary}
+            thumbColor={premiumToggle ? '#FFD700' : colors.surfacePrimary}
           />
         </View>
 
@@ -255,8 +259,9 @@ If it's after 9 PM and you reach for your phone, then you must first do 10 slow 
         {/* Trigger Buttons */}
         <SectionTitle title="🚀 Trigger UI Components" />
         <View style={styles.buttonGroup}>
-          <DebugButton title="Launch Vagus Gate" onPress={() => setShowGate(true)} variant="danger" />
+          <DebugButton title="Launch ResetDopa App Blocker" onPress={() => setShowGate(true)} variant="danger" />
           <DebugButton title="Launch Store" onPress={() => setShowStore(true)} variant="success" />
+          <DebugButton title="Present RC Paywall" onPress={() => presentPaywall().catch((e: any) => Alert.alert('Paywall Error', String(e)))} variant="primary" />
         </View>
 
         {/* Feature Status */}

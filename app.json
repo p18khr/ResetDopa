@@ -33,7 +33,7 @@
     },
     "android": {
       "package": "com.dopareset.app",
-      "versionCode": 13,
+      "versionCode": 20,
       "jsEngine": "hermes",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -82,6 +82,7 @@
     "extra": {
       "privacyPolicyUrl": "https://resetdopa.com/privacy.html",
       "termsUrl": "https://resetdopa.com/terms.html",
+      "accountDeletionUrl": "https://resetdopa.com/account/delete/",
       "eas": {
         "projectId": "de4ee721-5de6-46b5-9533-63ac1b808ac3"
       }

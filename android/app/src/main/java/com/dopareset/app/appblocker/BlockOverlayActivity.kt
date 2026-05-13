@@ -184,7 +184,7 @@ class BlockOverlayActivity : Activity() {
             setTextColor(0xFF666666.toInt())
             isAllCaps = false
             setOnClickListener {
-                returnToDopaReset()
+                returnToResetDopa()
             }
         }
 
@@ -549,10 +549,10 @@ class BlockOverlayActivity : Activity() {
                     .apply()
                 android.util.Log.d("BlockOverlayActivity", "✓ Marked for +2 points reward")
             }
-            returnToDopaReset()
+            returnToResetDopa()
         } catch (e: Exception) {
             android.util.Log.e("BlockOverlayActivity", "Error handling resist reward", e)
-            returnToDopaReset()
+            returnToResetDopa()
         }
     }
 
@@ -630,9 +630,9 @@ class BlockOverlayActivity : Activity() {
         }
     }
 
-    private fun returnToDopaReset() {
+    private fun returnToResetDopa() {
         try {
-            android.util.Log.d("BlockOverlayActivity", "returnToDopaReset() called - resetting service state")
+            android.util.Log.d("BlockOverlayActivity", "returnToResetDopa() called - resetting service state")
 
             // Check if we need to process reward
             val prefs = getSharedPreferences("AppBlockerPrefs", android.content.Context.MODE_PRIVATE)
@@ -662,13 +662,13 @@ class BlockOverlayActivity : Activity() {
             startActivity(intent)
             finish()
         } catch (e: Exception) {
-            android.util.Log.e("BlockOverlayActivity", "Error returning to DopaReset", e)
+            android.util.Log.e("BlockOverlayActivity", "Error returning to ResetDopa", e)
             finish()
         }
     }
 
     override fun onBackPressed() {
-        returnToDopaReset()
+        returnToResetDopa()
     }
 
     override fun onNewIntent(intent: Intent?) {

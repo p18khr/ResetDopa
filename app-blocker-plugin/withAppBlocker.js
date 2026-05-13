@@ -67,6 +67,14 @@ function withAppBlocker(config) {
           'android:exported': 'false',
           'android:foregroundServiceType': 'specialUse',
         },
+        property: [
+          {
+            $: {
+              'android:name': 'android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE',
+              'android:value': 'App blocking and digital wellbeing intervention',
+            },
+          },
+        ],
       });
     }
 

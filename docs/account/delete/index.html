@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Delete Your ResetDopa Account</title>
+    <meta name="robots" content="noindex" />
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #08080f;
+            --panel: #11111a;
+            --panel-2: #181824;
+            --border: #2a2a3d;
+            --text: #f2f4ff;
+            --muted: #a4aac7;
+            --accent: #8c7bff;
+            --danger: #ff6b6b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at top, #181828 0, var(--bg) 56%);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 840px;
+            margin: 0 auto;
+            padding: 48px 20px 64px;
+        }
+        .card {
+            background: rgba(17, 17, 26, 0.88);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+        }
+        h1 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3.1rem); line-height: 1.05; }
+        h2 { margin-top: 28px; font-size: 1.1rem; }
+        p, li { color: var(--muted); }
+        ul, ol { padding-left: 20px; }
+        .notice {
+            border-left: 4px solid var(--accent);
+            background: var(--panel-2);
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin: 18px 0;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--panel-2);
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .button-primary {
+            background: linear-gradient(135deg, var(--accent), #5fb7ff);
+            border-color: transparent;
+            color: #07111d;
+        }
+        .button-danger {
+            background: linear-gradient(135deg, var(--danger), #ff8b8b);
+            border-color: transparent;
+            color: #200808;
+        }
+        footer {
+            margin-top: 22px;
+            font-size: 0.92rem;
+            color: var(--muted);
+        }
+        code { color: #dbe4ff; }
+        a { color: #b9c3ff; }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="card">
+            <h1>Delete Your ResetDopa Account</h1>
+            <p>Use this page to permanently delete your account and associated personal data. Deletion is irreversible once completed.</p>
+
+            <div class="notice">
+                <strong>Security note:</strong> This page is public, but the actual deletion request is only accepted after account verification. The secure flow sends a one-time confirmation link to your email address.
+            </div>
+
+            <h2>What will be deleted</h2>
+            <ul>
+                <li>Your profile, email, display name, and account identifiers.</li>
+                <li>Personal settings, progress data, streaks, and logs tied to your account.</li>
+                <li>Device tokens and session data used for notifications and sync.</li>
+            </ul>
+
+            <h2>What may remain</h2>
+            <ul>
+                <li>Aggregated or anonymized analytics.</li>
+                <li>Backup copies and logs kept only for a short retention window.</li>
+            </ul>
+
+            <h2>How it works</h2>
+            <ol>
+                <li>Sign into the app with the account you want to delete.</li>
+                <li>Tap <strong>Request Account Deletion</strong> in Settings or use the button below.</li>
+                <li>Confirm deletion from the emailed one-time link.</li>
+                <li>We complete deletion within 30 days and email a reference ID when finished.</li>
+            </ol>
+
+            <div class="actions">
+                <form method="post" action="/api/account/delete-request">
+                    <button class="button button-danger" type="submit">Request Deletion Email</button>
+                </form>
+                <a class="button button-primary" href="/privacy.html">Read Privacy Policy</a>
+                <a class="button" href="/terms.html">Read Terms</a>
+            </div>
+
+            <h2>Need help?</h2>
+            <p>Contact <a href="mailto:privacy@resetdopa.com">privacy@resetdopa.com</a> if you have questions about deletion or retention.</p>
+
+            <footer>
+                Canonical deletion URL for Play Console: <code>https://resetdopa.com/account/delete/</code>
+            </footer>
+        </div>
+    </main>
+</body>
+</html>

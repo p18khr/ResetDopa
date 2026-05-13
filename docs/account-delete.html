@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Your ResetDopa Account</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <main style="max-width:820px;margin:48px auto;padding:24px;font-family:system-ui,Segoe UI,Roboto,Arial;background:#0f0f14;color:#eef;">
+        <h1>Delete Your ResetDopa Account</h1>
+        <p>This page lets you permanently delete your ResetDopa account and associated personal data. Deletion is irreversible — please read the details below before continuing.</p>
+
+        <h2>What will be deleted</h2>
+        <ul>
+            <li>Your profile and account identifiers (email, display name).</li>
+            <li>User-generated content and personal settings (timers, goals, preferences).</li>
+            <li>Device tokens and session data used for notifications and sync.</li>
+        </ul>
+
+        <h2>What may remain</h2>
+        <ul>
+            <li>Aggregate or anonymized analytics data.</li>
+            <li>Backups and logs for a short retention window (see timeline below).</li>
+        </ul>
+
+        <h2>How deletion works (recommended flow)</h2>
+        <ol>
+            <li>Sign into the app or website with the account you want to delete.</li>
+            <li>Request deletion from Settings → Delete Account (in-app) or click "Request deletion" below to receive a confirmation email.</li>
+            <li>Confirm deletion from the email link (this prevents unauthorized deletion).</li>
+            <li>We schedule and complete deletion within 30 days. You will receive a confirmation email with a reference id when finished.</li>
+        </ol>
+
+        <h2>Request deletion</h2>
+        <p>If you are signed in on this device, use the in-app Settings → Delete Account flow. If you prefer an email confirmation, click the button below to send a secure deletion link to your account email.</p>
+
+        <form method="POST" action="/api/account/delete-request" style="margin:20px 0">
+            <button type="submit" style="padding:12px 18px;border-radius:8px;background:#6C5CE7;color:white;border:0;cursor:pointer">Send deletion confirmation email</button>
+        </form>
+
+        <h2>Timeline & recovery</h2>
+        <p>Deletion is typically completed within 30 days. During this period you may contact support to request recovery (subject to identity verification), but after completion data cannot be restored.</p>
+
+        <h2>Contact</h2>
+        <p>If you have questions or need help, contact our privacy team: <a href="mailto:privacy@resetdopa.com">privacy@resetdopa.com</a></p>
+
+        <footer style="margin-top:40px;color:#9aa">Reference: ResetDopa account deletion instructions.</footer>
+    </main>
+</body>
+</html>

@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
+import com.dopareset.app.R
 
 /**
  * Foreground service that monitors app usage
@@ -169,9 +170,9 @@ class AppMonitorService : Service() {
                 }
             } else {
                 android.util.Log.d("AppMonitorService", "✗ $foregroundApp NOT in blocked list or null")
-                // Reset if user is back in DopaReset or another non-blocked app
+                // Reset if user is back in ResetDopa or another non-blocked app
                 if (foregroundApp == packageName) {
-                    android.util.Log.d("AppMonitorService", "Back in DopaReset, resetting lastBlockedApp")
+                    android.util.Log.d("AppMonitorService", "Back in ResetDopa, resetting lastBlockedApp")
                     lastBlockedApp = null
                 }
             }
@@ -254,9 +255,9 @@ class AppMonitorService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("DopaReset Protection Active")
+            .setContentTitle("ResetDopa Protection Active")
             .setContentText("Monitoring ${blockedApps.size} blocked apps")
-            .setSmallIcon(android.R.drawable.ic_menu_view) // Use app icon in production
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
