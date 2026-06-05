@@ -244,11 +244,133 @@
 
         .footer-right a:hover { color: #7C7FFF; }
 
+        /* Pro Section */
+        .pro {
+            padding: 100px 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+            border-bottom: 1px solid #35357A;
+        }
+
+        .gold { color: #FFD700; }
+
+        .pro-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+
+        .pro-card {
+            background: #17173A;
+            border: 1px solid #35357A;
+            padding: 32px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .pro-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+        }
+
+        .pro-card:hover {
+            border-color: #FFD700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.15);
+        }
+
+        .pro-card .icon {
+            font-size: 2rem;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .pro-card h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+            color: #FFF;
+        }
+
+        .pro-card p {
+            font-size: 0.85rem;
+            color: #A8B0D8;
+            line-height: 1.7;
+        }
+
+        .pro-card .tag {
+            display: inline-block;
+            margin-top: 16px;
+            font-size: 0.65rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #FFD700;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 4px 10px;
+        }
+
+        .trial-box {
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            background: rgba(255, 215, 0, 0.04);
+            padding: 48px 40px;
+            text-align: center;
+        }
+
+        .trial-box .trial-label {
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #FFD700;
+            margin-bottom: 16px;
+        }
+
+        .trial-box h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.6rem, 4vw, 2.5rem);
+            font-weight: 900;
+            margin-bottom: 12px;
+        }
+
+        .trial-box p {
+            font-size: 0.9rem;
+            color: #A8B0D8;
+            margin-bottom: 32px;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn-gold {
+            display: inline-block;
+            padding: 16px 40px;
+            background: #FFD700;
+            color: #0D0D2B;
+            border: 2px solid #FFD700;
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            text-decoration: none;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .btn-gold:hover {
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.6);
+            transform: translateY(-2px);
+        }
+
         @media (max-width: 768px) {
             nav { padding: 16px 20px; }
             .nav-links { gap: 16px; font-size: 0.75rem; }
             .hero { padding: 100px 20px 60px; }
             .features { padding: 60px 20px; }
+            .pro { padding: 60px 20px; }
+            .trial-box { padding: 32px 20px; }
             footer { flex-direction: column; padding: 32px 20px; }
         }
     </style>
@@ -264,6 +386,7 @@
     <nav>
         <a href="/" class="logo">Reset<span>Dopa</span>™</a>
         <div class="nav-links">
+            <a href="#pro" style="color:#FFD700;">Pro</a>
             <a href="privacy.html">Privacy</a>
             <a href="terms.html">Terms</a>
             <a href="account/delete/">Delete Account</a>
@@ -317,6 +440,40 @@
                 <p>Built-in stretching guide and breathing exercises to ground yourself in the moment when urges hit.</p>
                 <div class="metric">Exercises: Integrated</div>
             </div>
+        </div>
+    </section>
+
+    <section class="pro" id="pro">
+        <p class="section-label" style="color:#FFD700;">ResetDopa Pro</p>
+        <h2 class="section-title">Unlock the <span class="gold">Full Protocol</span></h2>
+        <p class="section-sub">Three precision tools that turn passive awareness into active dopamine recalibration.</p>
+
+        <div class="pro-grid">
+            <div class="pro-card">
+                <span class="icon">🛡️</span>
+                <h3>Content Blockers</h3>
+                <p>Block dopamine-hijacking apps like Instagram, TikTok, and YouTube. A 60-second mindfulness gate fires before access — breaking the automatic reach reflex before it becomes a habit.</p>
+                <span class="tag">App Blocker + Mindfulness Gate</span>
+            </div>
+            <div class="pro-card">
+                <span class="icon">🏪</span>
+                <h3>Calm Points Store</h3>
+                <p>Spend your earned Calm Points on Streak Repairs so a missed day doesn't erase your progress. Your daily discipline literally pays off — one point at a time.</p>
+                <span class="tag">Streak Protection</span>
+            </div>
+            <div class="pro-card">
+                <span class="icon">📊</span>
+                <h3>Weekly Neuro-Audit</h3>
+                <p>Every Sunday you receive your full behavior report: urge patterns, your weakest link, and a personalized action plan. Data-driven accountability for the week ahead.</p>
+                <span class="tag">Sunday Report</span>
+            </div>
+        </div>
+
+        <div class="trial-box">
+            <div class="trial-label">★ Limited Offer</div>
+            <h3>7-Day <span class="gold">Free Trial</span></h3>
+            <p>Start your Pro trial today. Cancel anytime. No commitment — just a measurably stronger reset.</p>
+            <a href="https://play.google.com/store/apps/details?id=com.dopareset.app" class="btn-gold">Start Free Trial</a>
         </div>
     </section>
 
